@@ -1,0 +1,216 @@
+'use client';
+import Link from 'next/link';
+import Image from 'next/image';
+import React, { useState, useEffect, useRef } from 'react';
+import { Search, Menu, Bell, User, Plus, Settings, X, LogOut } from 'lucide-react';
+import { useSidebar } from '@/context/SidebarContext';
+import { useAuth } from '@/context/AuthContext';
+import { useGoogleLogin } from '@react-oauth/google';
+
+export function Navbar() {
+  const { toggleSidebar } = useSidebar();
+  const { user, login, logout, isAuthenticated } = useAuth();
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+
+  const googleLogin = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      try {
+        const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
+        });
+        const userInfo = await res.json();
+        
+        // Sync with backend
+        const backendRes = await fetch('http://127.0.0.1:8000/api/v1/auth/google', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: userInfo.email,
+            name: userInfo.name,
+            picture: userInfo.picture,
+          })
+        });
+        const backendUser = await backendRes.json();
+
+        login({
+          id: backendUser.id,
+          name: userInfo.name,
+          email: userInfo.email,
+          picture: userInfo.picture,
+          sub: userInfo.sub,
+          is_superuser: backendUser.is_superuser
+        });
+      } catch (err) {
+        console.error("Failed to fetch user info", err);
+      }
+    },
+    onError: () => console.log('Login Failed'),
+  });
+
+  // Real-time search
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSearchResults([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`http://127.0.0.1:8000/api/v1/discover/search`);
+        if (res.ok) {
+          const data = await res.json();
+          const items = data.items || [];
+          const filtered = items.filter((item: any) => item.title.toLowerCase().includes(searchQuery.toLowerCase()));
+          setSearchResults(filtered);
+        }
+      } catch (err) {
+        setSearchResults([]);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+        setSearchResults([]);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  return (
+    <nav className="fixed top-0 left-0 right-0 h-16 bg-[#111111] z-50 flex items-center justify-between px-4 border-b border-zinc-800/50">
+      {/* Left: Menu & Logo */}
+      <div className={`flex items-center gap-4 ${isMobileSearchOpen ? 'hidden md:flex' : 'flex'}`}>
+        <button onClick={toggleSidebar} className="p-2 text-zinc-400 hover:text-white transition-colors">
+          <Menu className="w-6 h-6" />
+        </button>
+        <Link href="/" className="flex items-center gap-2 group">
+          <div className="relative w-10 h-10 transform group-hover:scale-110 transition-all duration-300 flex items-center justify-center">
+            <Image src="/pig-logo.png" alt="PIG Icon" fill sizes="40px" className="object-contain" />
+          </div>
+          <div className="relative w-20 h-8 transform group-hover:scale-105 transition-all duration-300 flex items-center justify-center">
+            <Image src="/xpig-text-logo.png" alt="XPIG Text" fill sizes="80px" className="object-contain" />
+          </div>
+        </Link>
+      </div>
+
+      {/* Center: Search */}
+      <div className={`${isMobileSearchOpen ? 'flex' : 'hidden'} md:flex flex-1 max-w-2xl mx-4 md:mx-8 w-full`} ref={searchContainerRef}>
+        <div className="relative w-full flex items-center gap-2">
+          {isMobileSearchOpen && (
+            <button onClick={() => setIsMobileSearchOpen(false)} className="md:hidden p-2 text-zinc-400 hover:text-white transition-colors">
+              <X className="w-6 h-6" />
+            </button>
+          )}
+          <div className="relative w-full flex flex-col">
+            <div className="relative w-full flex z-10">
+              <input 
+                type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search videos, creators..." autoFocus={isMobileSearchOpen}
+                className="w-full bg-[#1e1e1e] border border-zinc-800 rounded-l-md pl-4 pr-4 py-2 text-sm text-white focus:outline-none focus:border-pink-600 transition-colors placeholder:text-zinc-500"
+              />
+              <button className="px-5 bg-[#2a2a2a] hover:bg-[#333] border border-l-0 border-zinc-800 rounded-r-md text-zinc-400 transition-colors flex items-center justify-center">
+                <Search className="w-4 h-4" />
+              </button>
+            </div>
+            {searchResults.length > 0 && searchQuery.trim().length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-[#161616] border border-zinc-800 rounded-lg shadow-2xl overflow-hidden z-50 max-h-96 overflow-y-auto">
+                {searchResults.map((video) => (
+                  <Link key={video.id} href={`/watch/${video.id}`} onClick={() => { setSearchQuery(''); setSearchResults([]); }}
+                    className="flex items-center gap-3 p-3 hover:bg-[#222] transition-colors border-b border-zinc-800/50 last:border-0 group">
+                    <div className="relative w-16 h-10 bg-zinc-900 rounded overflow-hidden shrink-0">
+                      <Image src={video.thumbnail_url || "https://files.vidstack.io/sprite-fight/poster.webp"} alt={video.title} fill sizes="64px" className="object-cover" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-sm font-semibold text-zinc-200 truncate group-hover:text-pink-400">{video.title}</h4>
+                      <p className="text-xs text-zinc-500">Creator {video.creator_id}</p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Right: Actions */}
+      <div className={`flex items-center gap-2 md:gap-4 ${isMobileSearchOpen ? 'hidden md:flex' : 'flex'}`}>
+        <button onClick={() => setIsMobileSearchOpen(true)} className="md:hidden p-2 text-zinc-400 hover:text-white transition-colors">
+          <Search className="w-5 h-5" />
+        </button>
+        <Link href="/upload" className="hidden md:flex items-center gap-2 px-4 py-2 bg-pink-600 hover:bg-pink-500 text-white rounded-full font-medium text-sm transition-colors">
+          <Plus className="w-4 h-4" /> <span>Upload</span>
+        </Link>
+        <button className="p-2 text-zinc-400 hover:text-white transition-colors hidden sm:block">
+          <Bell className="w-5 h-5" />
+        </button>
+
+        {/* Profile Dropdown */}
+        <div className="relative group ml-1">
+          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 p-[2px] cursor-pointer overflow-hidden">
+            {isAuthenticated && user ? (
+              <img src={user.picture} alt={user.name} className="w-full h-full rounded-full object-cover" />
+            ) : (
+              <div className="w-full h-full bg-zinc-900 rounded-full flex items-center justify-center">
+                <User className="w-5 h-5 text-zinc-300" />
+              </div>
+            )}
+          </div>
+
+          {/* Dropdown */}
+          <div className="absolute top-full right-0 mt-2 w-72 bg-[#161616] border border-zinc-800 rounded-2xl shadow-2xl shadow-black/80 opacity-0 invisible group-hover:opacity-100 group-hover:visible focus-within:opacity-100 focus-within:visible transition-all duration-200 transform origin-top-right translate-y-2 group-hover:translate-y-0 focus-within:translate-y-0 z-50 overflow-hidden cursor-default">
+            
+            {isAuthenticated && user ? (
+              <div className="p-5 flex flex-col gap-4">
+                <div className="flex items-center gap-3 border-b border-zinc-800 pb-4">
+                  <img src={user.picture} alt={user.name} className="w-12 h-12 rounded-full" />
+                  <div>
+                    <h4 className="font-bold text-white leading-tight">{user.name}</h4>
+                    <p className="text-xs text-zinc-400">{user.email}</p>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <Link href="/profile" className="px-3 py-2 hover:bg-[#222] rounded-lg transition-colors text-sm font-medium flex items-center gap-2">
+                    <User className="w-4 h-4 text-zinc-400" /> My Profile
+                  </Link>
+                  <Link href="/settings" className="px-3 py-2 hover:bg-[#222] rounded-lg transition-colors text-sm font-medium flex items-center gap-2">
+                    <Settings className="w-4 h-4 text-zinc-400" /> Settings
+                  </Link>
+                </div>
+                <button onClick={logout} className="mt-2 flex items-center justify-center gap-2 w-full bg-zinc-800 hover:bg-zinc-700 text-white py-2.5 rounded-xl font-bold transition-colors">
+                  <LogOut className="w-4 h-4" /> Sign Out
+                </button>
+              </div>
+            ) : (
+              <div className="p-5 flex flex-col gap-4">
+                <h3 className="text-white font-bold text-lg text-center tracking-tight">Join XPIG Network</h3>
+                <button onClick={() => googleLogin()} className="flex items-center justify-center gap-2 w-full bg-white hover:bg-zinc-200 text-black py-2.5 rounded-xl font-bold transition-colors">
+                  <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-5 h-5" alt="Google" />
+                  Continue with Google
+                </button>
+                <div className="flex items-center gap-2 my-1">
+                  <div className="h-px bg-zinc-800 flex-1"></div>
+                  <span className="text-xs text-zinc-500 font-bold uppercase tracking-wider">Or Manual</span>
+                  <div className="h-px bg-zinc-800 flex-1"></div>
+                </div>
+                <div className="flex flex-col gap-3">
+                  <input type="email" placeholder="Email Address" className="w-full bg-[#111] border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-pink-600 transition-colors" />
+                  <input type="password" placeholder="Password" className="w-full bg-[#111] border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-pink-600 transition-colors" />
+                  <button className="w-full bg-pink-600 hover:bg-pink-500 text-white py-2.5 rounded-xl font-bold transition-colors shadow-lg shadow-pink-900/20">
+                    Log In / Sign Up
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </nav>
+  );
+}
