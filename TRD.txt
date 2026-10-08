@@ -1,0 +1,703 @@
+হ্যাঁ। **PIG**-এর জন্য TRD (Technical Requirements Document) বানানো যাবে। তবে external/free storage থেকে video নেওয়ার অংশটি **শুধু public/authorized source বা provider-এর অনুমোদিত API/streaming URL** ধরে ডিজাইন করব।
+
+# PIG — Technical Requirements Document (TRD)
+
+### 1. Project Definition
+
+**Project Name:** PIG
+**Product Type:** Adult-oriented video/content platform
+**Architecture:** Web-based, scalable, API-first
+**Primary Goal:** Users যেন content discover, view, interact এবং creators-এর content manage করতে পারে।
+
+---
+
+## 2. Core Architecture
+
+```text
+                         ┌──────────────────────┐
+                         │       PIG WEB        │
+                         │ Next.js + Tailwind   │
+                         └──────────┬───────────┘
+                                    │
+                                  HTTPS
+                                    │
+                         ┌──────────▼───────────┐
+                         │      API Gateway     │
+                         │   Nginx / Gateway    │
+                         └──────────┬───────────┘
+                                    │
+              ┌─────────────────────┼─────────────────────┐
+              │                     │                     │
+       ┌──────▼──────┐      ┌──────▼──────┐      ┌──────▼──────┐
+       │ Auth Service │      │ Content API │      │ User API    │
+       └──────┬──────┘      └──────┬──────┘      └──────┬──────┘
+              │                    │                     │
+              └────────────────────┼─────────────────────┘
+                                   │
+                         ┌─────────▼─────────┐
+                         │    PostgreSQL     │
+                         └───────────────────┘
+                                   │
+                    ┌──────────────┼──────────────┐
+                    │              │              │
+              ┌─────▼─────┐ ┌─────▼─────┐ ┌──────▼──────┐
+              │   Redis   │ │   Queue   │ │   Search    │
+              └───────────┘ └─────┬─────┘ └─────────────┘
+                                   │
+                           ┌───────▼────────┐
+                           │ Media Pipeline │
+                           │ FFmpeg         │
+                           └───────┬────────┘
+                                   │
+                           ┌───────▼────────┐
+                           │ Object Storage │
+                           └───────┬────────┘
+                                   │
+                              ┌────▼────┐
+                              │   CDN   │
+                              └────┬────┘
+                                   │
+                              Video Player
+```
+
+---
+
+# 3. Video Source Architecture
+
+PIG-এ **একটি নির্দিষ্ট storage provider-এর উপর dependency থাকবে না।**
+
+### Storage abstraction
+
+```text
+PIG Media Service
+       │
+       ├── Provider A
+       ├── Provider B
+       ├── Provider C
+       └── Self-hosted Storage
+```
+
+প্রতিটি video-এর metadata:
+
+```text
+video_id
+title
+description
+source_type
+source_provider
+source_url
+thumbnail_url
+duration
+mime_type
+resolution
+status
+visibility
+created_at
+```
+
+### Source Types
+
+```text
+UPLOAD
+EXTERNAL_API
+AUTHORIZED_REMOTE_URL
+OBJECT_STORAGE
+CDN
+```
+
+External source ব্যবহার করলে system প্রথমে source-এর permission/access এবং media availability validate করবে।
+
+---
+
+# 4. Media Processing
+
+Creator video upload করলে:
+
+```text
+Upload
+  ↓
+Validation
+  ↓
+Virus/Malware Scan
+  ↓
+Metadata Extraction
+  ↓
+FFmpeg Processing
+  ↓
+Multiple Resolutions
+  ↓
+HLS/DASH Packaging
+  ↓
+Object Storage
+  ↓
+CDN
+  ↓
+PIG Player
+```
+
+Recommended outputs:
+
+```text
+360p
+480p
+720p
+1080p
+```
+
+এবং adaptive streaming:
+
+```text
+master.m3u8
+```
+
+---
+
+# 5. Video Player
+
+Player requirements:
+
+* Play/Pause
+* Seek
+* Volume
+* Fullscreen
+* Playback speed
+* Quality selection
+* Auto quality
+* Subtitle support
+* Poster/thumbnail
+* Resume watching
+* Mobile controls
+* Adaptive bitrate streaming
+
+---
+
+# 6. User System
+
+### Registration
+
+```text
+Email
+Password
+Username
+Date of Birth
+Terms acceptance
+```
+
+### Authentication
+
+* Secure session
+* Password hashing
+* Email verification
+* Login throttling
+* Password reset
+* 2FA-ready architecture
+
+### Age Verification
+
+Account-এর জন্য age-verification status রাখা হবে:
+
+```text
+age_verification_status
+
+PENDING
+VERIFIED
+FAILED
+EXPIRED
+```
+
+---
+
+# 7. Creator System
+
+Creator profile:
+
+```text
+username
+display_name
+bio
+avatar
+banner
+followers
+total_views
+verification_status
+social_links
+```
+
+Creator dashboard:
+
+```text
+Overview
+Videos
+Images
+Analytics
+Followers
+Comments
+Revenue
+Settings
+```
+
+Analytics:
+
+```text
+Views
+Unique viewers
+Watch time
+Likes
+Comments
+Followers
+Revenue
+Top content
+Traffic sources
+```
+
+---
+
+# 8. Content Discovery
+
+### Categories
+
+```text
+Category
+   └── Subcategory
+```
+
+### Tags
+
+একটি content-এর multiple tags থাকতে পারবে।
+
+### Search
+
+Search করতে পারবে:
+
+```text
+Title
+Creator
+Category
+Tag
+Description
+```
+
+Future-ready:
+
+```text
+OpenSearch / Elasticsearch
+```
+
+---
+
+# 9. Social Features
+
+প্রতিটি content-এর জন্য:
+
+```text
+Like
+Comment
+Share
+Save
+Report
+```
+
+Creator-এর জন্য:
+
+```text
+Follow
+Unfollow
+```
+
+---
+
+# 10. Moderation System
+
+Admin dashboard:
+
+```text
+Users
+Creators
+Videos
+Images
+Reports
+Comments
+Copyright
+Payments
+Subscriptions
+Audit Logs
+```
+
+Content status:
+
+```text
+PENDING
+APPROVED
+REJECTED
+FLAGGED
+REMOVED
+```
+
+---
+
+# 11. Report System
+
+User report করতে পারবে:
+
+```text
+Copyright
+Abuse
+Illegal content
+Spam
+Impersonation
+Other
+```
+
+Workflow:
+
+```text
+Report
+ ↓
+Moderation Queue
+ ↓
+Admin Review
+ ↓
+Action
+ ↓
+Audit Log
+```
+
+---
+
+# 12. Copyright / Takedown
+
+Dedicated workflow:
+
+```text
+Claim Submitted
+       ↓
+Verification
+       ↓
+Content Restricted
+       ↓
+Admin Review
+       ↓
+Decision
+       ↓
+Remove / Restore
+       ↓
+Audit Record
+```
+
+---
+
+# 13. Database
+
+Core tables:
+
+```text
+users
+profiles
+creators
+age_verifications
+videos
+video_sources
+video_variants
+categories
+tags
+video_tags
+likes
+comments
+follows
+bookmarks
+reports
+copyright_claims
+subscriptions
+payments
+notifications
+admin_actions
+audit_logs
+```
+
+Relationship example:
+
+```text
+User
+ ├── Profile
+ ├── Videos
+ ├── Comments
+ ├── Likes
+ ├── Follows
+ └── Reports
+```
+
+---
+
+# 14. API Architecture
+
+Base:
+
+```text
+/api/v1
+```
+
+Authentication:
+
+```text
+POST /auth/register
+POST /auth/login
+POST /auth/logout
+POST /auth/verify-email
+POST /auth/forgot-password
+```
+
+Videos:
+
+```text
+GET    /videos
+GET    /videos/{id}
+POST   /videos
+PATCH  /videos/{id}
+DELETE /videos/{id}
+```
+
+Social:
+
+```text
+POST /videos/{id}/like
+POST /videos/{id}/comments
+POST /creators/{id}/follow
+```
+
+Search:
+
+```text
+GET /search?q=
+```
+
+Reports:
+
+```text
+POST /reports
+GET  /reports/{id}
+```
+
+Admin:
+
+```text
+GET /admin/reports
+PATCH /admin/content/{id}
+GET /admin/users
+```
+
+---
+
+# 15. Recommended Technology Stack
+
+### Frontend
+
+```text
+Next.js
+TypeScript
+Tailwind CSS
+React
+HLS.js / native MediaSource
+```
+
+### Backend
+
+```text
+Python
+FastAPI
+Pydantic
+SQLAlchemy
+```
+
+### Database
+
+```text
+PostgreSQL
+```
+
+### Infrastructure
+
+```text
+Docker
+Linux
+Nginx
+Redis
+Background Workers
+Object Storage
+CDN
+```
+
+### Media
+
+```text
+FFmpeg
+HLS
+DASH
+```
+
+### Search
+
+```text
+OpenSearch
+```
+
+---
+
+# 16. Security
+
+Required:
+
+```text
+HTTPS
+Password hashing
+JWT/session security
+CSRF protection
+XSS protection
+SQL injection protection
+Rate limiting
+Upload validation
+File-type validation
+Malware scanning
+IP/device abuse detection
+Admin 2FA
+Audit logging
+```
+
+---
+
+# 17. CDN Architecture
+
+```text
+                  PIG
+                   │
+             Media Service
+                   │
+             Object Storage
+                   │
+                  CDN
+          ┌────────┼────────┐
+          ↓        ↓        ↓
+        Asia     Europe    America
+          │        │        │
+          └────────┼────────┘
+                   ↓
+                 User
+```
+
+এতে মূল server-এর উপর video streaming-এর load কমবে।
+
+---
+
+# 18. Deployment
+
+```text
+Internet
+   │
+Cloudflare/CDN
+   │
+Load Balancer
+   │
+Nginx
+   │
+Next.js
+   │
+FastAPI
+   │
+ ┌─┴───────────────┐
+ │                 │
+PostgreSQL       Redis
+ │
+Object Storage
+ │
+Media Workers
+ │
+FFmpeg
+```
+
+---
+
+# 19. Project Structure
+
+```text
+pig/
+│
+├── frontend/
+│   ├── app/
+│   ├── components/
+│   ├── pages/
+│   ├── hooks/
+│   └── services/
+│
+├── backend/
+│   ├── app/
+│   │   ├── auth/
+│   │   ├── users/
+│   │   ├── creators/
+│   │   ├── videos/
+│   │   ├── comments/
+│   │   ├── reports/
+│   │   ├── payments/
+│   │   └── admin/
+│   │
+│   ├── workers/
+│   └── migrations/
+│
+├── media/
+│   ├── transcoding/
+│   └── processing/
+│
+├── infrastructure/
+│   ├── docker/
+│   ├── nginx/
+│   └── deployment/
+│
+└── docs/
+    ├── TRD.md
+    ├── API.md
+    └── DATABASE.md
+```
+
+---
+
+## 20. Development Phases
+
+### Phase 1 — Foundation
+
+Authentication, database, user system, basic UI.
+
+### Phase 2 — Content
+
+Creator profiles, upload, storage, media processing.
+
+### Phase 3 — Streaming
+
+HLS, CDN, player, adaptive quality.
+
+### Phase 4 — Discovery
+
+Categories, tags, search, recommendations.
+
+### Phase 5 — Social
+
+Like, comment, follow, bookmarks.
+
+### Phase 6 — Creator
+
+Dashboard + analytics.
+
+### Phase 7 — Moderation
+
+Admin dashboard, reports, blocking, takedown.
+
+### Phase 8 — Monetization
+
+Subscriptions + payment architecture.
+
+### Phase 9 — Security
+
+Rate limiting, abuse prevention, monitoring, audit.
+
+### Phase 10 — Production
+
+Docker, CDN, backups, CI/CD, scaling, observability.
+
+**মূল design principle:** PIG-এর application layer যেন কোনো নির্দিষ্ট “free storage”-এর সঙ্গে hard-coded না থাকে। `Media Provider Interface` রাখলে পরে provider বদলানো, নিজের storage যোগ করা বা CDN পরিবর্তন করা অনেক সহজ হবে।
