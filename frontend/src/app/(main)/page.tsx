@@ -65,6 +65,13 @@ export default async function HomePage() {
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center z-10">
                   <PlayCircle className="w-12 h-12 text-white opacity-0 group-hover:opacity-100 transform scale-75 group-hover:scale-100 transition-all duration-300 drop-shadow-lg" />
                 </div>
+
+                {/* NEW Badge (If within 72 hours) */}
+                {video.created_at && (new Date().getTime() - new Date(video.created_at).getTime()) < 72 * 60 * 60 * 1000 && (
+                  <div className="absolute top-2 left-2 px-2 py-0.5 bg-pink-600 rounded text-[10px] font-black text-white tracking-widest uppercase z-20 shadow-lg shadow-pink-900/50">
+                    NEW
+                  </div>
+                )}
                 
                 {/* Duration Badge */}
                 <div className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 bg-black/80 rounded text-[11px] font-bold text-white z-20 flex items-center gap-1 backdrop-blur-sm">
