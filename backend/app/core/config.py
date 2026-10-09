@@ -7,6 +7,13 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8
     DATABASE_URL: str = "sqlite+aiosqlite:///./xpig.db"
 
+    # Cloudflare R2
+    R2_ACCOUNT_ID: str = ""
+    R2_ACCESS_KEY_ID: str = ""
+    R2_SECRET_ACCESS_KEY: str = ""
+    R2_BUCKET_NAME: str = "xpig-videos"
+    R2_PUBLIC_URL: str = "" # e.g. https://pub-xxxxxxxx.r2.dev
+
     class Config:
         env_file = ".env"
 
