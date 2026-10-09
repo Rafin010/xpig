@@ -1,7 +1,7 @@
 from typing import Any
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func
 from pydantic import BaseModel
 
 from app.db.session import get_db
@@ -33,15 +33,20 @@ async def google_auth(
             email=payload.email,
             username=payload.name.replace(" ", "").lower() + str(len(payload.email)), # naive unique username
             hashed_password="google_oauth",
-            is_superuser=is_first_user
+            is_superuser=is_first_user,
+            last_active=func.now()
         )
         db.add(user)
         await db.commit()
         await db.refresh(user)
+    else:
+        user.last_active = func.now()
+        await db.commit()
         
     return {
         "id": user.id,
         "email": user.email,
         "username": user.username,
-        "is_superuser": user.is_superuser
+        "is_superuser": user.is_superuser,
+        "is_cofounder": user.is_cofounder
     }

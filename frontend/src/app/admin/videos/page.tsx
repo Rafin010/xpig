@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { PlayCircle, UploadCloud, Eye, TrendingUp, Filter, Search, MoreVertical, CheckCircle2, XCircle } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
 interface Video {
   id: string | number;
@@ -14,6 +15,7 @@ interface Video {
 }
 
 export default function VideoManagementPage() {
+  const { user } = useAuth();
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -197,9 +199,11 @@ export default function VideoManagementPage() {
                             <CheckCircle2 className="w-4 h-4" />
                           </button>
                         )}
-                        <button className="p-2 text-zinc-500 hover:text-red-500 transition-colors bg-[#222] rounded-lg border border-zinc-700" title="Delete/Reject Video">
-                          <XCircle className="w-4 h-4" />
-                        </button>
+                        {user?.is_superuser && (
+                          <button className="p-2 text-zinc-500 hover:text-red-500 transition-colors bg-[#222] rounded-lg border border-zinc-700" title="Delete/Reject Video">
+                            <XCircle className="w-4 h-4" />
+                          </button>
+                        )}
                         <button className="p-2 text-zinc-500 hover:text-white transition-colors bg-[#222] rounded-lg border border-zinc-700">
                           <MoreVertical className="w-4 h-4" />
                         </button>

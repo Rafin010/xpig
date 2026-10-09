@@ -8,6 +8,7 @@ type AuthUser = {
   picture: string;
   sub: string;
   is_superuser?: boolean;
+  is_cofounder?: boolean;
 };
 
 type AuthContextType = {

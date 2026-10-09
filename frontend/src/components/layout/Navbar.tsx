@@ -15,6 +15,44 @@ export function Navbar() {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const searchContainerRef = useRef<HTMLDivElement>(null);
 
+  // Manual Login Limits
+  const [manualEmail, setManualEmail] = useState('');
+  const [manualPassword, setManualPassword] = useState('');
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const [isLocked, setIsLocked] = useState(false);
+  const [lockTimer, setLockTimer] = useState(0);
+  const [loginError, setLoginError] = useState('');
+
+  useEffect(() => {
+    let interval: any;
+    if (isLocked && lockTimer > 0) {
+      interval = setInterval(() => {
+        setLockTimer((prev) => prev - 1);
+      }, 1000);
+    } else if (isLocked && lockTimer <= 0) {
+      setIsLocked(false);
+      setFailedAttempts(0);
+      setLoginError('');
+    }
+    return () => clearInterval(interval);
+  }, [isLocked, lockTimer]);
+
+  const handleManualLogin = () => {
+    if (isLocked) return;
+    
+    // Simulate failed login (since we only use Google Auth right now)
+    const newAttempts = failedAttempts + 1;
+    setFailedAttempts(newAttempts);
+    
+    if (newAttempts >= 4) {
+      setIsLocked(true);
+      setLockTimer(60);
+      setLoginError('Too many failed attempts. Locked for 60s.');
+    } else {
+      setLoginError(`Invalid credentials. ${4 - newAttempts} attempts left.`);
+    }
+  };
+
   const googleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       try {
@@ -41,7 +79,8 @@ export function Navbar() {
           email: userInfo.email,
           picture: userInfo.picture,
           sub: userInfo.sub,
-          is_superuser: backendUser.is_superuser
+          is_superuser: backendUser.is_superuser,
+          is_cofounder: backendUser.is_cofounder
         });
       } catch (err) {
         console.error("Failed to fetch user info", err);
@@ -200,11 +239,30 @@ export function Navbar() {
                   <div className="h-px bg-zinc-800 flex-1"></div>
                 </div>
                 <div className="flex flex-col gap-3">
-                  <input type="email" placeholder="Email Address" className="w-full bg-[#111] border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-pink-600 transition-colors" />
-                  <input type="password" placeholder="Password" className="w-full bg-[#111] border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-pink-600 transition-colors" />
-                  <button className="w-full bg-pink-600 hover:bg-pink-500 text-white py-2.5 rounded-xl font-bold transition-colors shadow-lg shadow-pink-900/20">
-                    Log In / Sign Up
+                  <input 
+                    type="email" 
+                    value={manualEmail}
+                    onChange={(e) => setManualEmail(e.target.value)}
+                    disabled={isLocked}
+                    placeholder="Email Address" 
+                    className="w-full bg-[#111] border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-pink-600 transition-colors disabled:opacity-50" 
+                  />
+                  <input 
+                    type="password" 
+                    value={manualPassword}
+                    onChange={(e) => setManualPassword(e.target.value)}
+                    disabled={isLocked}
+                    placeholder="Password" 
+                    className="w-full bg-[#111] border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-pink-600 transition-colors disabled:opacity-50" 
+                  />
+                  <button 
+                    onClick={handleManualLogin}
+                    disabled={isLocked || !manualEmail || !manualPassword}
+                    className="w-full bg-pink-600 hover:bg-pink-500 text-white py-2.5 rounded-xl font-bold transition-colors shadow-lg shadow-pink-900/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isLocked ? `Locked (${lockTimer}s)` : 'Log In / Sign Up'}
                   </button>
+                  {loginError && !isLocked && <p className="text-red-500 text-xs text-center font-semibold mt-1">{loginError}</p>}
                 </div>
               </div>
             )}
