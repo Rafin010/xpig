@@ -10,6 +10,7 @@ class Video(Base):
     description = Column(Text, nullable=True)
     creator_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     thumbnail_url = Column(String, nullable=True)
+    preview_url = Column(String, nullable=True)
     duration = Column(Integer, default=0) # in seconds
     views = Column(Integer, default=0)
     total_watch_seconds = Column(Integer, default=0)
