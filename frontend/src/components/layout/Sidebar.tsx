@@ -1,6 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { Home, Compass, Radio, Users, User, Star, History, ThumbsUp, ShieldAlert, BarChart3, Settings, Database } from 'lucide-react';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useSidebar } from '@/context/SidebarContext';
 
@@ -97,6 +98,23 @@ export function Sidebar() {
       <div className={`p-4 border-t border-white/5 flex flex-col gap-4 ${isCollapsed ? 'items-center' : ''}`}>
         <div className="w-full">
           <NavItem icon={Settings} label="Settings" href="/settings" />
+          
+          <Link 
+            href="/support"
+            className="group flex items-center px-4 py-3 rounded-2xl transition-all duration-300 font-bold text-sm text-zinc-400 hover:bg-[#222] hover:text-white w-full"
+            title={isCollapsed ? "Support Us" : undefined}
+          >
+            <div className="w-5 h-5 flex-shrink-0 flex items-center justify-center">
+              <Image 
+                src="/pig-logo.png" 
+                alt="Support" 
+                width={20} 
+                height={20} 
+                className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-125"
+              />
+            </div>
+            {!isCollapsed && <span className="ml-4">Support</span>}
+          </Link>
           <a 
             href="mailto:info@xpig.me?subject=Business%20and%20Advertising%20Inquiry"
             className="flex items-center gap-4 px-4 py-3 rounded-2xl transition-all duration-300 font-bold text-sm text-pink-400 hover:bg-pink-500/10 hover:text-pink-300 w-full"
