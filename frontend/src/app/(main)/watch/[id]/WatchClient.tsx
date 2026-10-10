@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 import React, { useState, useEffect, useRef } from 'react';
 import { Player } from '@/components/video/Player';
 import { ThumbsUp, MessageSquare, Share2, Heart, PlayCircle, CheckCircle2, Eye } from 'lucide-react';
@@ -175,40 +175,6 @@ export default function WatchClient({ videoId }: { videoId: string }) {
             <p>{videoData?.description || 'No description available for this video.'}</p>
           </div>
 
-          {/* Related Videos Section */}
-          <div className="mt-12 mb-8">
-            <h2 className="text-xl font-bold text-white mb-6">Related Videos</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-              {relatedVideos.map((video) => (
-                <Link href={`/watch/${video.id}`} key={video.id} className="group flex flex-col gap-2">
-                  <div className="aspect-[16/9] bg-[#1a1a1a] rounded-lg overflow-hidden relative border border-zinc-800/50 group-hover:border-zinc-700 transition-colors">
-                    {video.thumbnail_url ? (
-                      <img src={video.thumbnail_url} alt={video.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                    ) : (
-                      <div className="w-full h-full bg-zinc-800" />
-                    )}
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center z-10">
-                      <PlayCircle className="w-10 h-10 text-white opacity-0 group-hover:opacity-100 transform scale-75 group-hover:scale-100 transition-all duration-300 drop-shadow-lg" />
-                    </div>
-                    <div className="absolute bottom-1 right-1 px-1.5 py-0.5 bg-black/80 rounded text-[10px] font-bold text-white z-20">
-                      {video.duration || "0:00"}
-                    </div>
-                  </div>
-                  <div className="flex flex-col">
-                    <h3 className="font-medium text-[14px] text-zinc-100 leading-snug line-clamp-2 group-hover:text-pink-400 transition-colors">
-                      {video.title}
-                    </h3>
-                    <div className="flex items-center gap-1 mt-1">
-                      <span className="text-[12px] text-zinc-400 hover:text-white transition-colors truncate">
-                        Creator {video.creator_id}
-                      </span>
-                      <CheckCircle2 className="w-3 h-3 text-blue-400" />
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
           </div> {/* End Mobile Padding Wrapper */}
         </div>
 
@@ -256,6 +222,44 @@ export default function WatchClient({ videoId }: { videoId: string }) {
 
         </div>
         
+      </div>
+
+      {/* Full Width Related Videos Section */}
+      <div className="max-w-[1400px] mx-auto px-4 md:px-0">
+        {/* Related Videos Section */}
+        <div className="mt-12 mb-8">
+          <h2 className="text-xl font-bold text-white mb-6">Related Videos</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 2xl:grid-cols-6 gap-4 md:gap-6">
+            {relatedVideos.map((video) => (
+              <Link href={`/watch/${video.id}`} key={video.id} className="group flex flex-col gap-2">
+                <div className="aspect-[16/9] bg-[#1a1a1a] rounded-lg overflow-hidden relative border border-zinc-800/50 group-hover:border-zinc-700 transition-colors">
+                {video.thumbnail_url ? (
+                  <img src={video.thumbnail_url} alt={video.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                ) : (
+                  <div className="w-full h-full bg-zinc-800" />
+                )}
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center z-10">
+                  <PlayCircle className="w-10 h-10 text-white opacity-0 group-hover:opacity-100 transform scale-75 group-hover:scale-100 transition-all duration-300 drop-shadow-lg" />
+                </div>
+                <div className="absolute bottom-1 right-1 px-1.5 py-0.5 bg-black/80 rounded text-[10px] font-bold text-white z-20">
+                  {video.duration || "0:00"}
+                </div>
+                </div>
+                <div className="flex flex-col">
+                <h3 className="font-medium text-[14px] text-zinc-100 leading-snug line-clamp-2 group-hover:text-pink-400 transition-colors">
+                  {video.title}
+                </h3>
+                <div className="flex items-center gap-1 mt-1">
+                  <span className="text-[12px] text-zinc-400 hover:text-white transition-colors truncate">
+                    Creator {video.creator_id}
+                  </span>
+                  <CheckCircle2 className="w-3 h-3 text-blue-400" />
+                </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
