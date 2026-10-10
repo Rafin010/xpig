@@ -24,7 +24,7 @@ export default function VideoManagementPage() {
   useEffect(() => {
     async function fetchVideos() {
       try {
-        const res = await fetch('http://127.0.0.1:8000/api/v1/videos/');
+        const res = await fetch('https://xpig.onrender.com/api/v1/videos/');
         if (!res.ok) throw new Error('Failed to fetch');
         const data = await res.json();
         // The API returns an array directly

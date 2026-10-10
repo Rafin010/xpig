@@ -17,13 +17,13 @@ export default function AdminDashboard() {
   const [traffic, setTraffic] = useState({ live_users: 0, today_visitors: 0, week_visitors: 0, month_visitors: 0 });
 
   useEffect(() => {
-    fetch('http://127.0.0.1:8000/api/v1/admin/stats')
+    fetch('https://xpig.onrender.com/api/v1/admin/stats')
       .then(res => res.json())
       .then(data => setStats(data))
       .catch(err => console.error(err));
       
     const fetchTraffic = () => {
-      fetch('http://127.0.0.1:8000/api/v1/analytics/stats')
+      fetch('https://xpig.onrender.com/api/v1/analytics/stats')
         .then(res => res.json())
         .then(data => setTraffic(data))
         .catch(err => console.error(err));

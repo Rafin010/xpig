@@ -62,7 +62,7 @@ export function Navbar() {
         const userInfo = await res.json();
         
         // Sync with backend
-        const backendRes = await fetch('http://127.0.0.1:8000/api/v1/auth/google', {
+        const backendRes = await fetch('https://xpig.onrender.com/api/v1/auth/google', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -97,7 +97,7 @@ export function Navbar() {
     }
     const timer = setTimeout(async () => {
       try {
-        const res = await fetch(`http://127.0.0.1:8000/api/v1/discover/search`);
+        const res = await fetch(`https://xpig.onrender.com/api/v1/discover/search`);
         if (res.ok) {
           const data = await res.json();
           const items = data.items || [];

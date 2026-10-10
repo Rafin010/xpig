@@ -6,7 +6,7 @@ export const instant = false;
 async function getBlogPost(slug: string) {
   if (process.env.VERCEL) return null;
   try {
-    const res = await fetch(`http://127.0.0.1:8000/api/v1/blogs/${slug}`, { cache: 'no-store' });
+    const res = await fetch(`https://xpig.onrender.com/api/v1/blogs/${slug}`, { cache: 'no-store' });
     if (!res.ok) return null;
     return await res.json();
   } catch (err) {

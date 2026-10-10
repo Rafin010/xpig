@@ -15,7 +15,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     }
     
     const ping = () => {
-      fetch('http://127.0.0.1:8000/api/v1/analytics/ping', {
+      fetch('https://xpig.onrender.com/api/v1/analytics/ping', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ session_id: sessionId })

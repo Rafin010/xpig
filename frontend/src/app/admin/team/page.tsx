@@ -27,7 +27,7 @@ export default function TeamManagementPage() {
     setMessage({ type: '', text: '' });
 
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/v1/admin/cofounders', {
+      const res = await fetch('https://xpig.onrender.com/api/v1/admin/cofounders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })
@@ -53,7 +53,7 @@ export default function TeamManagementPage() {
   
   const fetchCofounders = async () => {
     try {
-      const res = await fetch('http://127.0.0.1:8000/api/v1/admin/cofounders');
+      const res = await fetch('https://xpig.onrender.com/api/v1/admin/cofounders');
       if (res.ok) {
         const data = await res.json();
         setCofounders(data);

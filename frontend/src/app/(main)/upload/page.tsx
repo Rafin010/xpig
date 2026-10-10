@@ -26,7 +26,7 @@ export default function UploadPage() {
         });
         const userInfo = await res.json();
         
-        const backendRes = await fetch('http://127.0.0.1:8000/api/v1/auth/google', {
+        const backendRes = await fetch('https://xpig.onrender.com/api/v1/auth/google', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: userInfo.email, name: userInfo.name, google_id: userInfo.sub, picture: userInfo.picture })

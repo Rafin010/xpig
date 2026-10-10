@@ -26,13 +26,13 @@ export default function WatchClient({ videoId }: { videoId: string }) {
       setIsLoading(true);
       try {
         // Fetch specific video (assuming /api/v1/videos/{id} exists, if not we fallback to mock)
-        const vRes = await fetch(`http://127.0.0.1:8000/api/v1/videos/${videoId}`);
+        const vRes = await fetch(`https://xpig.onrender.com/api/v1/videos/${videoId}`);
         if (vRes.ok) {
           setVideoData(await vRes.json());
         }
 
         // Fetch related videos (using discover search for now)
-        const relRes = await fetch(`http://127.0.0.1:8000/api/v1/discover/search`);
+        const relRes = await fetch(`https://xpig.onrender.com/api/v1/discover/search`);
         if (relRes.ok) {
           const rData = await relRes.json();
           // Filter out current video
@@ -77,7 +77,7 @@ export default function WatchClient({ videoId }: { videoId: string }) {
       const videoElement = document.querySelector('video');
       if (videoElement && !videoElement.paused) {
         try {
-          await fetch(`http://127.0.0.1:8000/api/v1/videos/${videoId}/ping`, {
+          await fetch(`https://xpig.onrender.com/api/v1/videos/${videoId}/ping`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

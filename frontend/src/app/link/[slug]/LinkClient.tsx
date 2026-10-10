@@ -20,7 +20,7 @@ function GatewayContent({ slug }: { slug: string }) {
 
   useEffect(() => {
     // Fetch destination from API
-    fetch(`http://127.0.0.1:8000/api/v1/links/${slug}`)
+    fetch(`https://xpig.onrender.com/api/v1/links/${slug}`)
       .then(res => {
         if (!res.ok) throw new Error('Link not found');
         return res.json();
@@ -62,7 +62,7 @@ function GatewayContent({ slug }: { slug: string }) {
 
     // Register click on backend
     try {
-      await fetch(`http://127.0.0.1:8000/api/v1/links/${slug}/click`, { method: 'POST' });
+      await fetch(`https://xpig.onrender.com/api/v1/links/${slug}/click`, { method: 'POST' });
     } catch (e) {
       console.error('Click tracking failed');
     }

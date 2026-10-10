@@ -34,7 +34,7 @@ export default function StorageSettingsPage() {
     try {
       setLoading(true);
       setError(null);
-      const res = await fetch("http://127.0.0.1:8000/api/v1/storage-nodes/");
+      const res = await fetch("https://xpig.onrender.com/api/v1/storage-nodes/");
       if (!res.ok) throw new Error("Failed to fetch storage nodes");
       const data = await res.json();
       setNodes(data);
@@ -61,7 +61,7 @@ export default function StorageSettingsPage() {
     e.preventDefault();
     try {
       setSubmitting(true);
-      const res = await fetch("http://127.0.0.1:8000/api/v1/storage-nodes/", {
+      const res = await fetch("https://xpig.onrender.com/api/v1/storage-nodes/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

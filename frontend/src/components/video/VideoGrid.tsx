@@ -20,7 +20,7 @@ export default function VideoGrid({ initialVideos = [] }: { initialVideos?: any[
     setLoading(true);
     try {
       const size = 20;
-      let url = `http://127.0.0.1:8000/api/v1/discover/search?size=${size}&page=${pageNum}`;
+      let url = `https://xpig.onrender.com/api/v1/discover/search?size=${size}&page=${pageNum}`;
       if (category !== "All") url += `&category=${encodeURIComponent(category)}`;
 
       const res = await fetch(url);
