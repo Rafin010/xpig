@@ -15,3 +15,5 @@ aiofiles
 
 asyncpg
 psycopg2-binary
+
+email-validator
