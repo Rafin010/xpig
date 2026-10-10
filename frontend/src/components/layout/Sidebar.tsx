@@ -57,7 +57,7 @@ export function Sidebar() {
         />
       )}
       <aside className={`fixed left-0 top-16 bottom-0 transition-all duration-300 bg-[#111111] z-[60] flex flex-col
-        ${isCollapsed ? '-translate-x-full lg:translate-x-0 lg:w-20' : 'translate-x-0 w-64'}
+        ${isCollapsed ? '-translate-x-full' : 'translate-x-0 w-64'}
       `}>
       
       {/* Scrollable Links Area */}
@@ -115,4 +115,5 @@ export function Sidebar() {
     </>
   );
 }
+
 

@@ -14,7 +14,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
         <Sidebar />
       </Suspense>
       <main className={`flex-1 w-full transition-all duration-300 min-h-[calc(100vh-4rem)] ${
-        isCollapsed ? 'lg:pl-20' : 'lg:pl-64'
+        isCollapsed ? 'lg:pl-0' : 'lg:pl-64'
       }`}>
         {children}
       </main>

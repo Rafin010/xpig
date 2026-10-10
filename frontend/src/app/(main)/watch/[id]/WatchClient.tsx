@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import React, { useState, useEffect, useRef } from 'react';
 import { Player } from '@/components/video/Player';
 import { ThumbsUp, MessageSquare, Share2, Heart, PlayCircle, CheckCircle2, Eye } from 'lucide-react';
@@ -99,7 +99,7 @@ export default function WatchClient({ videoId }: { videoId: string }) {
   const testHlsUrl = "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8";
   
   return (
-    <div className="min-h-screen bg-black md:px-8 text-white pb-20">
+    <div className="min-h-screen bg-black md:px-8 text-white pb-20 pt-4 md:pt-6">
       <div className="max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-3 gap-0 md:gap-8">
         
         {/* Left Col - Video & Details & Related */}
@@ -171,7 +171,7 @@ export default function WatchClient({ videoId }: { videoId: string }) {
           </div>
           
           <div className="mt-6 bg-[#111] rounded-xl p-4 text-sm text-zinc-300">
-            <p className="font-medium text-white mb-2">{videoData?.views || 0} views • {videoData?.created_at ? new Date(videoData.created_at).toLocaleDateString() : 'Just now'}</p>
+            <p className="font-medium text-white mb-2">{videoData?.views || 0} views â€¢ {videoData?.created_at ? new Date(videoData.created_at).toLocaleDateString() : 'Just now'}</p>
             <p>{videoData?.description || 'No description available for this video.'}</p>
           </div>
 
@@ -213,7 +213,7 @@ export default function WatchClient({ videoId }: { videoId: string }) {
         </div>
 
         {/* Right Col - Ads & Sponsored */}
-        <div className="lg:col-span-1 h-fit sticky top-24 space-y-6">
+        <div className="lg:col-span-1 space-y-6">
           
           {/* Ad Banner 1 */}
           <a href="#" className="block w-full h-64 bg-zinc-900 rounded-xl border border-zinc-800 overflow-hidden relative group">
@@ -260,5 +260,6 @@ export default function WatchClient({ videoId }: { videoId: string }) {
     </div>
   );
 }
+
 
 
