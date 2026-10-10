@@ -19,7 +19,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ session_id: sessionId })
-      }).catch(err => console.error('Tracker error:', err));
+      }).catch(() => {});
     };
     
     ping(); // Immediate ping on load

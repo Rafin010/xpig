@@ -1,4 +1,4 @@
-﻿import type { Metadata, Viewport } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/Providers";
@@ -66,7 +66,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       </head>
-      <body className="min-h-full flex flex-col bg-[#0a0a0a] text-white overflow-x-hidden">
+      <body suppressHydrationWarning className="min-h-full flex flex-col bg-[#0a0a0a] text-white overflow-x-hidden">
         <Providers>
           {children}
         </Providers>
