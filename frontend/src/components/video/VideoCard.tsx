@@ -1,6 +1,6 @@
-'use client';
+﻿'use client';
 
-import { PlayCircle, ThumbsUp, Eye, CheckCircle2 } from 'lucide-react';
+import { Play, ThumbsUp, Eye, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import { useState, useRef } from 'react';
 
@@ -9,7 +9,6 @@ export default function VideoCard({ video }: { video: any }) {
   const previewTimeout = useRef<NodeJS.Timeout | null>(null);
 
   const handleMouseEnter = () => {
-    // Small delay before playing to avoid flashes when quickly moving mouse over multiple videos
     previewTimeout.current = setTimeout(() => {
       setIsHovered(true);
     }, 500);
@@ -21,6 +20,8 @@ export default function VideoCard({ video }: { video: any }) {
   };
 
   const isNew = video.created_at && (new Date().getTime() - new Date(video.created_at).getTime()) < 72 * 60 * 60 * 1000;
+  
+  const playUrl = video.preview_url || video.video_url;
 
   return (
     <Link 
@@ -32,14 +33,14 @@ export default function VideoCard({ video }: { video: any }) {
       {/* Thumbnail Box */}
       <div className="aspect-[16/9] bg-[#1a1a1a] rounded-lg overflow-hidden relative border border-zinc-800/50 group-hover:border-zinc-700 transition-colors">
         
-        {isHovered && video.preview_url ? (
+        {isHovered && playUrl ? (
           <video 
-            src={video.preview_url} 
+            src={playUrl} 
             autoPlay 
             muted 
             loop 
             playsInline
-            className="w-full h-full object-cover scale-105"
+            className="w-full h-full object-cover scale-105 transition-all duration-700"
           />
         ) : (
           <>
@@ -57,8 +58,11 @@ export default function VideoCard({ video }: { video: any }) {
           </>
         )}
 
-        <div className={`absolute inset-0 bg-black/0 transition-colors flex items-center justify-center z-10 ${isHovered && !video.preview_url ? 'bg-black/20' : ''}`}>
-          <PlayCircle className={`w-12 h-12 text-white transform transition-all duration-300 drop-shadow-lg ${isHovered && !video.preview_url ? 'opacity-100 scale-100' : 'opacity-0 scale-75'}`} />
+        <div className={`absolute inset-0 transition-colors flex items-center justify-center z-10 ${isHovered && !playUrl ? 'bg-black/20' : ''}`}>
+          {/* Glassmorphism Play Icon */}
+          <div className={`w-14 h-14 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center transform transition-all duration-300 shadow-[0_8px_32px_rgba(0,0,0,0.3)] ${isHovered && !playUrl ? 'opacity-100 scale-100' : 'opacity-0 scale-75 group-hover:opacity-100 group-hover:scale-100'}`}>
+            <Play fill="white" className="w-6 h-6 text-white ml-1 drop-shadow-md" />
+          </div>
         </div>
 
         {/* NEW Badge */}
@@ -79,7 +83,7 @@ export default function VideoCard({ video }: { video: any }) {
       {/* Video Meta */}
       <div className="flex gap-3 mt-1 px-1">
         <div className="w-9 h-9 bg-pink-500 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-bold text-white shadow-lg">
-          {video.creator_id}
+          {video.creator_id?.toString().slice(0,2) || "U"}
         </div>
         
         <div className="flex flex-col overflow-hidden">

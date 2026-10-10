@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 import Link from 'next/link';
 import { Home, Compass, Radio, Users, User, Star, History, ThumbsUp, ShieldAlert, BarChart3, Settings, Database } from 'lucide-react';
 import { usePathname } from 'next/navigation';
@@ -56,7 +56,7 @@ export function Sidebar() {
           onClick={toggleSidebar}
         />
       )}
-      <aside className={`fixed left-0 top-16 bottom-0 transition-all duration-300 bg-[#111111] z-[60] flex flex-col
+      <aside className={`fixed left-0 top-16 bottom-0 transition-all duration-300 bg-black/50 backdrop-blur-xl border-r border-white/5 z-[60] flex flex-col
         ${isCollapsed ? '-translate-x-full' : 'translate-x-0 w-64'}
       `}>
       
@@ -94,7 +94,7 @@ export function Sidebar() {
       </div>
 
       {/* Settings & Footer Fixed Area */}
-      <div className={`bg-[#111111] z-10 p-4 border-t border-zinc-900 flex flex-col gap-4 ${isCollapsed ? 'items-center' : ''}`}>
+      <div className={`p-4 border-t border-white/5 flex flex-col gap-4 ${isCollapsed ? 'items-center' : ''}`}>
         <div className="w-full">
           <NavItem icon={Settings} label="Settings" href="/settings" />
         </div>
