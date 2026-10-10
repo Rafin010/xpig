@@ -93,7 +93,7 @@ export default function WatchClient({ videoId }: { videoId: string }) {
     return () => clearInterval(interval);
   }, [videoId]);
 
-  if (isLoading) return <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center text-white">Loading...</div>;
+  if (isLoading) return <WatchPageSkeleton />;
 
   // We use a public test HLS URL for demonstration since we haven't uploaded real files yet
   const testHlsUrl = "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8";

@@ -8,12 +8,12 @@ export function TopAdBanner() {
   if (!isVisible) return null;
 
   return (
-    <div className="fixed top-16 left-0 right-0 bg-[#0a0a0a] border-b border-pink-500/30 z-[45] flex items-center justify-center p-2 shadow-xl animate-in slide-in-from-top-10">
+    <div className="fixed top-16 left-0 right-0 z-[45] flex items-center justify-center p-2 shadow-none animate-in slide-in-from-top-10">
       <a 
         href="https://example.com/ad" 
         target="_blank" 
         rel="noopener noreferrer"
-        className="w-full max-w-3xl h-16 bg-zinc-900 overflow-hidden relative group cursor-pointer block rounded-md"
+        className="w-full max-w-3xl h-16 bg-zinc-900 overflow-hidden relative group cursor-pointer block rounded-md border-0"
       >
         <img 
           src="https://images.unsplash.com/photo-1518791841217-8f162f1e1131?q=80&w=1200&auto=format&fit=crop" 
@@ -32,7 +32,7 @@ export function TopAdBanner() {
       </a>
       <button 
         onClick={() => setIsVisible(false)}
-        className="absolute top-2 right-2 md:top-4 md:right-4 p-1.5 bg-black/50 hover:bg-black/80 rounded-full text-zinc-400 hover:text-white transition-colors border border-white/10"
+        className="absolute top-2 right-2 md:top-4 md:right-4 p-1.5 bg-black/50 hover:bg-black/80 rounded-full text-zinc-400 hover:text-white transition-colors border-0"
       >
         <X className="w-4 h-4" />
       </button>

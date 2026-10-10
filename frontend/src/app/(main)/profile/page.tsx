@@ -1,11 +1,12 @@
 ﻿'use client';
 import { User } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import ProfileSkeleton from '@/components/skeletons/ProfileSkeleton';
 
 export default function ProfilePage() {
   const { isAuthenticated, isInitializing, loginWithGoogle } = useAuth();
 
-  if (isInitializing) return null;
+  if (isInitializing) return <ProfileSkeleton />;
 
   if (!isAuthenticated) {
     return (

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import VideoCard from './VideoCard';
 import AdCard from '../ads/AdCard';
+import VideoCardSkeleton from '../skeletons/VideoCardSkeleton';
 import { Loader2 } from 'lucide-react';
 
 export default function VideoGrid({ initialVideos = [] }: { initialVideos?: any[] }) {
@@ -92,7 +93,11 @@ export default function VideoGrid({ initialVideos = [] }: { initialVideos?: any[
         {activeCategory === "All" ? "Recommended For You" : `${activeCategory} Videos`}
       </h1>
 
-      {videos.length === 0 && !loading ? (
+      {videos.length === 0 && loading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-8">
+          {[...Array(12)].map((_, i) => <VideoCardSkeleton key={i} />)}
+        </div>
+      ) : videos.length === 0 && !loading ? (
         <div className="text-zinc-500 flex flex-col items-center justify-center py-20">
           <p>No videos found for this category.</p>
         </div>
@@ -112,7 +117,7 @@ export default function VideoGrid({ initialVideos = [] }: { initialVideos?: any[
         </div>
       )}
 
-      {loading && (
+      {loading && videos.length > 0 && (
         <div className="flex justify-center py-8">
           <Loader2 className="w-8 h-8 text-pink-500 animate-spin" />
         </div>
