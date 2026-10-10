@@ -97,6 +97,16 @@ export function Sidebar() {
       <div className={`p-4 border-t border-white/5 flex flex-col gap-4 ${isCollapsed ? 'items-center' : ''}`}>
         <div className="w-full">
           <NavItem icon={Settings} label="Settings" href="/settings" />
+          <a 
+            href="mailto:info@xpig.me?subject=Business%20and%20Advertising%20Inquiry"
+            className="flex items-center gap-4 px-4 py-3 rounded-2xl transition-all duration-300 font-bold text-sm text-pink-400 hover:bg-pink-500/10 hover:text-pink-300 w-full"
+            title={isCollapsed ? "Advertise" : undefined}
+          >
+            <div className="w-5 h-5 flex-shrink-0 flex items-center justify-center">
+              <span className="text-lg leading-none">🚀</span>
+            </div>
+            {!isCollapsed && <span>Advertise with us</span>}
+          </a>
         </div>
         
         {!isCollapsed && (
