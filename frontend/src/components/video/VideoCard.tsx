@@ -1,3 +1,4 @@
+import Image from 'next/image';
 'use client';
 
 import { Play, ThumbsUp, Eye, CheckCircle2 } from 'lucide-react';
@@ -45,11 +46,11 @@ export default function VideoCard({ video }: { video: any }) {
         ) : (
           <>
             {video.thumbnail_url ? (
-              <img 
+              <Image 
                 src={video.thumbnail_url} 
                 alt={video.title} 
                 className={`w-full h-full object-cover transition-transform duration-500 ${isHovered ? 'scale-110' : ''}`} 
-              />
+              / fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" />
             ) : (
               <div className="w-full h-full bg-zinc-800 flex items-center justify-center">
                 <span className="text-zinc-600 font-bold">NO THUMBNAIL</span>

@@ -1,3 +1,4 @@
+import Image from 'next/image';
 ﻿'use client';
 import { useState } from 'react';
 import { X } from 'lucide-react';
@@ -15,11 +16,11 @@ export function TopAdBanner() {
         rel="noopener noreferrer"
         className="w-full max-w-3xl h-16 bg-zinc-900 overflow-hidden relative group cursor-pointer block rounded-md border-0"
       >
-        <img 
+        <Image 
           src="https://images.unsplash.com/photo-1518791841217-8f162f1e1131?q=80&w=1200&auto=format&fit=crop" 
           alt="Ad Banner" 
           className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" 
-        />
+        / fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" />
         <div className="absolute inset-0 bg-gradient-to-r from-pink-900/60 to-purple-900/60 flex items-center justify-between px-6">
           <div className="flex flex-col">
             <h4 className="text-white font-bold text-base md:text-lg drop-shadow-md">Play Live Cams for Free</h4>

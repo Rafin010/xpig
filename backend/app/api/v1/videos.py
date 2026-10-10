@@ -9,6 +9,9 @@ from arq.connections import RedisSettings
 
 from app.db.session import get_db
 from app.models.video import Video, VideoSource
+from app.api.deps import get_current_user
+from app.models.user import User
+import uuid
 from app.schemas.video import Video as VideoSchema, VideoCreate, VideoSourceCreate
 from app.services.media_provider import SelfHostedProvider # Replace with factory
 
@@ -32,10 +35,10 @@ class VideoCreateWithStatus(VideoCreate):
 @router.post("/", response_model=VideoSchema)
 async def create_video(
     video_in: VideoCreateWithStatus,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ) -> Any:
-    # In production, extract user_id from auth token
-    user_id = 1 
+    user_id = current_user.id 
     
     video = Video(
         title=video_in.title,
@@ -103,7 +106,8 @@ async def upload_video(
     title: str = Form(...),
     description: Optional[str] = Form(None),
     file: UploadFile = File(...),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ) -> Any:
     """
     Secure endpoint for uploading a video file.
@@ -112,7 +116,7 @@ async def upload_video(
     if not file.content_type.startswith("video/"):
         raise HTTPException(status_code=400, detail="Invalid file type. Must be a video.")
         
-    user_id = 1 # Mock authenticated user
+    user_id = current_user.id
     
     # 1. Create Video DB record in 'PENDING' state
     video = Video(
@@ -129,7 +133,10 @@ async def upload_video(
     # 2. Save raw file to a staging directory
     staging_dir = f"D:/tmp/pig_uploads/{video.id}"
     os.makedirs(staging_dir, exist_ok=True)
-    input_path = os.path.join(staging_dir, file.filename)
+    # Fix Path Traversal Risk
+    ext = os.path.splitext(file.filename)[1]
+    safe_filename = f"{uuid.uuid4()}{ext}"
+    input_path = os.path.join(staging_dir, safe_filename)
     
     async with aiofiles.open(input_path, 'wb') as out_file:
         content = await file.read()

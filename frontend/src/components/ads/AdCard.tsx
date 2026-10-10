@@ -1,3 +1,4 @@
+import Image from 'next/image';
 ﻿'use client';
 
 import { ExternalLink } from 'lucide-react';
@@ -13,11 +14,11 @@ export default function AdCard() {
     >
       {/* Thumbnail Box */}
       <div className="aspect-[16/9] bg-[#1a1a1a] rounded-lg overflow-hidden relative border border-pink-500/30 group-hover:border-pink-500 transition-colors">
-        <img 
+        <Image 
           src="https://images.unsplash.com/photo-1611162617474-5b21e879e113?q=80&w=600&auto=format&fit=crop" 
           alt="Advertisement" 
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
-        />
+        / fill sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" />
 
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex flex-col justify-end p-3 z-10">
           <h4 className="text-white font-bold text-lg leading-tight drop-shadow-md group-hover:text-pink-400 transition-colors">
