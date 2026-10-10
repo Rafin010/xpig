@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { Play, ThumbsUp, Eye, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
@@ -58,11 +58,8 @@ export default function VideoCard({ video }: { video: any }) {
           </>
         )}
 
+        {/* Glassmorphism Play Icon Removed as per user request */}
         <div className={`absolute inset-0 transition-colors flex items-center justify-center z-10 ${isHovered && !playUrl ? 'bg-black/20' : ''}`}>
-          {/* Glassmorphism Play Icon */}
-          <div className={`w-14 h-14 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center transform transition-all duration-300 shadow-[0_8px_32px_rgba(0,0,0,0.3)] ${isHovered && !playUrl ? 'opacity-100 scale-100' : 'opacity-0 scale-75 group-hover:opacity-100 group-hover:scale-100'}`}>
-            <Play fill="white" className="w-6 h-6 text-white ml-1 drop-shadow-md" />
-          </div>
         </div>
 
         {/* NEW Badge */}

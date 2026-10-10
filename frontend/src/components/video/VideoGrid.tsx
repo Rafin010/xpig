@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import VideoCard from './VideoCard';
+import AdCard from '../ads/AdCard';
 import { Loader2 } from 'lucide-react';
 
 export default function VideoGrid({ initialVideos = [] }: { initialVideos?: any[] }) {
