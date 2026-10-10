@@ -62,6 +62,20 @@ async def process_video_task(ctx, video_id: int, input_path: str, output_dir: st
     )
     await thumb_process.communicate()
     
+    # Extract 5-second lightweight preview clip
+    preview_path = os.path.join(output_dir, f"preview_{video_id}.mp4")
+    ffmpeg_preview_cmd = [
+        "ffmpeg", "-y", "-ss", "00:00:05", "-t", "00:00:05", "-i", input_path,
+        "-vf", "scale=640:-2", "-an", "-c:v", "libx264", "-crf", "28", "-preset", "ultrafast", preview_path
+    ]
+    logger.info(f"Extracting preview clip: {' '.join(ffmpeg_preview_cmd)}")
+    preview_process = await asyncio.create_subprocess_exec(
+        *ffmpeg_preview_cmd,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+    await preview_process.communicate()
+    
     # Connect to DB to handle storage
     async with SessionLocal() as db:
         active_node = await StorageService.get_active_node(db, final_file_size)
@@ -81,6 +95,19 @@ async def process_video_task(ctx, video_id: int, input_path: str, output_dir: st
                 StorageService.upload_file_to_r2,
                 thumbnail_path,
                 thumb_dest,
+                active_node
+            )
+            
+        # Upload Preview if it was successfully created
+        preview_url = None
+        if os.path.exists(preview_path):
+            preview_dest = f"videos/{video_id}/preview.mp4"
+            logger.info(f"Uploading preview clip to R2 node {active_node.name} at {preview_dest}")
+            preview_url = await loop.run_in_executor(
+                None,
+                StorageService.upload_file_to_r2,
+                preview_path,
+                preview_dest,
                 active_node
             )
             
@@ -104,6 +131,8 @@ async def process_video_task(ctx, video_id: int, input_path: str, output_dir: st
         video.status = "PUBLISHED"
         if thumbnail_url:
             video.thumbnail_url = thumbnail_url
+        if preview_url:
+            video.preview_url = preview_url
         
         # Add VideoSource
         source = VideoSource(
@@ -125,6 +154,8 @@ async def process_video_task(ctx, video_id: int, input_path: str, output_dir: st
             os.remove(watermarked_path)
             if os.path.exists(thumbnail_path):
                 os.remove(thumbnail_path)
+            if os.path.exists(preview_path):
+                os.remove(preview_path)
         except Exception as e:
             logger.warning(f"Failed to cleanup temp files: {e}")
             
