@@ -1,6 +1,7 @@
-import type { Metadata } from "next";
+﻿import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { Providers } from "@/components/Providers";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -12,16 +13,59 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: "PIG - Premium Content",
-  description: "The premium creator-first content platform.",
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#0a0a0a",
 };
 
-import { Providers } from "@/components/Providers";
+export const metadata: Metadata = {
+  title: "XPIG - Premium Creator Content Platform",
+  description: "Discover exclusive content, follow top creators, and monetize your audience on XPIG. The ultimate platform for premium video sharing, networking, and creator success.",
+  keywords: ["premium content", "creators", "monetization", "exclusive videos", "creator platform", "video sharing", "social network", "XPIG", "xpig.me", "live streaming", "content monetization", "vlogging", "influencers", "creator economy", "digital content", "video hosting", "ad network", "social media", "subscriptions", "creative community"],
+  openGraph: {
+    title: "XPIG - Premium Creator Content Platform",
+    description: "Discover exclusive content, follow top creators, and monetize your audience on XPIG.",
+    url: "https://xpig.me",
+    siteName: "XPIG",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "XPIG - The Premium Content Platform",
+    description: "Discover exclusive content and monetize your audience.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+};
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "XPIG",
+    "url": "https://xpig.me",
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": "https://xpig.me/search?q={search_term_string}",
+      "query-input": "required name=search_term_string"
+    }
+  };
+
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}>
+      <head>
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      </head>
       <body className="min-h-full flex flex-col bg-[#0a0a0a] text-white overflow-x-hidden">
         <Providers>
           {children}
