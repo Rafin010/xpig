@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import Link from 'next/link';
 import { Home, Compass, Radio, Users, User, Star, History, ThumbsUp, ShieldAlert, BarChart3, Settings, Database } from 'lucide-react';
 import { usePathname } from 'next/navigation';
@@ -36,8 +36,8 @@ export function Sidebar() {
         href={href}
         className={`flex items-center ${isCollapsed ? 'justify-center lg:px-0 px-4' : 'gap-4 px-4'} py-3 rounded-2xl transition-all duration-300 font-bold text-sm ${
           isActive 
-            ? 'bg-gradient-to-r from-pink-500 to-rose-400 text-white shadow-[0_4px_10px_rgba(236,72,153,0.4)] transform hover:-translate-y-1' 
-            : 'text-zinc-400 hover:bg-pink-500/10 hover:text-pink-400 transform hover:scale-105'
+            ? 'bg-gradient-to-r from-pink-600 to-pink-500 text-white' 
+            : 'text-zinc-400 hover:bg-[#222] hover:text-white'
         }`}
         title={isCollapsed ? label : undefined}
       >
@@ -115,3 +115,4 @@ export function Sidebar() {
     </>
   );
 }
+

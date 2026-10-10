@@ -1,9 +1,9 @@
-import VideoGrid from '@/components/video/VideoGrid';
+﻿import VideoGrid from '@/components/video/VideoGrid';
 
 export const instant = false;
 
 async function getVideos() {
-  if (process.env.VERCEL || process.env.NODE_ENV === 'production' && !process.env.NEXT_PUBLIC_API_URL) return [];
+  
   try {
     const res = await fetch('https://xpig.onrender.com/api/v1/discover/search?size=20&page=1', { 
       cache: 'no-store' 
@@ -26,3 +26,4 @@ export default async function HomePage() {
     </div>
   );
 }
+

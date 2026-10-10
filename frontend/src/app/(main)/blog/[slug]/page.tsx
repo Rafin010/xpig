@@ -1,10 +1,10 @@
-import Link from 'next/link';
+﻿import Link from 'next/link';
 import { Calendar, User, Tag, ArrowLeft, PlayCircle, Share2, Link as LinkIcon } from 'lucide-react';
 
 export const instant = false;
 
 async function getBlogPost(slug: string) {
-  if (process.env.VERCEL) return null;
+  
   try {
     const res = await fetch(`https://xpig.onrender.com/api/v1/blogs/${slug}`, { cache: 'no-store' });
     if (!res.ok) return null;
@@ -130,5 +130,6 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
     </div>
   );
 }
+
 
 

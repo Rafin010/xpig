@@ -1,10 +1,10 @@
-import Link from 'next/link';
+﻿import Link from 'next/link';
 import { FileText, Calendar, ArrowRight } from 'lucide-react';
 
 export const instant = false;
 
 async function getBlogs() {
-  if (process.env.VERCEL) return [];
+  
   try {
     const res = await fetch('https://xpig.onrender.com/api/v1/blogs', { cache: 'no-store' });
     if (!res.ok) return [];
@@ -81,3 +81,4 @@ export default async function BlogIndexPage() {
     </div>
   );
 }
+
