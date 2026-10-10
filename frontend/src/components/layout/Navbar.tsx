@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 import Link from 'next/link';
 import Image from 'next/image';
 import React, { useState, useEffect, useRef } from 'react';
@@ -53,36 +53,7 @@ export function Navbar() {
     }
   };
 
-  
-        const userInfo = await res.json();
-        
-        // Sync with backend
-        const backendRes = await fetch('https://xpig.onrender.com/api/v1/auth/google', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: userInfo.email,
-            name: userInfo.name,
-            picture: userInfo.picture,
-          })
-        });
-        const backendUser = await backendRes.json();
 
-        login({
-          id: backendUser.id,
-          name: userInfo.name,
-          email: userInfo.email,
-          picture: userInfo.picture,
-          sub: userInfo.sub,
-          is_superuser: backendUser.is_superuser,
-          is_cofounder: backendUser.is_cofounder
-        });
-      } catch (err) {
-        console.error("Failed to fetch user info", err);
-      }
-    },
-    onError: () => console.log('Login Failed'),
-  });
 
   // Real-time search
   useEffect(() => {
@@ -267,4 +238,5 @@ export function Navbar() {
     </nav>
   );
 }
+
 
