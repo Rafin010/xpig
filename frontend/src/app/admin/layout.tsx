@@ -1,46 +1,18 @@
-'use client';
-import { useAuth } from '@/context/AuthContext';
-import { useRouter, usePathname } from 'next/navigation';
-import { useEffect } from 'react';
+﻿'use client';
+import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { LayoutDashboard, Video, Users, Settings } from 'lucide-react';
 
-import { Suspense } from 'react';
-
-function AdminLayoutContent({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, user, isInitializing } = useAuth();
-  const router = useRouter();
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-
-  const isAllowed = user?.is_superuser || user?.is_cofounder;
-
-  useEffect(() => {
-    if (!isInitializing) {
-      if (!isAuthenticated || !isAllowed) {
-        router.replace('/');
-      }
-    }
-  }, [isAuthenticated, isAllowed, isInitializing, router]);
-
-  if (isInitializing || !isAuthenticated || !isAllowed) {
-    return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center text-white">
-        <span className="w-8 h-8 border-4 border-pink-500 border-t-transparent rounded-full animate-spin"></span>
-      </div>
-    );
-  }
 
   const navLinks = [
     { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/admin/videos', label: 'Videos', icon: Video },
     { href: '/admin/users', label: 'Users', icon: Users },
+    { href: '/admin/settings', label: 'Settings', icon: Settings },
+    { href: '/admin/team', label: 'Team Roles', icon: Users },
   ];
-
-  // Owner only features
-  if (user?.is_superuser) {
-    navLinks.push({ href: '/admin/settings', label: 'Settings', icon: Settings });
-    navLinks.push({ href: '/admin/team', label: 'Team Roles', icon: Users }); // Adding Team
-  }
 
   return (
     <div className="flex min-h-screen bg-[#050505]">
@@ -48,7 +20,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
       <aside className="w-64 bg-[#111] border-r border-zinc-800 flex flex-col">
         <div className="p-6 border-b border-zinc-800">
           <h2 className="text-xl font-black text-pink-500 tracking-tight">PIG Admin</h2>
-          <p className="text-xs text-zinc-500 mt-1">{user?.is_superuser ? 'Superuser Access' : 'Co-Founder Access'}</p>
+          <p className="text-xs text-zinc-500 mt-1">Superuser Access</p>
         </div>
         <nav className="flex-1 p-4 space-y-2">
           {navLinks.map(link => {
@@ -71,13 +43,5 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
         </div>
       </main>
     </div>
-  );
-}
-
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <Suspense fallback={<div>Loading Admin Layout...</div>}>
-      <AdminLayoutContent>{children}</AdminLayoutContent>
-    </Suspense>
   );
 }
