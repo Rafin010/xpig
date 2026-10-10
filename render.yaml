@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: xpig-backend
+    env: python
+    region: singapore
+    buildCommand: "cd backend && pip install -r requirements.txt"
+    startCommand: "cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: DATABASE_URL
+        value: "postgresql+asyncpg://neondb_owner:npg_e9hC3rsjlMdS@ep-cold-rain-b393m5ei-pooler.c-4.ap-southeast-1.aws.neon.tech/neondb"
+      - key: SECRET_KEY
+        value: "SUPER_SECRET_KEY_CHANGE_ME_IN_PRODUCTION"
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "11520"
+      - key: PROJECT_NAME
+        value: "XPIG API"
+      - key: PYTHON_VERSION
+        value: "3.10.11"
