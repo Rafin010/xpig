@@ -1,15 +1,15 @@
-'use client';
+﻿'use client';
 import Link from 'next/link';
 import Image from 'next/image';
 import React, { useState, useEffect, useRef } from 'react';
 import { Search, Menu, Bell, User, Plus, Settings, X, LogOut } from 'lucide-react';
 import { useSidebar } from '@/context/SidebarContext';
 import { useAuth } from '@/context/AuthContext';
-import { useGoogleLogin } from '@react-oauth/google';
+
 
 export function Navbar() {
   const { toggleSidebar } = useSidebar();
-  const { user, login, logout, isAuthenticated } = useAuth();
+  const { user, loginWithGoogle, logout, isAuthenticated } = useAuth();
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -53,12 +53,7 @@ export function Navbar() {
     }
   };
 
-  const googleLogin = useGoogleLogin({
-    onSuccess: async (tokenResponse) => {
-      try {
-        const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-          headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
-        });
+  
         const userInfo = await res.json();
         
         // Sync with backend
@@ -229,7 +224,7 @@ export function Navbar() {
             ) : (
               <div className="p-5 flex flex-col gap-4">
                 <h3 className="text-white font-bold text-lg text-center tracking-tight">Join XPIG Network</h3>
-                <button onClick={() => googleLogin()} className="flex items-center justify-center gap-2 w-full bg-white hover:bg-zinc-200 text-black py-2.5 rounded-xl font-bold transition-colors">
+                <button onClick={() => loginWithGoogle()} className="flex items-center justify-center gap-2 w-full bg-white hover:bg-zinc-200 text-black py-2.5 rounded-xl font-bold transition-colors">
                   <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-5 h-5" alt="Google" />
                   Continue with Google
                 </button>
@@ -272,3 +267,4 @@ export function Navbar() {
     </nav>
   );
 }
+

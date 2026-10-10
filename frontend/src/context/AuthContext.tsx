@@ -1,5 +1,6 @@
-'use client';
+﻿'use client';
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useGoogleLogin } from '@react-oauth/google';
 
 type AuthUser = {
   id?: number;
@@ -14,6 +15,7 @@ type AuthUser = {
 type AuthContextType = {
   user: AuthUser | null;
   login: (profile: AuthUser) => void;
+  loginWithGoogle: () => void;
   logout: () => void;
   isAuthenticated: boolean;
   isInitializing: boolean;
@@ -43,8 +45,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem('xpig_user');
   };
 
+  const loginWithGoogle = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      try {
+        const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
+        });
+        const userInfo = await res.json();
+        
+        // Sync with backend
+        const backendRes = await fetch('https://xpig.onrender.com/api/v1/auth/google', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: userInfo.email,
+            name: userInfo.name,
+            picture: userInfo.picture,
+          })
+        });
+        const backendUser = await backendRes.json();
+
+        login({
+          id: backendUser.id,
+          name: userInfo.name,
+          email: userInfo.email,
+          picture: userInfo.picture,
+          sub: userInfo.sub || '',
+          is_superuser: backendUser.is_superuser,
+          is_cofounder: backendUser.is_cofounder
+        });
+      } catch (err) {
+        console.error('Google login failed', err);
+      }
+    }
+  });
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user, isInitializing }}>
+    <AuthContext.Provider value={{ user, login, loginWithGoogle, logout, isAuthenticated: !!user, isInitializing }}>
       {children}
     </AuthContext.Provider>
   );
