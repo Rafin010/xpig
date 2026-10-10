@@ -14,12 +14,23 @@ export default function AdminDashboard() {
   const [timeFilter, setTimeFilter] = useState('Week');
   const [durationFilter, setDurationFilter] = useState('All');
   const [stats, setStats] = useState({ total_videos: 0, total_users: 0, total_views: 0 });
+  const [traffic, setTraffic] = useState({ live_users: 0, today_visitors: 0, week_visitors: 0, month_visitors: 0 });
 
   useEffect(() => {
     fetch('http://127.0.0.1:8000/api/v1/admin/stats')
       .then(res => res.json())
       .then(data => setStats(data))
       .catch(err => console.error(err));
+      
+    const fetchTraffic = () => {
+      fetch('http://127.0.0.1:8000/api/v1/analytics/stats')
+        .then(res => res.json())
+        .then(data => setTraffic(data))
+        .catch(err => console.error(err));
+    };
+    fetchTraffic();
+    const interval = setInterval(fetchTraffic, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   const StatCard = ({ title, value, change, icon: Icon, color }: any) => (
@@ -56,6 +67,34 @@ export default function AdminDashboard() {
               {f}
             </button>
           ))}
+        </div>
+      </div>
+      
+      {/* Traffic Analytics (Real-Time) */}
+      <div className="bg-[#111111] border border-zinc-800/50 p-6 rounded-2xl shadow-xl">
+        <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
+          <Activity className="w-5 h-5 text-red-500" /> Live Traffic
+        </h3>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-8">
+          <div className="flex flex-col gap-1">
+            <span className="text-sm font-semibold text-zinc-400 flex items-center gap-2">
+              <span className="w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse"></span>
+              Live Right Now
+            </span>
+            <span className="text-4xl font-black text-white">{traffic.live_users}</span>
+          </div>
+          <div className="flex flex-col gap-1 border-l border-zinc-800/50 pl-6">
+            <span className="text-sm font-semibold text-zinc-400">Today&apos;s Visitors</span>
+            <span className="text-4xl font-black text-white">{traffic.today_visitors}</span>
+          </div>
+          <div className="flex flex-col gap-1 border-l border-zinc-800/50 pl-6">
+            <span className="text-sm font-semibold text-zinc-400">This Week</span>
+            <span className="text-4xl font-black text-white">{traffic.week_visitors}</span>
+          </div>
+          <div className="flex flex-col gap-1 border-l border-zinc-800/50 pl-6">
+            <span className="text-sm font-semibold text-zinc-400">This Month</span>
+            <span className="text-4xl font-black text-white">{traffic.month_visitors}</span>
+          </div>
         </div>
       </div>
 

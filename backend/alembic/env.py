@@ -15,6 +15,8 @@ import app.models.social
 import app.models.moderation
 import app.models.payment
 import app.models.link
+import app.models.storage
+import app.models.analytics
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

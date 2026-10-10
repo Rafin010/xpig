@@ -18,12 +18,14 @@ export function Player({ src, poster, title }: PlayerProps) {
   const handleFullscreenChange = (isFullscreen: boolean) => {
     try {
       if (isFullscreen) {
-        if (screen.orientation && screen.orientation.lock) {
-          screen.orientation.lock('landscape').catch((e) => console.log('Orientation lock not supported', e));
+        const orientation = screen.orientation as any;
+        if (orientation && orientation.lock) {
+          orientation.lock('landscape').catch((e: any) => console.log('Orientation lock not supported', e));
         }
       } else {
-        if (screen.orientation && screen.orientation.unlock) {
-          screen.orientation.unlock();
+        const orientation = screen.orientation as any;
+        if (orientation && orientation.unlock) {
+          orientation.unlock();
         }
       }
     } catch (err) {

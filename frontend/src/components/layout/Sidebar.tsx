@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { Home, Compass, Radio, Users, User, Star, History, ThumbsUp, ShieldAlert, BarChart3, Settings } from 'lucide-react';
+import { Home, Compass, Radio, Users, User, Star, History, ThumbsUp, ShieldAlert, BarChart3, Settings, Database } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { useSidebar } from '@/context/SidebarContext';
 
@@ -25,6 +25,8 @@ export function Sidebar() {
   const adminLinks = [
     { icon: BarChart3, label: 'Creator Dashboard', href: '/creator' },
     { icon: ShieldAlert, label: 'Trust & Safety', href: '/admin' },
+    { icon: Database, label: 'Storage', href: '/admin/storage' },
+    { icon: Users, label: 'Team', href: '/admin/team' },
   ];
 
   const NavItem = ({ icon: Icon, label, href }: { icon: any, label: string, href: string }) => {

@@ -3,6 +3,7 @@ import VideoGrid from '@/components/video/VideoGrid';
 export const instant = false;
 
 async function getVideos() {
+  if (process.env.VERCEL || process.env.NODE_ENV === 'production' && !process.env.NEXT_PUBLIC_API_URL) return [];
   try {
     const res = await fetch('http://127.0.0.1:8000/api/v1/discover/search?size=20&page=1', { 
       cache: 'no-store' 

@@ -5,7 +5,9 @@ import { useEffect } from 'react';
 import Link from 'next/link';
 import { LayoutDashboard, Video, Users, Settings } from 'lucide-react';
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+import { Suspense } from 'react';
+
+function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, user, isInitializing } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
@@ -69,5 +71,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
       </main>
     </div>
+  );
+}
+
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <Suspense fallback={<div>Loading Admin Layout...</div>}>
+      <AdminLayoutContent>{children}</AdminLayoutContent>
+    </Suspense>
   );
 }

@@ -2,49 +2,130 @@ import os
 import asyncio
 import logging
 from pathlib import Path
+from app.db.session import SessionLocal
+from app.models.video import Video, VideoSource
+from app.services.storage_service import StorageService
 
 logger = logging.getLogger(__name__)
 
 async def process_video_task(ctx, video_id: int, input_path: str, output_dir: str):
     """
-    Executes FFmpeg to convert the raw mp4 into HLS format with multiple resolutions.
-    This simulates a real distributed worker (e.g. AWS MediaConvert or local FFmpeg).
+    Executes FFmpeg to add a watermark, then uploads the video to Cloudflare R2
+    using the active storage node logic.
     """
     logger.info(f"Starting video processing for video_id={video_id}")
     
-    # 1. Ensure output directory exists
     os.makedirs(output_dir, exist_ok=True)
+    watermarked_path = os.path.join(output_dir, f"video_{video_id}_wm.mp4")
+    watermark_image = "D:/_Xpig/backend/watermark.png"
     
-    # We will simulate processing if FFmpeg is not installed on this local system.
-    # A real production command would look like:
+    # Check file size for space allocation
+    # (Using the original file size as a rough estimate for the final file size)
+    file_size_bytes = os.path.getsize(input_path)
+    
+    # FFmpeg command to add watermark
+    # scale watermark to reasonable size (e.g., 150px wide), place in bottom-right corner
     ffmpeg_cmd = [
-        "ffmpeg", "-i", input_path,
-        "-preset", "fast", "-g", "48", "-sc_threshold", "0",
-        "-map", "0:v:0", "-map", "0:a:0",
-        "-s:v:0", "1920x1080", "-c:v:0", "libx264", "-b:v:0", "5000k",
-        "-s:v:1", "1280x720", "-c:v:1", "libx264", "-b:v:1", "2800k",
-        "-s:v:2", "854x480", "-c:v:2", "libx264", "-b:v:2", "1400k",
-        "-f", "hls", "-hls_time", "6", "-hls_playlist_type", "vod",
-        "-master_pl_name", "master.m3u8",
-        "-var_stream_map", "v:0,a:0 v:1,a:0 v:2,a:0",
-        f"{output_dir}/stream_%v.m3u8"
+        "ffmpeg", "-y", "-i", input_path, "-i", watermark_image,
+        "-filter_complex", "[1][0]scale2ref=w='iw*15/100':h='ow/mdar'[wm][vid];[vid][wm]overlay=W-w-10:H-h-10",
+        "-c:a", "copy",
+        watermarked_path
     ]
     
-    # For now, let's just log and mock the creation of files to simulate success
-    # without actually hanging if ffmpeg is missing.
     logger.info(f"Executing: {' '.join(ffmpeg_cmd)}")
     
-    # Simulate processing time
-    await asyncio.sleep(5)
+    # Run FFmpeg process
+    process = await asyncio.create_subprocess_exec(
+        *ffmpeg_cmd,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+    stdout, stderr = await process.communicate()
     
-    # Mock creating the master playlist
-    master_playlist_path = os.path.join(output_dir, "master.m3u8")
-    with open(master_playlist_path, "w") as f:
-        f.write("#EXTM3U\\n# Mock HLS Playlist\\n")
+    if process.returncode != 0:
+        logger.error(f"FFmpeg failed: {stderr.decode()}")
+        return {"status": "error", "message": "FFmpeg processing failed"}
         
-    logger.info(f"Finished processing video_id={video_id}. Master playlist at {master_playlist_path}")
+    final_file_size = os.path.getsize(watermarked_path)
     
-    # In production, we'd update the DB here:
-    # update videos set status = 'PUBLISHED' where id = video_id
+    # Extract thumbnail
+    thumbnail_path = os.path.join(output_dir, f"thumb_{video_id}.jpg")
+    ffmpeg_thumb_cmd = [
+        "ffmpeg", "-y", "-ss", "00:00:05", "-i", input_path,
+        "-frames:v", "1", "-q:v", "2", thumbnail_path
+    ]
+    logger.info(f"Extracting thumbnail: {' '.join(ffmpeg_thumb_cmd)}")
+    thumb_process = await asyncio.create_subprocess_exec(
+        *ffmpeg_thumb_cmd,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+    await thumb_process.communicate()
     
-    return {"status": "success", "video_id": video_id, "playlist": master_playlist_path}
+    # Connect to DB to handle storage
+    async with SessionLocal() as db:
+        active_node = await StorageService.get_active_node(db, final_file_size)
+        
+        if not active_node:
+            logger.error("No available R2 storage node found!")
+            return {"status": "error", "message": "Storage limit reached"}
+            
+        # Upload Thumbnail if it was successfully created
+        thumbnail_url = None
+        loop = asyncio.get_running_loop()
+        if os.path.exists(thumbnail_path):
+            thumb_dest = f"videos/{video_id}/thumb.jpg"
+            logger.info(f"Uploading thumbnail to R2 node {active_node.name} at {thumb_dest}")
+            thumbnail_url = await loop.run_in_executor(
+                None,
+                StorageService.upload_file_to_r2,
+                thumbnail_path,
+                thumb_dest,
+                active_node
+            )
+            
+        destination_name = f"videos/{video_id}/video_wm.mp4"
+        logger.info(f"Uploading to R2 node {active_node.name} at {destination_name}")
+        
+        # Upload Video via boto3
+        public_url = await loop.run_in_executor(
+            None, 
+            StorageService.upload_file_to_r2,
+            watermarked_path,
+            destination_name,
+            active_node
+        )
+        
+        # Update Node usage
+        active_node.total_used_bytes += final_file_size
+        
+        # Update Video record
+        video = await db.get(Video, video_id)
+        video.status = "PUBLISHED"
+        if thumbnail_url:
+            video.thumbnail_url = thumbnail_url
+        
+        # Add VideoSource
+        source = VideoSource(
+            video_id=video.id,
+            source_type="DIRECT_URL",
+            source_provider="CLOUDFLARE_R2",
+            source_url=public_url,
+            resolution="Original",
+            mime_type="video/mp4"
+        )
+        db.add(source)
+        
+        await db.commit()
+        logger.info(f"Video {video_id} successfully published at {public_url}")
+        
+        # Clean up local files
+        try:
+            os.remove(input_path)
+            os.remove(watermarked_path)
+            if os.path.exists(thumbnail_path):
+                os.remove(thumbnail_path)
+        except Exception as e:
+            logger.warning(f"Failed to cleanup temp files: {e}")
+            
+    return {"status": "success", "video_id": video_id, "url": public_url}

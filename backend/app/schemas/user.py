@@ -9,6 +9,7 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     password: str
     date_of_birth: str  # e.g., YYYY-MM-DD
+    is_cofounder: Optional[bool] = False
 
 class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None

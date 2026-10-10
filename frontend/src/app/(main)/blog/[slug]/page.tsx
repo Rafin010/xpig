@@ -4,6 +4,7 @@ import { Calendar, User, Tag, ArrowLeft, PlayCircle, Share2, Link as LinkIcon } 
 export const instant = false;
 
 async function getBlogPost(slug: string) {
+  if (process.env.VERCEL) return null;
   try {
     const res = await fetch(`http://127.0.0.1:8000/api/v1/blogs/${slug}`, { cache: 'no-store' });
     if (!res.ok) return null;
@@ -13,8 +14,9 @@ async function getBlogPost(slug: string) {
   }
 }
 
-export default async function BlogPostPage({ params }: { params: { slug: string } }) {
-  const slug = params.slug;
+export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
+  const resolvedParams = await params;
+  const slug = resolvedParams.slug;
   const post = await getBlogPost(slug);
 
   if (!post) {
@@ -41,7 +43,7 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
               <ArrowLeft className="w-4 h-4" /> Back to all articles
             </Link>
             <div className="flex flex-wrap gap-2 mb-4">
-              {post.keywords.map(kw => (
+              {post.keywords.map((kw: string) => (
                 <span key={kw} className="px-3 py-1 bg-pink-500/20 text-pink-400 border border-pink-500/20 rounded-full text-xs font-bold uppercase tracking-wider">
                   {kw}
                 </span>
@@ -128,3 +130,5 @@ export default async function BlogPostPage({ params }: { params: { slug: string 
     </div>
   );
 }
+
+

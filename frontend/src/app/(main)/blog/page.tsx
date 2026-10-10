@@ -4,6 +4,7 @@ import { FileText, Calendar, ArrowRight } from 'lucide-react';
 export const instant = false;
 
 async function getBlogs() {
+  if (process.env.VERCEL) return [];
   try {
     const res = await fetch('http://127.0.0.1:8000/api/v1/blogs', { cache: 'no-store' });
     if (!res.ok) return [];

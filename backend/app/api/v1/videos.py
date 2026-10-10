@@ -1,7 +1,7 @@
 from typing import Any, List, Optional
 import os
 import aiofiles
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from arq import create_pool
@@ -99,6 +99,7 @@ async def get_video(
 
 @router.post("/upload", response_model=VideoSchema)
 async def upload_video(
+    background_tasks: BackgroundTasks,
     title: str = Form(...),
     description: Optional[str] = Form(None),
     file: UploadFile = File(...),
@@ -136,9 +137,9 @@ async def upload_video(
         
     output_dir = f"D:/tmp/pig_hls/{video.id}"
     
-    # 3. Enqueue `process_video_task` to ARQ worker
-    redis = await create_pool(RedisSettings(host='localhost', port=6379))
-    await redis.enqueue_job('process_video_task', video.id, input_path, output_dir)
+    # 3. Use FastAPI BackgroundTasks
+    from app.worker.tasks import process_video_task
+    background_tasks.add_task(process_video_task, None, video.id, input_path, output_dir)
     
     return video
 

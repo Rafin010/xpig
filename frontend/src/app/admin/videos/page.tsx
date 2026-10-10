@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { PlayCircle, UploadCloud, Eye, TrendingUp, Filter, Search, MoreVertical, CheckCircle2, XCircle } from 'lucide-react';
+import { PlayCircle, UploadCloud, Eye, TrendingUp, Filter, Search, MoreVertical, CheckCircle2, XCircle, Trash, Edit } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
 interface Video {
@@ -10,8 +10,10 @@ interface Video {
   title: string;
   creator_id: string | number;
   views: number;
+  total_watch_seconds?: number;
   created_at?: string;
   status: string;
+  thumbnail_url?: string;
 }
 
 export default function VideoManagementPage() {
@@ -164,25 +166,36 @@ export default function VideoManagementPage() {
             <table className="w-full text-left text-sm whitespace-nowrap">
               <thead className="bg-[#161616] text-zinc-400 border-b border-zinc-800/50">
                 <tr>
-                  <th className="px-6 py-4 font-semibold">Video Title</th>
-                  <th className="px-6 py-4 font-semibold">Creator ID</th>
-                  <th className="px-6 py-4 font-semibold">Total Views</th>
+                  <th className="px-6 py-4 font-semibold">Video</th>
+                  <th className="px-6 py-4 font-semibold">Upload Date</th>
+                  <th className="px-6 py-4 font-semibold">Reach/Views</th>
                   <th className="px-6 py-4 font-semibold">Status</th>
-                  <th className="px-6 py-4 font-semibold text-right">Moderation Actions</th>
+                  <th className="px-6 py-4 font-semibold text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-800/50 text-zinc-300">
                 {videos.map(vid => (
                   <tr key={vid.id} className="hover:bg-[#1a1a1a] transition-colors group">
-                    <td className="px-6 py-4">
-                      <div className="font-bold text-white flex items-center gap-2">
-                        <PlayCircle className="w-4 h-4 text-pink-500" />
-                        {vid.title}
+                    <td className="px-6 py-4 flex items-center gap-4">
+                      <div className="w-16 h-10 bg-zinc-800 rounded flex items-center justify-center overflow-hidden">
+                        {vid.thumbnail_url ? (
+                          <img src={vid.thumbnail_url} alt="thumbnail" className="w-full h-full object-cover" />
+                        ) : (
+                          <PlayCircle className="w-5 h-5 text-zinc-500" />
+                        )}
                       </div>
-                      <div className="text-xs text-zinc-500 mt-0.5 ml-6">ID: {vid.id}</div>
+                      <div>
+                        <div className="font-bold text-white">{vid.title}</div>
+                        <div className="text-xs text-zinc-500 mt-0.5">ID: {vid.id}</div>
+                      </div>
                     </td>
-                    <td className="px-6 py-4 text-zinc-400 font-medium">{vid.creator_id}</td>
-                    <td className="px-6 py-4 font-semibold">{vid.views || 0}</td>
+                    <td className="px-6 py-4 text-zinc-400 font-medium">
+                      {vid.created_at ? new Date(vid.created_at).toLocaleDateString() : 'Unknown'}
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="font-semibold text-white">{vid.views || 0} views</div>
+                      <div className="text-xs text-zinc-500 mt-0.5">{vid.total_watch_seconds || 0}s watch time</div>
+                    </td>
                     <td className="px-6 py-4">
                       <span className={`px-2.5 py-1 rounded text-xs font-bold ${
                         vid.status === 'Published' || vid.status === 'published' ? 'bg-green-500/10 text-green-400' : 
@@ -194,18 +207,11 @@ export default function VideoManagementPage() {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        {(vid.status === 'Pending Review' || vid.status === 'pending') && (
-                          <button className="p-2 text-zinc-500 hover:text-green-500 transition-colors bg-[#222] rounded-lg border border-zinc-700" title="Approve Video">
-                            <CheckCircle2 className="w-4 h-4" />
-                          </button>
-                        )}
-                        {user?.is_superuser && (
-                          <button className="p-2 text-zinc-500 hover:text-red-500 transition-colors bg-[#222] rounded-lg border border-zinc-700" title="Delete/Reject Video">
-                            <XCircle className="w-4 h-4" />
-                          </button>
-                        )}
-                        <button className="p-2 text-zinc-500 hover:text-white transition-colors bg-[#222] rounded-lg border border-zinc-700">
-                          <MoreVertical className="w-4 h-4" />
+                        <button className="p-2 text-zinc-500 hover:text-blue-400 transition-colors bg-[#222] rounded-lg border border-zinc-700" title="Edit Video" onClick={() => alert('Edit ' + vid.id)}>
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button className="p-2 text-zinc-500 hover:text-red-500 transition-colors bg-[#222] rounded-lg border border-zinc-700" title="Delete Video" onClick={() => alert('Delete ' + vid.id)}>
+                          <Trash className="w-4 h-4" />
                         </button>
                       </div>
                     </td>

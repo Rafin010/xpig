@@ -34,7 +34,7 @@ export default function VideoGrid({ initialVideos = [] }: { initialVideos?: any[
           setVideos(prev => [...prev, ...items]);
         }
         
-        if (items.length < limit) setHasMore(false);
+        if (items.length < size) setHasMore(false);
       }
     } catch (err) {
       console.error(err);

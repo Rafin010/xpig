@@ -31,3 +31,4 @@ logs/
 # IDE
 .vscode/
 .idea/
+.env.local
