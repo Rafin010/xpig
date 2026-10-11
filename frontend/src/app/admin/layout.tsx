@@ -32,6 +32,24 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     } catch {
       setRole('superuser');
     }
+
+    // Set Admin Browser Tab Favicon
+    let icon = document.querySelector("link[rel*='icon']") as HTMLLinkElement;
+    if (!icon) {
+      icon = document.createElement('link');
+      icon.rel = 'icon';
+      document.head.appendChild(icon);
+    }
+    icon.type = 'image/png';
+    icon.href = '/admin-icon.png';
+
+    let appleIcon = document.querySelector("link[rel='apple-touch-icon']") as HTMLLinkElement;
+    if (!appleIcon) {
+      appleIcon = document.createElement('link');
+      appleIcon.rel = 'apple-touch-icon';
+      document.head.appendChild(appleIcon);
+    }
+    appleIcon.href = '/admin-icon.png';
   }, []);
 
   // Co-Founder Heartbeat (every 60 seconds to track active session duration)
@@ -99,8 +117,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {/* Sidebar Header */}
         <div className="p-6 border-b border-zinc-800/80">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-zinc-800 border border-zinc-700 flex items-center justify-center">
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+            <div className="w-9 h-9 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center overflow-hidden p-0.5 shadow-sm">
+              <img src="/admin-icon.png" alt="XPIG Admin" className="w-full h-full object-contain" />
             </div>
             <div>
               <h2 className="text-base font-black text-white tracking-tight leading-tight">XPIG Admin</h2>

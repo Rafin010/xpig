@@ -70,31 +70,101 @@ export default function AdminDashboard() {
         </div>
       </div>
       
-      {/* Traffic Analytics (Real-Time) */}
-      <div className="bg-[#111111] border border-zinc-800/50 p-6 rounded-2xl shadow-xl">
-        <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-          <Activity className="w-5 h-5 text-red-500" /> Live Traffic
-        </h3>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-8">
-          <div className="flex flex-col gap-1">
-            <span className="text-sm font-semibold text-zinc-400 flex items-center gap-2">
-              <span className="w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse"></span>
-              Live Right Now
+      {/* Traffic Analytics (Real-Time Mission-Control Console) */}
+      <div className="bg-[#111113] border border-zinc-800/80 p-6 rounded-2xl shadow-2xl relative overflow-hidden">
+        {/* Header with Live Pulsing Radar Beacon */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-zinc-800/60">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-500">
+              <Activity className="w-5 h-5 animate-pulse" />
+            </div>
+            <div>
+              <h3 className="text-lg font-black text-white tracking-tight flex items-center gap-2">
+                Live Traffic & Audience Telemetry
+              </h3>
+              <p className="text-xs text-zinc-400">Real-time concurrent sessions and active visitor flow</p>
+            </div>
+          </div>
+
+          <div className="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-zinc-900 border border-zinc-800 text-xs font-mono">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
             </span>
-            <span className="text-4xl font-black text-white">{traffic.live_users}</span>
+            <span className="text-emerald-400 font-bold tracking-wider">LIVE TELEMETRY</span>
+            <span className="text-zinc-600">•</span>
+            <span className="text-zinc-400 text-[11px]">10s Polling</span>
           </div>
-          <div className="flex flex-col gap-1 border-l border-zinc-800/50 pl-6">
-            <span className="text-sm font-semibold text-zinc-400">Today&apos;s Visitors</span>
-            <span className="text-4xl font-black text-white">{traffic.today_visitors}</span>
+        </div>
+
+        {/* 4 Mission-Control Stat Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          
+          {/* Card 1: Live Concurrent Users */}
+          <div className="bg-zinc-900/60 border border-zinc-800/80 hover:border-emerald-500/40 p-4.5 rounded-xl transition-all shadow-md group">
+            <div className="flex items-center justify-between text-zinc-400 mb-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                Active Right Now
+              </span>
+              <Activity className="w-4 h-4 text-emerald-400" />
+            </div>
+            <div className="text-4xl font-black text-white tracking-tight group-hover:scale-105 transition-transform duration-200">
+              {traffic.live_users}
+            </div>
+            <p className="text-xs text-zinc-400 mt-2 font-medium">
+              Concurrent live users on platform
+            </p>
           </div>
-          <div className="flex flex-col gap-1 border-l border-zinc-800/50 pl-6">
-            <span className="text-sm font-semibold text-zinc-400">This Week</span>
-            <span className="text-4xl font-black text-white">{traffic.week_visitors}</span>
+
+          {/* Card 2: Today's Unique Visitors */}
+          <div className="bg-zinc-900/60 border border-zinc-800/80 hover:border-blue-500/40 p-4.5 rounded-xl transition-all shadow-md group">
+            <div className="flex items-center justify-between text-zinc-400 mb-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-blue-400">
+                Today&apos;s Visitors
+              </span>
+              <Users className="w-4 h-4 text-blue-400" />
+            </div>
+            <div className="text-4xl font-black text-white tracking-tight group-hover:scale-105 transition-transform duration-200">
+              {traffic.today_visitors.toLocaleString()}
+            </div>
+            <p className="text-xs text-zinc-400 mt-2 font-medium">
+              24-hour unique IP visitor reach
+            </p>
           </div>
-          <div className="flex flex-col gap-1 border-l border-zinc-800/50 pl-6">
-            <span className="text-sm font-semibold text-zinc-400">This Month</span>
-            <span className="text-4xl font-black text-white">{traffic.month_visitors}</span>
+
+          {/* Card 3: 7-Day Active Reach */}
+          <div className="bg-zinc-900/60 border border-zinc-800/80 hover:border-purple-500/40 p-4.5 rounded-xl transition-all shadow-md group">
+            <div className="flex items-center justify-between text-zinc-400 mb-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-purple-400">
+                7-Day Active Reach
+              </span>
+              <TrendingUp className="w-4 h-4 text-purple-400" />
+            </div>
+            <div className="text-4xl font-black text-white tracking-tight group-hover:scale-105 transition-transform duration-200">
+              {traffic.week_visitors.toLocaleString()}
+            </div>
+            <p className="text-xs text-zinc-400 mt-2 font-medium">
+              Trailing 7-day visitor volume
+            </p>
           </div>
+
+          {/* Card 4: 30-Day Monthly Reach */}
+          <div className="bg-zinc-900/60 border border-zinc-800/80 hover:border-pink-500/40 p-4.5 rounded-xl transition-all shadow-md group">
+            <div className="flex items-center justify-between text-zinc-400 mb-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-pink-400">
+                30-Day Total Traffic
+              </span>
+              <Eye className="w-4 h-4 text-pink-400" />
+            </div>
+            <div className="text-4xl font-black text-white tracking-tight group-hover:scale-105 transition-transform duration-200">
+              {traffic.month_visitors.toLocaleString()}
+            </div>
+            <p className="text-xs text-zinc-400 mt-2 font-medium">
+              Total monthly unique impressions
+            </p>
+          </div>
+
         </div>
       </div>
 

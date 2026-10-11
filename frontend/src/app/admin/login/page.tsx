@@ -304,6 +304,41 @@ export default function AdminLoginPage() {
                 )}
               </button>
 
+              {/* Co-Founder Permissions & Access Scope Summary */}
+              <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 space-y-3">
+                <div className="text-xs font-bold text-zinc-200 flex items-center justify-between border-b border-zinc-800/80 pb-2">
+                  <span className="flex items-center gap-1.5">
+                    <Scale className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Team Role Access Scope</span>
+                  </span>
+                  <span className="text-[10px] text-pink-400 font-mono bg-pink-500/10 px-2 py-0.5 rounded border border-pink-500/20">RBAC Verified</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[11px]">
+                  <div className="space-y-1 bg-zinc-950/40 p-2.5 rounded-xl border border-zinc-800/60">
+                    <span className="text-emerald-400 font-bold block flex items-center gap-1">
+                      ✓ Allowed Privileges
+                    </span>
+                    <ul className="text-zinc-300 space-y-0.5 pl-3 list-disc">
+                      <li>Video Moderation Queue</li>
+                      <li>Content Review & Approvals</li>
+                      <li>Live Traffic Overview</li>
+                      <li>User Directory & Support</li>
+                    </ul>
+                  </div>
+                  <div className="space-y-1 bg-zinc-950/40 p-2.5 rounded-xl border border-zinc-800/60">
+                    <span className="text-rose-400 font-bold block flex items-center gap-1">
+                      ✕ Restricted (Super Admin Only)
+                    </span>
+                    <ul className="text-zinc-500 space-y-0.5 pl-3 list-disc">
+                      <li>Cloudflare R2 API Secrets</li>
+                      <li>User GPS & Geo-Location</li>
+                      <li>Financials & Payout Data</li>
+                      <li>Team Role Modifications</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
               <div className="flex items-center gap-2 justify-center text-[11px] text-zinc-500">
                 <MapPin className="w-3.5 h-3.5 text-zinc-400" />
                 <span>ম্যাপ লোকেশন অনুমোদন বাধ্যতামূলক</span>

@@ -1,4 +1,4 @@
-﻿import type { Metadata, Viewport } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
@@ -21,20 +21,31 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "XPIG - Premium Creator Content Platform",
-  description: "Discover exclusive content, follow top creators, and monetize your audience on XPIG. The ultimate platform for premium video sharing, networking, and creator success.",
+  metadataBase: new URL("https://xpig.me"),
+  title: "XPIG - আপনার পছন্দের নতুন ঠিকানা!",
+  description: "XPIG.me-এ ভিজিট করুন এবং নতুন নতুন লিংক, আকর্ষণীয় কনটেন্ট এবং প্রিমিয়াম কালেকশন পেতে আজই আমাদের ওয়েবসাইট ঘুরে দেখুন!",
   keywords: ["premium content", "creators", "monetization", "exclusive videos", "creator platform", "video sharing", "social network", "XPIG", "xpig.me", "live streaming", "content monetization", "vlogging", "influencers", "creator economy", "digital content", "video hosting", "ad network", "social media", "subscriptions", "creative community"],
   openGraph: {
-    title: "XPIG - Premium Creator Content Platform",
-    description: "Discover exclusive content, follow top creators, and monetize your audience on XPIG.",
+    title: "XPIG - আপনার পছন্দের নতুন ঠিকানা!",
+    description: "XPIG.me-এ ভিজিট করুন এবং নতুন নতুন লিংক, আকর্ষণীয় কনটেন্ট এবং প্রিমিয়াম কালেকশন পেতে আজই আমাদের ওয়েবসাইট ঘুরে দেখুন!",
     url: "https://xpig.me",
     siteName: "XPIG",
+    images: [
+      {
+        url: "/og-image.jpg",
+        width: 1200,
+        height: 675,
+        alt: "XPIG - আপনার পছন্দের নতুন ঠিকানা!",
+      },
+    ],
     type: "website",
+    locale: "bn_BD",
   },
   twitter: {
     card: "summary_large_image",
-    title: "XPIG - The Premium Content Platform",
-    description: "Discover exclusive content and monetize your audience.",
+    title: "XPIG - আপনার পছন্দের নতুন ঠিকানা!",
+    description: "XPIG.me-এ ভিজিট করুন এবং নতুন নতুন লিংক, আকর্ষণীয় কনটেন্ট এবং প্রিমিয়াম কালেকশন পেতে আজই আমাদের ওয়েবসাইট ঘুরে দেখুন!",
+    images: ["/og-image.jpg"],
   },
   robots: {
     index: true,

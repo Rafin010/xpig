@@ -2,8 +2,7 @@ from typing import Any, List, Optional
 import os
 import aiofiles
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, BackgroundTasks
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.future import select
+from sqlalchemy import select, delete, desc
 from arq import create_pool
 from arq.connections import RedisSettings
 
@@ -218,3 +217,155 @@ async def toggle_video_like(
     video.likes = current_likes
     await db.commit()
     return {"status": "ok", "likes": video.likes, "is_liked": new_is_liked}
+
+@router.delete("/{video_id}")
+async def delete_video(
+    video_id: int,
+    db: AsyncSession = Depends(get_db)
+) -> Any:
+    """
+    Permanently delete video and all associated video sources.
+    """
+    result = await db.execute(select(Video).where(Video.id == video_id))
+    video = result.scalars().first()
+    if not video:
+        raise HTTPException(status_code=404, detail="Video not found")
+
+    # Remove all video sources
+    await db.execute(delete(VideoSource).where(VideoSource.video_id == video_id))
+    await db.delete(video)
+    await db.commit()
+    return {"success": True, "message": f"Video {video_id} deleted successfully"}
+
+class VideoUpdatePayload(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    visibility: Optional[str] = None
+    status: Optional[str] = None
+    thumbnail_url: Optional[str] = None
+
+@router.patch("/{video_id}")
+async def update_video(
+    video_id: int,
+    payload: VideoUpdatePayload,
+    db: AsyncSession = Depends(get_db)
+) -> Any:
+    """
+    Update video title, description, visibility, and status.
+    """
+    result = await db.execute(select(Video).where(Video.id == video_id))
+    video = result.scalars().first()
+    if not video:
+        raise HTTPException(status_code=404, detail="Video not found")
+
+    if payload.title is not None:
+        video.title = payload.title.strip()
+    if payload.description is not None:
+        video.description = payload.description.strip()
+    if payload.visibility is not None:
+        video.visibility = payload.visibility
+    if payload.status is not None:
+        video.status = payload.status
+    if payload.thumbnail_url is not None:
+        video.thumbnail_url = payload.thumbnail_url
+
+    await db.commit()
+    await db.refresh(video)
+    return {"success": True, "video": video}
+
+@router.post("/admin-upload")
+async def admin_direct_upload(
+    file: UploadFile = File(...),
+    title: str = Form(...),
+    description: Optional[str] = Form(""),
+    visibility: Optional[str] = Form("PUBLIC"),
+    status: Optional[str] = Form("PUBLISHED"),
+    thumbnail_url: Optional[str] = Form(None),
+    db: AsyncSession = Depends(get_db)
+) -> Any:
+    """
+    Ultra-fast direct upload from admin's device to Cloudflare R2 storage.
+    """
+    from app.services.storage import storage_service
+    from app.models.storage import StorageNode
+    
+    # 1. Save temp file
+    os.makedirs("temp", exist_ok=True)
+    temp_ext = os.path.splitext(file.filename or ".mp4")[1] or ".mp4"
+    temp_filename = f"temp/{uuid.uuid4()}{temp_ext}"
+    
+    file_bytes = await file.read()
+    file_size = len(file_bytes)
+    
+    with open(temp_filename, "wb") as f:
+        f.write(file_bytes)
+        
+    try:
+        # 2. Upload to Cloudflare R2
+        r2_object_name = f"videos/admin/{uuid.uuid4()}{temp_ext}"
+        r2_video_url = storage_service.upload_file(
+            temp_filename, 
+            object_name=r2_object_name, 
+            content_type=file.content_type or "video/mp4"
+        )
+        
+        # 3. Create Video Record
+        new_video = Video(
+            title=title.strip(),
+            description=(description or "").strip(),
+            visibility=visibility or "PUBLIC",
+            status=status or "PUBLISHED",
+            thumbnail_url=thumbnail_url or "https://pub-1080459c8c0a45b9a545f0b3b3fb21c1.r2.dev/videos/default_thumb.jpg",
+            preview_url=r2_video_url,
+            creator_id=1,
+            views=0,
+            likes=0,
+            total_watch_seconds=0
+        )
+        db.add(new_video)
+        await db.commit()
+        await db.refresh(new_video)
+        
+        # 4. Attach VideoSource
+        new_source = VideoSource(
+            video_id=new_video.id,
+            source_type="DIRECT_URL",
+            source_provider="CLOUDFLARE_R2",
+            source_url=r2_video_url,
+            resolution="Original",
+            mime_type=file.content_type or "video/mp4"
+        )
+        db.add(new_source)
+        
+        # 5. Update active storage node bytes
+        active_node_res = await db.execute(select(StorageNode).where(StorageNode.is_active == True))
+        active_node = active_node_res.scalars().first()
+        if active_node:
+            active_node.total_used_bytes = (active_node.total_used_bytes or 0) + file_size
+            
+        await db.commit()
+        await db.refresh(new_video)
+        
+        return {
+            "success": True,
+            "message": "Video uploaded successfully to Cloudflare R2",
+            "video": {
+                "id": new_video.id,
+                "title": new_video.title,
+                "description": new_video.description,
+                "thumbnail_url": new_video.thumbnail_url,
+                "preview_url": new_video.preview_url,
+                "status": new_video.status,
+                "visibility": new_video.visibility,
+                "created_at": new_video.created_at.isoformat() if new_video.created_at else None,
+                "views": new_video.views,
+                "likes": new_video.likes
+            }
+        }
+    finally:
+        if os.path.exists(temp_filename):
+            try:
+                os.remove(temp_filename)
+            except Exception:
+                pass
+

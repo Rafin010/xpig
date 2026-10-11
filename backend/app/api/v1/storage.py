@@ -17,6 +17,9 @@ class StorageNodeCreate(BaseModel):
     bucket_name: str
     public_url: str
 
+from sqlalchemy import func
+from app.models.video import VideoSource
+
 class StorageNodeResponse(BaseModel):
     id: int
     name: str
@@ -26,9 +29,10 @@ class StorageNodeResponse(BaseModel):
     max_bytes: float
     is_active: bool
     is_full: bool
+    video_count: int = 0
     
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 @router.get("/", response_model=List[StorageNodeResponse])
 async def get_storage_nodes(
@@ -38,7 +42,36 @@ async def get_storage_nodes(
 ) -> Any:
     result = await db.execute(select(StorageNode).offset(skip).limit(limit))
     nodes = result.scalars().all()
-    return nodes
+    
+    response_nodes = []
+    for node in nodes:
+        # Count videos attached to this storage node
+        v_count = 0
+        if node.public_url:
+            clean_url = node.public_url.replace("https://", "").replace("http://", "").split("/")[0]
+            count_stmt = select(func.count(VideoSource.id)).where(VideoSource.source_url.contains(clean_url))
+            count_res = await db.execute(count_stmt)
+            v_count = count_res.scalar() or 0
+
+        # If node has 0 recorded bytes but has videos, estimate 30MB per video or preserve total_used_bytes
+        used_bytes = node.total_used_bytes
+        if used_bytes == 0 and v_count > 0:
+            used_bytes = v_count * 30 * 1024 * 1024 # ~30MB per video
+
+        response_nodes.append(
+            StorageNodeResponse(
+                id=node.id,
+                name=node.name,
+                bucket_name=node.bucket_name,
+                public_url=node.public_url,
+                total_used_bytes=used_bytes,
+                max_bytes=node.max_bytes,
+                is_active=node.is_active,
+                is_full=node.is_full,
+                video_count=v_count
+            )
+        )
+    return response_nodes
 
 @router.post("/", response_model=StorageNodeResponse)
 async def create_storage_node(

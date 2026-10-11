@@ -16,18 +16,33 @@ export default function VideoGrid({
 }) {
   const categories = ["All", "Premium", "Verified", "Amateur", "VR", "Couples", "Solo", "Trending", "Exclusive"];
 
-  const bannerSponsors = sponsors.filter((s: any) => s.placement === 'banner' || s.placement === 'all');
-  const feedSponsors = sponsors.filter((s: any) => s.placement === 'feed' || s.placement === 'all' || !s.placement);
+  const bannerSponsors = sponsors.filter((s: any) => s.is_active !== false && (s.placement === 'banner' || s.placement === 'all'));
+  const feedSponsors = sponsors.filter((s: any) => s.is_active !== false && (s.placement === 'feed' || s.placement === 'all' || !s.placement));
+
+  // Determine Slot 1 (at index 3) and Slot 2 (at index 7)
+  const playlistCandidates = feedSponsors.filter((s: any) => s.in_card_playlist !== false);
+
+  // Slot 1: Fixed slot 1 priority, then first playlist candidate
+  const fixedSlot1 = feedSponsors.find((s: any) => s.is_fixed_slot && s.fixed_slot_position === 1);
+  const slot1Sponsor = fixedSlot1 || playlistCandidates.find((s: any) => !s.is_fixed_slot || s.fixed_slot_position === 1);
+
+  // Slot 2: Fixed slot 2 priority, then next distinct playlist candidate
+  const fixedSlot2 = feedSponsors.find((s: any) => s.is_fixed_slot && s.fixed_slot_position === 2);
+  const slot2Sponsor = fixedSlot2 || playlistCandidates.find((s: any) => 
+    s.id !== slot1Sponsor?.id && (!s.is_fixed_slot || s.fixed_slot_position === 2)
+  );
 
   // Interleave feed sponsors only if real active sponsors are present
   const combinedItems: { type: 'video' | 'sponsor'; data: any; key: string }[] = [];
   
-  let sponsorIndex = 0;
   videos.forEach((video, index) => {
-    // If active feed sponsors exist, insert at index 3 and index 7
-    if (feedSponsors.length > sponsorIndex && (index === 3 || index === 7)) {
-      const sp = feedSponsors[sponsorIndex++];
-      combinedItems.push({ type: 'sponsor', data: sp, key: `sponsor-${sp.id}` });
+    // Slot 1 at index 3
+    if (index === 3 && slot1Sponsor) {
+      combinedItems.push({ type: 'sponsor', data: slot1Sponsor, key: `sponsor-slot1-${slot1Sponsor.id}` });
+    }
+    // Slot 2 at index 7
+    if (index === 7 && slot2Sponsor) {
+      combinedItems.push({ type: 'sponsor', data: slot2Sponsor, key: `sponsor-slot2-${slot2Sponsor.id}` });
     }
     combinedItems.push({ type: 'video', data: video, key: `video-${video.id}-${index}` });
   });

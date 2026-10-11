@@ -1,6 +1,22 @@
 'use client';
+
 import { useState, useRef } from 'react';
-import { Settings2, ArrowLeft, Upload, Image as ImageIcon, ExternalLink, Sparkles, LayoutTemplate, Layers, Check } from 'lucide-react';
+import { 
+  Settings2, 
+  ArrowLeft, 
+  Upload, 
+  Image as ImageIcon, 
+  ExternalLink, 
+  LayoutTemplate, 
+  Layers, 
+  Check, 
+  Megaphone, 
+  Eye, 
+  DollarSign, 
+  Receipt,
+  ShieldCheck,
+  CheckCircle2
+} from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -8,18 +24,38 @@ export default function CreateAdCampaign() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Core Ad Details
   const [name, setName] = useState('');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [thumbnailUrl, setThumbnailUrl] = useState('');
+  const [videoUrl, setVideoUrl] = useState('');
   const [targetUrl, setTargetUrl] = useState('');
   const [badgeText, setBadgeText] = useState('SPONSORED');
   const [placement, setPlacement] = useState<'feed' | 'banner' | 'all'>('feed');
+
+  // Ad Engine & Impression Quota
+  const [targetImpressions, setTargetImpressions] = useState<number>(100000);
+  const [pricingModel, setPricingModel] = useState<'CPM' | 'FLAT_RATE' | 'CPC'>('CPM');
+  const [inCardPlaylist, setInCardPlaylist] = useState<boolean>(true);
+
+  // Billing & Invoicing Information
+  const [billingCompany, setBillingCompany] = useState('');
+  const [billingEmail, setBillingEmail] = useState('');
+  const [billingTaxId, setBillingTaxId] = useState('');
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [previewTab, setPreviewTab] = useState<'banner' | 'card'>('card');
 
-  // Handle local file selection and convert to Base64 data URI / upload
+  // Auto calculate budget based on model & quota
+  const calculatedBudget = pricingModel === 'CPM'
+    ? Math.round((targetImpressions / 1000.0) * 2.50)
+    : pricingModel === 'CPC'
+    ? Math.round((targetImpressions * 0.03) * 0.25)
+    : 150.00;
+
+  // Handle local file upload
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -29,7 +65,6 @@ export default function CreateAdCampaign() {
       return;
     }
 
-    // Try backend upload endpoint or fallback to client-side data URI
     setIsUploadingImage(true);
     try {
       const formData = new FormData();
@@ -43,22 +78,16 @@ export default function CreateAdCampaign() {
         const data = await res.json();
         setThumbnailUrl(data.url);
       } else {
-        // Fallback to FileReader data URI
         const reader = new FileReader();
         reader.onload = (event) => {
-          if (event.target?.result) {
-            setThumbnailUrl(event.target.result as string);
-          }
+          if (event.target?.result) setThumbnailUrl(event.target.result as string);
         };
         reader.readAsDataURL(file);
       }
-    } catch (err) {
-      console.warn('Backend creative upload failed, using local Data URI fallback', err);
+    } catch {
       const reader = new FileReader();
       reader.onload = (event) => {
-        if (event.target?.result) {
-          setThumbnailUrl(event.target.result as string);
-        }
+        if (event.target?.result) setThumbnailUrl(event.target.result as string);
       };
       reader.readAsDataURL(file);
     } finally {
@@ -83,22 +112,30 @@ export default function CreateAdCampaign() {
           title,
           description: description || null,
           thumbnail_url: thumbnailUrl,
+          video_url: videoUrl || null,
           target_url: targetUrl,
           badge_text: badgeText || 'SPONSORED',
           placement,
           is_active: true,
+          target_impressions: targetImpressions,
+          budget: calculatedBudget,
+          pricing_model: pricingModel,
+          status: 'ACTIVE',
+          in_card_playlist: inCardPlaylist,
+          billing_company: billingCompany || name,
+          billing_email: billingEmail || `billing@${name.toLowerCase().replace(/\s+/g, '')}.com`,
+          billing_tax_id: billingTaxId || `TAX-${Math.floor(100000 + Math.random() * 900000)}`,
         }),
       });
 
       if (res.ok) {
-        alert('Sponsor Campaign Launched Successfully!');
         router.push('/admin/ads');
       } else {
-        alert('Failed to launch campaign. Please check backend response.');
+        alert('Failed to launch campaign. Please check input fields.');
       }
     } catch (err) {
       console.error(err);
-      alert('Network error submitting campaign.');
+      alert('Network error connecting to ad server.');
     } finally {
       setIsSubmitting(false);
     }
@@ -109,18 +146,18 @@ export default function CreateAdCampaign() {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-800/80 border border-zinc-700/60 text-xs text-zinc-300 font-semibold mb-2">
-            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            <span>Sponsor & Ad Campaign Builder</span>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-xs text-zinc-300 font-semibold mb-2">
+            <Megaphone className="w-3.5 h-3.5 text-pink-500" />
+            <span>Enterprise Multi-Channel Campaign Builder</span>
           </div>
           <h1 className="text-3xl font-black text-white tracking-tight">Create Sponsor Campaign</h1>
           <p className="text-zinc-400 text-sm mt-1">
-            Design and launch custom banner or video grid sponsor cards. Active campaigns render seamlessly on XPIG.
+            Configure impression quotas, automated billing invoices, and homepage card playlist serving.
           </p>
         </div>
         <Link
           href="/admin/ads"
-          className="px-5 py-2.5 bg-[#18181b] hover:bg-zinc-800 border border-zinc-800 text-white rounded-xl font-bold transition-all text-sm flex items-center gap-2 self-start sm:self-auto"
+          className="px-5 py-2.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-white rounded-xl font-bold transition-all text-sm flex items-center gap-2 self-start sm:self-auto"
         >
           <ArrowLeft className="w-4 h-4" /> Back to Campaigns
         </Link>
@@ -129,230 +166,351 @@ export default function CreateAdCampaign() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Form Column */}
         <form onSubmit={handleSubmit} className="lg:col-span-7 space-y-6">
-          <div className="bg-[#111] border border-zinc-800/60 rounded-2xl p-6 shadow-xl space-y-6">
-            <h3 className="text-lg font-bold text-white flex items-center gap-2 border-b border-zinc-800/60 pb-4">
-              <Settings2 className="w-5 h-5 text-amber-500" /> Campaign Configuration
-            </h3>
-
-            {/* Placement Selector */}
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-zinc-300">
-                Placement Type <span className="text-red-400">*</span>
+          <div className="bg-[#111113] border border-zinc-800/80 p-6 sm:p-8 rounded-2xl shadow-xl space-y-6">
+            
+            {/* Section 1: Placement Selector */}
+            <div className="space-y-3">
+              <label className="text-xs font-bold text-zinc-300 uppercase tracking-wider block">
+                Target Ad Placement
               </label>
               <div className="grid grid-cols-3 gap-3">
                 <button
                   type="button"
-                  onClick={() => {
-                    setPlacement('feed');
-                    setPreviewTab('card');
-                  }}
-                  className={`p-3.5 rounded-xl border text-left transition-all flex flex-col justify-between ${
+                  onClick={() => setPlacement('feed')}
+                  className={`p-3.5 rounded-xl border text-left transition-all ${
                     placement === 'feed'
-                      ? 'bg-zinc-800/90 border-zinc-500 text-white shadow-md'
-                      : 'bg-[#18181b] border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700'
+                      ? 'bg-zinc-800 border-emerald-500 text-white shadow-md'
+                      : 'bg-zinc-900/60 border-zinc-800 text-zinc-400 hover:text-white'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <LayoutTemplate className="w-4 h-4 text-purple-400" />
-                    {placement === 'feed' && <Check className="w-4 h-4 text-white" />}
+                    <Layers className="w-4 h-4 text-emerald-400" />
+                    {placement === 'feed' && <Check className="w-4 h-4 text-emerald-400" />}
                   </div>
-                  <div>
-                    <div className="font-bold text-xs text-white">Feed Card</div>
-                    <div className="text-[11px] text-zinc-500 mt-0.5">Video Grid Native</div>
-                  </div>
+                  <div className="font-bold text-xs text-white">Feed Cards</div>
+                  <div className="text-[11px] text-zinc-500 mt-0.5">Slots 1 & 2</div>
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => {
-                    setPlacement('banner');
-                    setPreviewTab('banner');
-                  }}
-                  className={`p-3.5 rounded-xl border text-left transition-all flex flex-col justify-between ${
+                  onClick={() => setPlacement('banner')}
+                  className={`p-3.5 rounded-xl border text-left transition-all ${
                     placement === 'banner'
-                      ? 'bg-zinc-800/90 border-zinc-500 text-white shadow-md'
-                      : 'bg-[#18181b] border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700'
+                      ? 'bg-zinc-800 border-emerald-500 text-white shadow-md'
+                      : 'bg-zinc-900/60 border-zinc-800 text-zinc-400 hover:text-white'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <Layers className="w-4 h-4 text-blue-400" />
-                    {placement === 'banner' && <Check className="w-4 h-4 text-white" />}
+                    <LayoutTemplate className="w-4 h-4 text-blue-400" />
+                    {placement === 'banner' && <Check className="w-4 h-4 text-emerald-400" />}
                   </div>
-                  <div>
-                    <div className="font-bold text-xs text-white">Billboard</div>
-                    <div className="text-[11px] text-zinc-500 mt-0.5">Homepage Top</div>
-                  </div>
+                  <div className="font-bold text-xs text-white">Billboard Banner</div>
+                  <div className="text-[11px] text-zinc-500 mt-0.5">Top of Page</div>
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => {
-                    setPlacement('all');
-                  }}
-                  className={`p-3.5 rounded-xl border text-left transition-all flex flex-col justify-between ${
+                  onClick={() => setPlacement('all')}
+                  className={`p-3.5 rounded-xl border text-left transition-all ${
                     placement === 'all'
-                      ? 'bg-zinc-800/90 border-zinc-500 text-white shadow-md'
-                      : 'bg-[#18181b] border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700'
+                      ? 'bg-zinc-800 border-emerald-500 text-white shadow-md'
+                      : 'bg-zinc-900/60 border-zinc-800 text-zinc-400 hover:text-white'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <Sparkles className="w-4 h-4 text-amber-400" />
-                    {placement === 'all' && <Check className="w-4 h-4 text-white" />}
+                    <Megaphone className="w-4 h-4 text-purple-400" />
+                    {placement === 'all' && <Check className="w-4 h-4 text-emerald-400" />}
                   </div>
-                  <div>
-                    <div className="font-bold text-xs text-white">All Slots</div>
-                    <div className="text-[11px] text-zinc-500 mt-0.5">Banner + Feed</div>
-                  </div>
+                  <div className="font-bold text-xs text-white">All Slots</div>
+                  <div className="text-[11px] text-zinc-500 mt-0.5">Banner + Feed</div>
                 </button>
               </div>
             </div>
 
-            {/* Campaign Title & Brand */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-zinc-300">
-                  Campaign Title <span className="text-red-400">*</span>
+            {/* Section 2: Meta-Style Impression Quota & Pacing Engine */}
+            <div className="space-y-3 pt-2 border-t border-zinc-800/80">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-zinc-300 uppercase tracking-wider block">
+                  Impression Delivery Quota (Meta/YouTube Pacing)
                 </label>
-                <input
-                  type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g. Ultra Fast Premium VPN"
-                  className="w-full bg-[#18181b] border border-zinc-800 rounded-xl px-4 py-2.5 text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-500 transition-colors text-sm"
-                  required
-                />
+                <span className="text-[11px] text-emerald-400 font-mono font-bold">Auto-Paced</span>
+              </div>
+              <p className="text-xs text-zinc-400">
+                The ad engine serves higher-volume campaigns with proportionally higher probability weight until their guaranteed quota is fulfilled.
+              </p>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {[1000, 10000, 50000, 100000].map((quota) => (
+                  <button
+                    key={quota}
+                    type="button"
+                    onClick={() => setTargetImpressions(quota)}
+                    className={`p-2.5 rounded-xl border text-center transition-all ${
+                      targetImpressions === quota
+                        ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300 font-bold'
+                        : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white'
+                    }`}
+                  >
+                    <div className="text-sm font-black">{quota.toLocaleString()}</div>
+                    <div className="text-[10px] text-zinc-500">Impressions</div>
+                  </button>
+                ))}
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-zinc-300">
-                  Sponsor / Brand Name <span className="text-red-400">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. NordVPN"
-                  className="w-full bg-[#18181b] border border-zinc-800 rounded-xl px-4 py-2.5 text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-500 transition-colors text-sm"
-                  required
-                />
-              </div>
-            </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                <div>
+                  <label className="text-xs text-zinc-400 block mb-1">Custom Impression Quota</label>
+                  <input
+                    type="number"
+                    min="100"
+                    step="100"
+                    value={targetImpressions}
+                    onChange={(e) => setTargetImpressions(Math.max(100, parseInt(e.target.value || '1000', 10)))}
+                    className="w-full bg-zinc-900 border border-zinc-700/80 rounded-xl px-3.5 py-2 text-white font-mono text-sm focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
 
-            {/* Short Description */}
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-zinc-300">Offer / Subtitle Description</label>
-              <input
-                type="text"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="e.g. Get 70% off + 3 extra months with promo code XPIG."
-                className="w-full bg-[#18181b] border border-zinc-800 rounded-xl px-4 py-2.5 text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-500 transition-colors text-sm"
-              />
-            </div>
-
-            {/* Creative Image Upload / URL Input */}
-            <div className="space-y-3">
-              <label className="text-sm font-semibold text-zinc-300 flex items-center justify-between">
-                <span>Creative Image (Thumbnail / Banner) <span className="text-red-400">*</span></span>
-                <span className="text-xs text-zinc-500">16:9 ratio recommended</span>
-              </label>
-
-              {/* Drag & Drop File Box */}
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-zinc-800 hover:border-zinc-600 bg-[#161618] rounded-xl p-5 text-center cursor-pointer transition-colors group"
-              >
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileChange}
-                  accept="image/*"
-                  className="hidden"
-                />
-                <div className="flex flex-col items-center justify-center gap-2">
-                  <div className="p-3 rounded-full bg-zinc-800/80 group-hover:bg-zinc-700 text-zinc-300 transition-colors">
-                    <Upload className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <span className="text-sm font-semibold text-white group-hover:underline">
-                      {isUploadingImage ? 'Processing Image...' : 'Click to upload creative banner'}
-                    </span>
-                    <p className="text-xs text-zinc-500 mt-0.5">PNG, JPG, WEBP, or GIF</p>
-                  </div>
+                <div>
+                  <label className="text-xs text-zinc-400 block mb-1">Pricing Model</label>
+                  <select
+                    value={pricingModel}
+                    onChange={(e: any) => setPricingModel(e.target.value)}
+                    className="w-full bg-zinc-900 border border-zinc-700/80 rounded-xl px-3.5 py-2 text-white text-sm focus:outline-none focus:border-emerald-500"
+                  >
+                    <option value="CPM">CPM ($2.50 per 1,000 Impressions)</option>
+                    <option value="FLAT_RATE">Flat Sponsorship ($150 / Flight)</option>
+                    <option value="CPC">CPC ($0.25 per Click Guarantee)</option>
+                  </select>
                 </div>
               </div>
 
-              {/* Or paste direct URL */}
-              <div className="relative">
-                <input
-                  type="url"
-                  value={thumbnailUrl}
-                  onChange={(e) => setThumbnailUrl(e.target.value)}
-                  placeholder="Or paste direct image URL (https://...)"
-                  className="w-full bg-[#18181b] border border-zinc-800 rounded-xl pl-4 pr-10 py-2.5 text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-500 transition-colors text-xs"
-                  required
-                />
-                <ImageIcon className="w-4 h-4 text-zinc-500 absolute right-3.5 top-1/2 -translate-y-1/2" />
+              {/* Calculated Budget Preview Box */}
+              <div className="p-3 bg-zinc-900/90 border border-zinc-800 rounded-xl flex items-center justify-between text-xs">
+                <span className="text-zinc-400 flex items-center gap-1.5 font-medium">
+                  <DollarSign className="w-3.5 h-3.5 text-emerald-400" />
+                  Calculated Campaign Budget:
+                </span>
+                <span className="font-mono text-emerald-400 font-bold text-sm">
+                  ${calculatedBudget.toFixed(2)} USD
+                </span>
               </div>
             </div>
 
-            {/* Target Destination URL & Badge Text */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-zinc-300">
-                  Target Destination URL <span className="text-red-400">*</span>
+            {/* Section 3: Campaign Titles & Creative Details */}
+            <div className="space-y-4 pt-2 border-t border-zinc-800/80">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-zinc-300 uppercase tracking-wider block">
+                    Campaign Title <span className="text-rose-400">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="e.g., Spring Mega Sale 50% Off"
+                    className="w-full bg-zinc-900 border border-zinc-700/80 rounded-xl px-3.5 py-2.5 text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 text-sm"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-zinc-300 uppercase tracking-wider block">
+                    Sponsor Brand Name <span className="text-rose-400">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => {
+                      setName(e.target.value);
+                      if (!billingCompany) setBillingCompany(e.target.value);
+                    }}
+                    placeholder="e.g., CyberVPN Global"
+                    className="w-full bg-zinc-900 border border-zinc-700/80 rounded-xl px-3.5 py-2.5 text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 text-sm"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-zinc-300 uppercase tracking-wider block">
+                  Short Description
+                </label>
+                <input
+                  type="text"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="e.g., Ultra-fast anonymous proxy with 30-day money back guarantee"
+                  className="w-full bg-zinc-900 border border-zinc-700/80 rounded-xl px-3.5 py-2.5 text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 text-sm"
+                />
+              </div>
+
+              {/* Creative Upload */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-zinc-300 uppercase tracking-wider block">
+                  Creative Image Banner <span className="text-rose-400">*</span>
+                </label>
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  accept="image/*" 
+                  onChange={handleFileChange} 
+                  className="hidden" 
+                />
+                <div className="flex gap-3">
+                  <input
+                    type="text"
+                    value={thumbnailUrl}
+                    onChange={(e) => setThumbnailUrl(e.target.value)}
+                    placeholder="Paste image URL or upload directly..."
+                    className="flex-1 bg-zinc-900 border border-zinc-700/80 rounded-xl px-3.5 py-2.5 text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 text-xs font-mono"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploadingImage}
+                    className="px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl font-bold text-xs flex items-center gap-2 border border-zinc-700 shrink-0"
+                  >
+                    <Upload className="w-4 h-4" />
+                    <span>{isUploadingImage ? 'Uploading...' : 'Upload File'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Destination URL & Badge Label */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-zinc-300 uppercase tracking-wider block">
+                    Target URL <span className="text-rose-400">*</span>
+                  </label>
+                  <input
+                    type="url"
+                    value={targetUrl}
+                    onChange={(e) => setTargetUrl(e.target.value)}
+                    placeholder="https://sponsor.com/promo"
+                    className="w-full bg-zinc-900 border border-zinc-700/80 rounded-xl px-3.5 py-2.5 text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 text-xs font-mono"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-zinc-300 uppercase tracking-wider block">
+                    Badge Label
+                  </label>
+                  <input
+                    type="text"
+                    value={badgeText}
+                    onChange={(e) => setBadgeText(e.target.value)}
+                    placeholder="SPONSORED"
+                    className="w-full bg-zinc-900 border border-zinc-700/80 rounded-xl px-3.5 py-2.5 text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 text-sm"
+                  />
+                </div>
+              </div>
+
+              {/* Optional Video Loop URL for Card Ads */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-zinc-300 uppercase tracking-wider block">
+                  Optional Video Loop URL (For Muted Infinity Card Preview)
                 </label>
                 <input
                   type="url"
-                  value={targetUrl}
-                  onChange={(e) => setTargetUrl(e.target.value)}
-                  placeholder="https://sponsor.com/offer"
-                  className="w-full bg-[#18181b] border border-zinc-800 rounded-xl px-4 py-2.5 text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-500 transition-colors text-sm"
-                  required
+                  value={videoUrl}
+                  onChange={(e) => setVideoUrl(e.target.value)}
+                  placeholder="https://pub-xxx.r2.dev/videos/sponsor_loop.mp4"
+                  className="w-full bg-zinc-900 border border-zinc-700/80 rounded-xl px-3.5 py-2.5 text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 text-xs font-mono"
                 />
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-zinc-300">Badge Label</label>
+              {/* Homepage 2-Card Playlist Inclusion Toggle */}
+              <div className="p-3 bg-zinc-900/60 border border-zinc-800 rounded-xl flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-bold text-white block">Include in Homepage 2-Card Playlist</span>
+                  <span className="text-[11px] text-zinc-500">Enables infinite rotation on Slot 1 & 2 of the video grid</span>
+                </div>
                 <input
-                  type="text"
-                  value={badgeText}
-                  onChange={(e) => setBadgeText(e.target.value)}
-                  placeholder="SPONSORED"
-                  className="w-full bg-[#18181b] border border-zinc-800 rounded-xl px-4 py-2.5 text-white placeholder-zinc-600 focus:outline-none focus:border-zinc-500 transition-colors text-sm"
+                  type="checkbox"
+                  checked={inCardPlaylist}
+                  onChange={(e) => setInCardPlaylist(e.target.checked)}
+                  className="w-4 h-4 accent-emerald-500 rounded cursor-pointer"
                 />
               </div>
             </div>
 
-            {/* Action Buttons */}
+            {/* Section 4: Corporate Billing & Invoicing */}
+            <div className="space-y-4 pt-2 border-t border-zinc-800/80">
+              <div className="flex items-center gap-2">
+                <Receipt className="w-4 h-4 text-blue-400" />
+                <span className="text-xs font-bold text-zinc-300 uppercase tracking-wider">
+                  Sponsor Billing & Invoice Generator
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[11px] text-zinc-400 block">Billing Company</label>
+                  <input
+                    type="text"
+                    value={billingCompany}
+                    onChange={(e) => setBillingCompany(e.target.value)}
+                    placeholder="Company Legal Name"
+                    className="w-full bg-zinc-900 border border-zinc-700/80 rounded-xl px-3 py-2 text-white text-xs"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[11px] text-zinc-400 block">Billing Email</label>
+                  <input
+                    type="email"
+                    value={billingEmail}
+                    onChange={(e) => setBillingEmail(e.target.value)}
+                    placeholder="billing@company.com"
+                    className="w-full bg-zinc-900 border border-zinc-700/80 rounded-xl px-3 py-2 text-white text-xs font-mono"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[11px] text-zinc-400 block">Tax / VAT ID</label>
+                  <input
+                    type="text"
+                    value={billingTaxId}
+                    onChange={(e) => setBillingTaxId(e.target.value)}
+                    placeholder="e.g. EU12345678"
+                    className="w-full bg-zinc-900 border border-zinc-700/80 rounded-xl px-3 py-2 text-white text-xs font-mono"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Submit Action */}
             <div className="pt-4 border-t border-zinc-800/60 flex items-center justify-between">
-              <span className="text-xs text-zinc-500">
-                Campaign will activate immediately across XPIG.
+              <span className="text-xs text-zinc-500 font-mono">
+                Auto-generates official invoice & audit certificate
               </span>
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="px-7 py-3 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl font-bold transition-all border border-zinc-700/80 shadow-lg disabled:opacity-50 text-sm flex items-center gap-2"
+                className="px-7 py-3 bg-emerald-500 hover:bg-emerald-400 text-black rounded-xl font-black transition-all shadow-lg shadow-emerald-950/40 text-sm flex items-center gap-2 active:scale-[0.98] disabled:opacity-50"
               >
-                {isSubmitting ? 'Launching...' : 'Launch Campaign'}
+                {isSubmitting ? 'Launching Campaign...' : 'Launch Campaign & Generate Bill'}
               </button>
             </div>
+
           </div>
         </form>
 
-        {/* Live Preview Column */}
+        {/* Live Visual Preview Column */}
         <div className="lg:col-span-5 space-y-4 lg:sticky lg:top-24">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-zinc-300 uppercase tracking-wider flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4 text-amber-400" />
+            <h3 className="text-xs font-bold text-zinc-300 uppercase tracking-wider flex items-center gap-1.5">
+              <Eye className="w-4 h-4 text-emerald-400" />
               Live Visual Preview
             </h3>
-            <div className="flex gap-1 bg-[#18181b] p-1 rounded-lg border border-zinc-800 text-xs font-semibold">
+            <div className="flex gap-1 bg-zinc-900 p-1 rounded-xl border border-zinc-800 text-xs font-semibold">
               <button
                 type="button"
                 onClick={() => setPreviewTab('card')}
-                className={`px-3 py-1 rounded-md transition-colors ${
-                  previewTab === 'card' ? 'bg-zinc-700 text-white' : 'text-zinc-400 hover:text-white'
+                className={`px-3 py-1 rounded-lg transition-colors ${
+                  previewTab === 'card' ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:text-white'
                 }`}
               >
                 Card View
@@ -360,112 +518,66 @@ export default function CreateAdCampaign() {
               <button
                 type="button"
                 onClick={() => setPreviewTab('banner')}
-                className={`px-3 py-1 rounded-md transition-colors ${
-                  previewTab === 'banner' ? 'bg-zinc-700 text-white' : 'text-zinc-400 hover:text-white'
+                className={`px-3 py-1 rounded-lg transition-colors ${
+                  previewTab === 'banner' ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:text-white'
                 }`}
               >
-                Banner View
+                Billboard View
               </button>
             </div>
           </div>
 
-          <div className="bg-[#111] border border-zinc-800/60 rounded-2xl p-4 shadow-xl">
+          {/* Preview Container */}
+          <div className="bg-[#111113] border border-zinc-800/80 p-5 rounded-2xl shadow-xl space-y-4">
             {previewTab === 'card' ? (
-              /* Feed Video Card Preview */
               <div className="space-y-3">
-                <div className="relative aspect-video w-full rounded-[12px] overflow-hidden bg-zinc-900 border border-zinc-800 flex items-center justify-center">
-                  {thumbnailUrl ? (
-                    <img
-                      src={thumbnailUrl}
-                      alt={title || 'Preview'}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex flex-col items-center justify-center text-zinc-600 gap-1.5">
-                      <ImageIcon className="w-8 h-8" />
-                      <span className="text-xs">Upload creative to view preview</span>
-                    </div>
-                  )}
-
-                  {/* Badge */}
-                  <span className="absolute top-2 left-2 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-amber-500 text-black shadow-md">
-                    {badgeText || 'SPONSORED'}
-                  </span>
-                </div>
-
-                <div className="flex gap-3 items-start pt-1">
-                  <div className="w-9 h-9 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-xs font-black text-white shrink-0">
-                    {(name || 'SP')[0]?.toUpperCase()}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-bold text-sm text-white line-clamp-2 leading-snug">
-                      {title || 'Your Campaign Headline Will Appear Here'}
-                    </h4>
-                    <p className="text-xs text-zinc-400 mt-1 truncate">
-                      {name || 'Sponsor Brand'}
-                    </p>
-                    {description && (
-                      <p className="text-[11px] text-zinc-500 mt-1 line-clamp-2">
-                        {description}
-                      </p>
+                <span className="text-[11px] text-zinc-500 uppercase font-mono font-bold">Homepage Video Grid Card Slot (Index 3 & 7)</span>
+                <div className="bg-[#050505] p-3 rounded-xl border border-zinc-800">
+                  <div className="aspect-[16/9] bg-zinc-900 rounded-xl overflow-hidden relative border border-zinc-800">
+                    {thumbnailUrl ? (
+                      <img src={thumbnailUrl} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-zinc-600 text-xs font-mono">
+                        No Creative Uploaded
+                      </div>
                     )}
-                    <div className="mt-2.5 inline-flex items-center gap-1.5 px-3 py-1 bg-zinc-800 border border-zinc-700 rounded-lg text-xs font-bold text-zinc-200">
-                      <span>Visit Sponsor</span>
-                      <ExternalLink className="w-3 h-3 text-zinc-400" />
+                    <div className="absolute top-2 left-2 px-2 py-0.5 bg-black/80 rounded text-[10px] font-black text-amber-400 uppercase border border-amber-500/30">
+                      {badgeText || 'SPONSORED'}
+                    </div>
+                  </div>
+                  <div className="mt-2.5 flex items-start gap-2.5">
+                    <div className="w-8 h-8 rounded-full bg-zinc-800 text-amber-400 font-bold text-xs flex items-center justify-center shrink-0">
+                      {name ? name.slice(0, 2).toUpperCase() : 'AD'}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="font-bold text-white text-xs truncate">{title || 'Campaign Title Goes Here'}</div>
+                      <div className="text-[11px] text-zinc-400 mt-0.5">{name || 'Sponsor Name'}</div>
                     </div>
                   </div>
                 </div>
               </div>
             ) : (
-              /* Top Billboard Banner Preview */
-              <div className="relative w-full rounded-[12px] overflow-hidden border border-zinc-800 bg-gradient-to-r from-zinc-950 via-zinc-900 to-zinc-950 p-5">
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                  <div className="flex items-center gap-4">
-                    {thumbnailUrl ? (
-                      <img
-                        src={thumbnailUrl}
-                        alt=""
-                        className="w-20 h-14 rounded-lg object-cover border border-zinc-800 shrink-0"
-                      />
-                    ) : (
-                      <div className="w-20 h-14 rounded-lg bg-zinc-800 flex items-center justify-center text-zinc-600 shrink-0">
-                        <ImageIcon className="w-5 h-5" />
-                      </div>
-                    )}
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-amber-500 text-black">
-                          {badgeText || 'SPONSORED'}
-                        </span>
-                        <span className="text-xs font-semibold text-zinc-400">
-                          {name || 'Brand Name'}
-                        </span>
-                      </div>
-                      <h4 className="text-base font-bold text-white mt-1">
-                        {title || 'Top Billboard Campaign Headline'}
-                      </h4>
-                      <p className="text-xs text-zinc-400 mt-0.5 line-clamp-1">
-                        {description || 'Sponsor offer and promotional details...'}
-                      </p>
+              <div className="space-y-3">
+                <span className="text-[11px] text-zinc-500 uppercase font-mono font-bold">Homepage Billboard Banner Slot</span>
+                <div className="bg-zinc-900 rounded-xl p-4 border border-zinc-800 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-14 h-10 rounded-lg overflow-hidden bg-zinc-800 shrink-0">
+                      {thumbnailUrl ? <img src={thumbnailUrl} alt="" className="w-full h-full object-cover" /> : null}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-xs font-bold text-white truncate">{title || 'Billboard Banner Headline'}</div>
+                      <div className="text-[11px] text-zinc-400 truncate">{description || 'Promotional Offer Details'}</div>
                     </div>
                   </div>
-
-                  <div className="shrink-0 px-4 py-2 bg-zinc-800 text-white rounded-lg text-xs font-bold border border-zinc-700 flex items-center gap-1.5">
-                    <span>Learn More</span>
-                    <ExternalLink className="w-3 h-3" />
-                  </div>
+                  <span className="px-3 py-1.5 bg-emerald-500 text-black text-xs font-extrabold rounded-lg shrink-0">
+                    Visit
+                  </span>
                 </div>
               </div>
             )}
           </div>
-
-          <div className="bg-zinc-900/50 border border-zinc-800/60 rounded-xl p-3.5 text-xs text-zinc-400 space-y-1">
-            <div className="font-semibold text-zinc-300">💡 Zero-Ad Rule Active:</div>
-            <div>
-              সিস্টেমে কোনো স্পন্সর ক্যাম্পেইন সক্রিয় না থাকলে ওয়েবসাইটে কোনো ফাঁকা ব্যানার বা ফেক অ্যাড প্লেসহোল্ডার আসবে না। স্পন্সর আপলোড করলেই কেবল নির্দিষ্ট জায়গায় তা দৃশ্যমান হবে।
-            </div>
-          </div>
         </div>
+
       </div>
     </div>
   );

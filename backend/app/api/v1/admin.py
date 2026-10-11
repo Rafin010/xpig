@@ -102,12 +102,19 @@ async def get_cofounders(db: AsyncSession = Depends(get_db)):
             diff_mins = (now - active_time).total_seconds() / 60
             is_currently_online = diff_mins < 3
 
+        # Check invite acceptance status
+        has_logged_in = bool(u.last_active is not None or (u.hashed_password and u.hashed_password != "invited_cofounder"))
+        invite_status = "ACCEPTED" if has_logged_in else "PENDING"
+        role_title = t.get("role", "Co-Founder")
+
         data.append({
             "id": u.id,
             "email": u.email,
             "username": u.username,
             "last_active": u.last_active.isoformat() if u.last_active else None,
             "is_online": is_currently_online,
+            "invite_status": invite_status,
+            "role": role_title,
             "latitude": t.get("lat"),
             "longitude": t.get("lng"),
             "maps_url": t.get("maps_url"),
@@ -115,6 +122,21 @@ async def get_cofounders(db: AsyncSession = Depends(get_db)):
             "duration_mins": t.get("duration_mins", 0)
         })
     return data
+
+class CofounderRoleUpdate(BaseModel):
+    role: str
+
+@router.patch("/cofounders/{user_id}/role")
+async def update_cofounder_role(user_id: int, payload: CofounderRoleUpdate, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalars().first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Co-founder not found")
+    t = get_telemetry(user)
+    t["role"] = payload.role.strip()
+    update_telemetry(user, t)
+    await db.commit()
+    return {"success": True, "user_id": user.id, "role": t["role"]}
 
 @router.post("/cofounders/heartbeat")
 async def cofounder_heartbeat(payload: HeartbeatPayload, db: AsyncSession = Depends(get_db)):
