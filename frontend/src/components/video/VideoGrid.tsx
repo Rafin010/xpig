@@ -2,6 +2,7 @@
 
 import VideoCard from './VideoCard';
 import SponsorCard from '../ads/SponsorCard';
+import SponsorBanner from '../ads/SponsorBanner';
 import Link from 'next/link';
 
 export default function VideoGrid({ 
@@ -15,14 +16,17 @@ export default function VideoGrid({
 }) {
   const categories = ["All", "Premium", "Verified", "Amateur", "VR", "Couples", "Solo", "Trending", "Exclusive"];
 
-  // Interleave sponsors only if real active sponsors are present
+  const bannerSponsors = sponsors.filter((s: any) => s.placement === 'banner' || s.placement === 'all');
+  const feedSponsors = sponsors.filter((s: any) => s.placement === 'feed' || s.placement === 'all' || !s.placement);
+
+  // Interleave feed sponsors only if real active sponsors are present
   const combinedItems: { type: 'video' | 'sponsor'; data: any; key: string }[] = [];
   
   let sponsorIndex = 0;
   videos.forEach((video, index) => {
-    // If active sponsors exist, insert at index 3 and index 7
-    if (sponsors.length > sponsorIndex && (index === 3 || index === 7)) {
-      const sp = sponsors[sponsorIndex++];
+    // If active feed sponsors exist, insert at index 3 and index 7
+    if (feedSponsors.length > sponsorIndex && (index === 3 || index === 7)) {
+      const sp = feedSponsors[sponsorIndex++];
       combinedItems.push({ type: 'sponsor', data: sp, key: `sponsor-${sp.id}` });
     }
     combinedItems.push({ type: 'video', data: video, key: `video-${video.id}-${index}` });
@@ -50,6 +54,11 @@ export default function VideoGrid({
           );
         })}
       </div>
+
+      {/* Top Billboard Sponsor Banner (Only rendered if active banner sponsor exists) */}
+      {bannerSponsors.length > 0 && (
+        <SponsorBanner sponsor={bannerSponsors[0]} />
+      )}
 
       <h1 className="text-2xl font-bold text-white mb-6 tracking-tight">
         {activeCategory === "All" ? "Recommended For You" : `${activeCategory} Videos`}

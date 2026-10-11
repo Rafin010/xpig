@@ -8,6 +8,7 @@ import { useSidebar } from '@/context/SidebarContext';
 import { useAuth } from '@/context/AuthContext';
 import WatchPageSkeleton from '@/components/skeletons/WatchPageSkeleton';
 import VideoCard from '@/components/video/VideoCard';
+import SponsorWatchBanner from '@/components/ads/SponsorWatchBanner';
 import { decodeVideoId, encodeVideoId } from '@/lib/obfuscate';
 
 export default function WatchClient({ videoId }: { videoId: string }) {
@@ -19,6 +20,7 @@ export default function WatchClient({ videoId }: { videoId: string }) {
 
   const [videoData, setVideoData] = useState<any>(null);
   const [relatedVideos, setRelatedVideos] = useState<any[]>([]);
+  const [watchSponsor, setWatchSponsor] = useState<any>(null);
   const [isLiked, setIsLiked] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -73,6 +75,17 @@ export default function WatchClient({ videoId }: { videoId: string }) {
           // Filter out current video
           setRelatedVideos((rData.items || []).filter((v: any) => v.id.toString() !== numericId));
         }
+
+        // Fetch active sponsor for sidebar
+        try {
+          const spRes = await fetch(`https://xpig.onrender.com/api/v1/sponsors/`);
+          if (spRes.ok) {
+            const spData = await spRes.json();
+            if (Array.isArray(spData) && spData.length > 0) {
+              setWatchSponsor(spData[0]);
+            }
+          }
+        } catch (e) {}
       } catch (err) {
         console.error(err);
       } finally {
@@ -333,6 +346,9 @@ export default function WatchClient({ videoId }: { videoId: string }) {
 
         {/* Right Col - Up Next / Recommended Sidebar */}
         <div className="lg:col-span-1 space-y-4 px-4 md:px-0 mt-6 lg:mt-0">
+          {/* Active Sponsor Banner (Only if present in database) */}
+          {watchSponsor && <SponsorWatchBanner sponsor={watchSponsor} />}
+
           <h3 className="text-base font-bold text-zinc-200 tracking-tight">Up Next</h3>
           
           <div className="flex flex-col gap-3">
