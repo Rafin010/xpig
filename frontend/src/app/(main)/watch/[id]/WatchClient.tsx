@@ -7,10 +7,14 @@ import { useSidebar } from '@/context/SidebarContext';
 import WatchPageSkeleton from '@/components/skeletons/WatchPageSkeleton';
 import AdCard from '@/components/ads/AdCard';
 import VideoCard from '@/components/video/VideoCard';
+import { decodeVideoId } from '@/lib/obfuscate';
 
 export default function WatchClient({ videoId }: { videoId: string }) {
   const { isCollapsed, toggleSidebar } = useSidebar();
   
+  // Resolve obfuscated video slug (e.g. "v_xxrb9") to raw database ID (e.g. "371")
+  const numericId = decodeVideoId(videoId);
+
   const [videoData, setVideoData] = useState<any>(null);
   const [relatedVideos, setRelatedVideos] = useState<any[]>([]);
   const [isLiked, setIsLiked] = useState(false);
@@ -24,12 +28,25 @@ export default function WatchClient({ videoId }: { videoId: string }) {
     }
   }, []);
 
+  // Mark video as watched in localStorage so the NEW badge disappears
+  useEffect(() => {
+    if (!numericId) return;
+    try {
+      const watched = JSON.parse(localStorage.getItem('xpig_watched_videos') || '[]');
+      const idNum = Number(numericId);
+      if (Array.isArray(watched) && !watched.includes(idNum)) {
+        watched.push(idNum);
+        localStorage.setItem('xpig_watched_videos', JSON.stringify(watched));
+      }
+    } catch (e) {}
+  }, [numericId]);
+
   useEffect(() => {
     async function loadData() {
       setIsLoading(true);
       try {
-        // Fetch specific video
-        const vRes = await fetch(`https://xpig.onrender.com/api/v1/videos/${videoId}`);
+        // Fetch specific video using decoded numeric ID
+        const vRes = await fetch(`https://xpig.onrender.com/api/v1/videos/${numericId}`);
         if (vRes.ok) {
           setVideoData(await vRes.json());
         }
@@ -39,7 +56,7 @@ export default function WatchClient({ videoId }: { videoId: string }) {
         if (relRes.ok) {
           const rData = await relRes.json();
           // Filter out current video
-          setRelatedVideos((rData.items || []).filter((v: any) => v.id.toString() !== videoId));
+          setRelatedVideos((rData.items || []).filter((v: any) => v.id.toString() !== numericId));
         }
       } catch (err) {
         console.error(err);
@@ -48,7 +65,7 @@ export default function WatchClient({ videoId }: { videoId: string }) {
       }
     }
     loadData();
-  }, [videoId]);
+  }, [numericId]);
   
   // Real-time Ambient Mode (Safeguarded against CORS SecurityError)
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -63,13 +80,11 @@ export default function WatchClient({ videoId }: { videoId: string }) {
     const renderAmbient = () => {
       if (!isTainted) {
         try {
-          // Find the video element rendered by the player
           const videoElement = document.querySelector('video') as HTMLVideoElement;
           if (videoElement && !videoElement.paused && !videoElement.ended && videoElement.readyState >= 2) {
             ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
           }
         } catch (e) {
-          // Cross-origin tainted canvas: gracefully suppress error to preserve video playback
           isTainted = true;
         }
       }
@@ -87,7 +102,7 @@ export default function WatchClient({ videoId }: { videoId: string }) {
       const videoElement = document.querySelector('video');
       if (videoElement && !videoElement.paused) {
         try {
-          await fetch(`https://xpig.onrender.com/api/v1/videos/${videoId}/ping`, {
+          await fetch(`https://xpig.onrender.com/api/v1/videos/${numericId}/ping`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -101,7 +116,7 @@ export default function WatchClient({ videoId }: { videoId: string }) {
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [videoId]);
+  }, [numericId]);
 
   if (isLoading) return <WatchPageSkeleton />;
 
@@ -134,19 +149,19 @@ export default function WatchClient({ videoId }: { videoId: string }) {
               className="absolute -inset-10 w-[calc(100%+80px)] h-[calc(100%+80px)] blur-[80px] opacity-60 z-0 hidden md:block pointer-events-none transition-opacity duration-500"
             />
             
-            {/* Mobile Edge-to-Edge Player */}
-            <div className="relative z-10 aspect-video bg-zinc-900 md:rounded-xl overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)] border-y border-zinc-800 md:border-x">
+            {/* Adaptive Player Container */}
+            <div className="relative z-10 w-full max-h-[80vh] flex items-center justify-center bg-zinc-950 md:rounded-xl overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)] border-y border-zinc-800 md:border-x">
               <Player 
                 src={realVideoUrl}
                 autoPlay={true} 
-                title={videoData?.title || `Premium Video ${videoId}`} 
+                title={videoData?.title || `Premium Video ${numericId}`} 
                 poster={videoData?.thumbnail_url || "https://files.vidstack.io/sprite-fight/poster.webp"}
               />
             </div>
           </div>
           
           <div className="px-4 md:px-0">
-            <h1 className="text-xl md:text-2xl font-bold mt-4 md:mt-6 leading-tight">{videoData?.title || `Premium Video ${videoId}`}</h1>
+            <h1 className="text-xl md:text-2xl font-bold mt-4 md:mt-6 leading-tight">{videoData?.title || `Premium Video ${numericId}`}</h1>
             <div className="flex flex-wrap items-center justify-between mt-4 pb-6 border-b border-zinc-800 gap-4">
             
             {/* Creator Info */}

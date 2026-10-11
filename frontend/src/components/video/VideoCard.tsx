@@ -2,13 +2,36 @@
 import Image from 'next/image';
 import { Play, ThumbsUp, Eye, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { encodeVideoId } from '@/lib/obfuscate';
 
 export default function VideoCard({ video }: { video: any }) {
   const [isHovered, setIsHovered] = useState(false);
+  const [hasBeenWatched, setHasBeenWatched] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  const isNew = video.created_at && (new Date().getTime() - new Date(video.created_at).getTime()) < 72 * 60 * 60 * 1000;
+  // Check if current user has already watched this video
+  useEffect(() => {
+    try {
+      const watched = JSON.parse(localStorage.getItem('xpig_watched_videos') || '[]');
+      if (Array.isArray(watched) && watched.includes(Number(video.id))) {
+        setHasBeenWatched(true);
+      }
+    } catch (e) {}
+  }, [video.id]);
+
+  const handleCardClick = () => {
+    try {
+      const watched = JSON.parse(localStorage.getItem('xpig_watched_videos') || '[]');
+      if (Array.isArray(watched) && !watched.includes(Number(video.id))) {
+        watched.push(Number(video.id));
+        localStorage.setItem('xpig_watched_videos', JSON.stringify(watched));
+      }
+    } catch (e) {}
+  };
+
+  // NEW badge only displays if video is <72h old AND has NOT been watched by user
+  const isNew = !hasBeenWatched && video.created_at && (new Date().getTime() - new Date(video.created_at).getTime()) < 72 * 60 * 60 * 1000;
   const playUrl = video.preview_url || video.sources?.[0]?.source_url || video.video_url;
 
   const handleMouseEnter = () => {
@@ -32,10 +55,13 @@ export default function VideoCard({ video }: { video: any }) {
     }
   };
 
+  const watchUrl = `/watch/${encodeVideoId(video.id)}`;
+
   return (
     <Link 
-      href={`/watch/${video.id}`} 
+      href={watchUrl} 
       className="group flex flex-col gap-2 relative"
+      onClick={handleCardClick}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
@@ -72,7 +98,7 @@ export default function VideoCard({ video }: { video: any }) {
           </div>
         )}
 
-        {/* NEW Badge */}
+        {/* NEW Badge (Automatically hidden once watched) */}
         {isNew && (
           <div className="absolute top-2 left-2 px-2 py-0.5 bg-pink-600 rounded text-[10px] font-black text-white tracking-widest uppercase z-20 shadow-lg shadow-pink-900/50">
             NEW

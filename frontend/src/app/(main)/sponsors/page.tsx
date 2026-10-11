@@ -1,5 +1,6 @@
-﻿import { Mail, ArrowRight, ShieldCheck, TrendingUp, Users } from 'lucide-react';
+import { ShieldCheck, TrendingUp, Users } from 'lucide-react';
 import Link from 'next/link';
+import SponsorContactButton from './SponsorContactButton';
 
 export const metadata = {
   title: 'Advertise with XPIG - Sponsorships',
@@ -37,24 +38,15 @@ export default function SponsorsPage() {
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-pink-900/20 to-purple-900/20 border border-pink-500/30 rounded-3xl p-8 md:p-12 text-center">
+        <div className="bg-[#111114] border border-zinc-800 rounded-3xl p-8 md:p-12 text-center shadow-xl">
           <h2 className="text-2xl font-bold text-white mb-4">Ready to setup a Direct Deal?</h2>
-          <p className="text-zinc-400 mb-8 max-w-2xl mx-auto">
+          <p className="text-zinc-400 mb-8 max-w-2xl mx-auto text-sm md:text-base">
             We offer custom sponsorship packages including homepage takeovers, pre-roll video ads, and permanent sponsored cards. Get in touch with our sales team to discuss custom pricing.
           </p>
           
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <a 
-              href="mailto:admin@xpig.me" 
-              className="flex items-center gap-2 bg-pink-600 hover:bg-pink-500 text-white px-8 py-4 rounded-full font-bold text-lg transition-all hover:scale-105 shadow-lg shadow-pink-500/20"
-            >
-              <Mail className="w-5 h-5" />
-              Email Us: admin@xpig.me
-            </a>
-          </div>
+          <SponsorContactButton />
         </div>
       </div>
     </div>
   );
 }
-

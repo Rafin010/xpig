@@ -17,6 +17,16 @@ export function Player({ src, poster, title, autoPlay = true }: PlayerProps) {
   const playerRef = useRef<any>(null);
   const videoFallbackRef = useRef<HTMLVideoElement>(null);
   const [useFallback, setUseFallback] = useState(false);
+  const [aspectRatio, setAspectRatio] = useState<string>('16 / 9');
+
+  const handleMetadata = (e: any) => {
+    try {
+      const target = (e?.target || e?.detail?.target) as HTMLVideoElement;
+      if (target && target.videoWidth && target.videoHeight) {
+        setAspectRatio(`${target.videoWidth} / ${target.videoHeight}`);
+      }
+    } catch (err) {}
+  };
 
   const handleFullscreenChange = (isFullscreen: boolean) => {
     try {
@@ -44,7 +54,10 @@ export function Player({ src, poster, title, autoPlay = true }: PlayerProps) {
 
   if (useFallback) {
     return (
-      <div className="w-full h-full aspect-video bg-black rounded-none md:rounded-xl overflow-hidden relative flex items-center justify-center">
+      <div 
+        className="w-full bg-black rounded-none md:rounded-xl overflow-hidden relative flex items-center justify-center mx-auto"
+        style={{ aspectRatio, maxHeight: '78vh' }}
+      >
         <video
           ref={videoFallbackRef}
           src={src}
@@ -53,7 +66,8 @@ export function Player({ src, poster, title, autoPlay = true }: PlayerProps) {
           autoPlay={autoPlay}
           muted={true}
           playsInline
-          className="w-full h-full object-contain"
+          onLoadedMetadata={handleMetadata}
+          className="w-full h-full max-h-[78vh] object-contain"
         />
       </div>
     );
@@ -72,10 +86,10 @@ export function Player({ src, poster, title, autoPlay = true }: PlayerProps) {
       muted={true}
       onError={() => setUseFallback(true)}
       onFullscreenChange={handleFullscreenChange}
-      className="w-full h-full aspect-video bg-black rounded-none md:rounded-xl overflow-hidden ring-0 outline-none"
-      style={{ '--video-brand': '#db2777' } as any} // Pink-600
+      className="w-full bg-black rounded-none md:rounded-xl overflow-hidden ring-0 outline-none mx-auto"
+      style={{ '--video-brand': '#db2777', aspectRatio, maxHeight: '78vh' } as any}
     >
-      <MediaProvider>
+      <MediaProvider onLoadedMetadata={handleMetadata}>
         {poster && <Poster className="vds-poster object-cover" src={poster} alt={title} />}
       </MediaProvider>
       <DefaultVideoLayout 
