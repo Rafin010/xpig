@@ -10,9 +10,10 @@ interface PlayerProps {
   src: string;
   poster?: string;
   title?: string;
+  autoPlay?: boolean;
 }
 
-export function Player({ src, poster, title }: PlayerProps) {
+export function Player({ src, poster, title, autoPlay = true }: PlayerProps) {
   const playerRef = useRef<any>(null);
 
   const handleFullscreenChange = (isFullscreen: boolean) => {
@@ -43,6 +44,8 @@ export function Player({ src, poster, title }: PlayerProps) {
       logLevel="warn"
       crossOrigin
       playsInline
+      autoPlay={autoPlay}
+      muted={true}
       onFullscreenChange={handleFullscreenChange}
       className="w-full h-full aspect-video bg-black rounded-none md:rounded-xl overflow-hidden ring-0 outline-none"
       style={{ '--video-brand': '#db2777' } as any} // Pink-600

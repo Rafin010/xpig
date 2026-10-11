@@ -99,7 +99,13 @@ export default function WatchClient({ videoId }: { videoId: string }) {
   if (isLoading) return <WatchPageSkeleton />;
 
   // We use a public test HLS URL for demonstration since we haven't uploaded real files yet
-  const testHlsUrl = "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8";
+    // Dynamically resolve real video stream from Cloudflare R2
+  const realVideoUrl = 
+    videoData?.sources?.find((s: any) => s.resolution === 'Original')?.source_url || 
+    videoData?.sources?.[0]?.source_url || 
+    videoData?.video_url || 
+    videoData?.preview_url || 
+    "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8";
   
   return (
     <div className="min-h-screen bg-black md:px-8 text-white pb-20 pt-4 md:pt-6">
@@ -125,7 +131,8 @@ export default function WatchClient({ videoId }: { videoId: string }) {
             {/* Mobile Edge-to-Edge Player */}
             <div className="relative z-10 aspect-video bg-zinc-900 md:rounded-xl overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)] border-y border-zinc-800 md:border-x">
               <Player 
-                src={testHlsUrl} 
+                src={realVideoUrl}
+                autoPlay={true} 
                 title={videoData?.title || `Premium Video ${videoId}`} 
                 poster={videoData?.thumbnail_url || "https://files.vidstack.io/sprite-fight/poster.webp"}
               />
