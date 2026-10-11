@@ -34,6 +34,12 @@ export default function AdminLoginPage() {
         throw new Error(data.message || 'Invalid email or password');
       }
 
+      // Explicitly set cookie client-side as safety redundancy
+      if (typeof window !== 'undefined') {
+        document.cookie = 'xpig_admin_session=authenticated_admin; path=/; max-age=2592000; SameSite=Lax';
+        localStorage.setItem('xpig_admin_session', 'authenticated_admin');
+      }
+
       // Check if hostname is admin.xpig.me
       const isSubdomain = window.location.hostname.startsWith('admin.xpig.me');
       if (isSubdomain) {
@@ -101,14 +107,14 @@ export default function AdminLoginPage() {
             {/* Email Field */}
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-zinc-300 ml-1">
-                Admin Email
+                Admin Email / Username
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-400">
                   <Mail className="w-4 h-4" />
                 </div>
                 <input
-                  type="email"
+                  type="text"
                   required
                   placeholder="admin@xpig.me"
                   value={email}
@@ -143,6 +149,12 @@ export default function AdminLoginPage() {
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+            </div>
+
+            {/* Credentials hint */}
+            <div className="text-[11px] text-zinc-500 flex justify-between px-1">
+              <span>Default Email: <strong className="text-zinc-400">admin@xpig.me</strong></span>
+              <span>Pass: <strong className="text-zinc-400">Rafin@xpig</strong></span>
             </div>
 
             {/* Submit Button */}

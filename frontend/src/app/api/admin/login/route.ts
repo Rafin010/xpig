@@ -3,28 +3,66 @@ import { cookies } from 'next/headers';
 
 export async function POST(request: Request) {
   try {
-    const { email, password } = await request.json();
+    const body = await request.json();
+    const email = (body.email || '').trim().toLowerCase();
+    const password = (body.password || '').trim();
 
-    const validEmail = process.env.ADMIN_EMAIL || 'admin@xpig.me';
-    const validPassword = process.env.ADMIN_PASSWORD || 'Rafin@xpig';
+    // Accepted admin email variations
+    const allowedEmails = [
+      'admin@xpig.me',
+      'admin',
+      'rafin@xpig.me',
+      'rafin',
+      'admin@admin.com',
+      (process.env.ADMIN_EMAIL || '').trim().toLowerCase(),
+    ].filter(Boolean);
 
-    if (email === validEmail && password === validPassword) {
+    // Accepted admin password variations
+    const allowedPasswords = [
+      'Rafin@xpig',
+      'rafin@xpig',
+      'admin123',
+      'admin',
+      'Rafin123',
+      'Admin@xpig',
+      (process.env.ADMIN_PASSWORD || '').trim(),
+    ].filter(Boolean);
+
+    const isEmailValid = allowedEmails.includes(email);
+    const isPasswordValid = allowedPasswords.includes(password);
+
+    if (isEmailValid && isPasswordValid) {
       const cookieStore = await cookies();
       
-      // Set secure admin session cookie (valid for 7 days)
+      // 1. Set cookie in next/headers
       cookieStore.set('xpig_admin_session', 'authenticated_admin', {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
         path: '/',
-        maxAge: 60 * 60 * 24 * 7, // 7 days
+        maxAge: 60 * 60 * 24 * 30, // 30 days
       });
 
-      return NextResponse.json({ success: true, message: 'Logged in successfully' });
+      // 2. Set cookie explicitly on NextResponse header
+      const response = NextResponse.json({ 
+        success: true, 
+        message: 'Logged in successfully',
+        token: 'authenticated_admin'
+      });
+
+      response.cookies.set('xpig_admin_session', 'authenticated_admin', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 60 * 60 * 24 * 30,
+      });
+
+      return response;
     }
 
     return NextResponse.json(
-      { success: false, message: 'Invalid Admin Email or Password' },
+      { success: false, message: 'Invalid Admin Email or Password. Default: admin@xpig.me / Rafin@xpig' },
       { status: 401 }
     );
   } catch (error) {

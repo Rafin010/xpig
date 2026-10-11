@@ -1,28 +1,36 @@
 'use client';
 import Image from 'next/image';
-
 import { Play, ThumbsUp, Eye, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import { useState, useRef } from 'react';
 
 export default function VideoCard({ video }: { video: any }) {
   const [isHovered, setIsHovered] = useState(false);
-  const previewTimeout = useRef<NodeJS.Timeout | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  const isNew = video.created_at && (new Date().getTime() - new Date(video.created_at).getTime()) < 72 * 60 * 60 * 1000;
+  const playUrl = video.preview_url || video.sources?.[0]?.source_url || video.video_url;
 
   const handleMouseEnter = () => {
-    previewTimeout.current = setTimeout(() => {
-      setIsHovered(true);
-    }, 120);
+    setIsHovered(true);
+    if (videoRef.current) {
+      try {
+        videoRef.current.defaultMuted = true;
+        videoRef.current.muted = true;
+        videoRef.current.currentTime = 0;
+        videoRef.current.play().catch(() => {});
+      } catch (e) {}
+    }
   };
 
   const handleMouseLeave = () => {
-    if (previewTimeout.current) clearTimeout(previewTimeout.current);
     setIsHovered(false);
+    if (videoRef.current) {
+      try {
+        videoRef.current.pause();
+      } catch (e) {}
+    }
   };
-
-  const isNew = video.created_at && (new Date().getTime() - new Date(video.created_at).getTime()) < 72 * 60 * 60 * 1000;
-  
-  const playUrl = video.preview_url || video.sources?.[0]?.source_url || video.video_url;
 
   return (
     <Link 
@@ -34,37 +42,35 @@ export default function VideoCard({ video }: { video: any }) {
       {/* Thumbnail Box */}
       <div className="aspect-[16/9] bg-[#1a1a1a] rounded-lg overflow-hidden relative border border-zinc-800/50 group-hover:border-zinc-700 transition-colors">
         
-        {isHovered && playUrl ? (
+        {/* Preloaded video preview in DOM (opacity controlled for 0ms latency) */}
+        {playUrl && (
           <video 
+            ref={videoRef}
             src={playUrl} 
-            autoPlay 
             muted 
             loop 
             playsInline
-            preload="auto"
-            className="w-full h-full object-cover scale-105 transition-all duration-300 pointer-events-none"
+            preload="metadata"
+            className={`absolute inset-0 w-full h-full object-cover scale-105 transition-opacity duration-300 pointer-events-none z-10 ${
+              isHovered ? 'opacity-100' : 'opacity-0'
+            }`}
           />
-        ) : (
-          <>
-            {video.thumbnail_url ? (
-              <Image 
-                src={video.thumbnail_url} 
-                alt={video.title} 
-                className={`w-full h-full object-cover transition-transform duration-500 ${isHovered ? 'scale-110' : ''}`}
-                fill 
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" 
-              />
-            ) : (
-              <div className="w-full h-full bg-zinc-800 flex items-center justify-center">
-                <span className="text-zinc-600 font-bold">NO THUMBNAIL</span>
-              </div>
-            )}
-          </>
         )}
 
-        {/* Glassmorphism Play Icon Removed as per user request */}
-        <div className={`absolute inset-0 transition-colors flex items-center justify-center z-10 ${isHovered && !playUrl ? 'bg-black/20' : ''}`}>
-        </div>
+        {/* Thumbnail Image */}
+        {video.thumbnail_url ? (
+          <Image 
+            src={video.thumbnail_url} 
+            alt={video.title} 
+            className={`w-full h-full object-cover transition-transform duration-500 ${isHovered ? 'scale-110' : ''}`}
+            fill 
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" 
+          />
+        ) : (
+          <div className="w-full h-full bg-zinc-800 flex items-center justify-center">
+            <span className="text-zinc-600 font-bold">NO THUMBNAIL</span>
+          </div>
+        )}
 
         {/* NEW Badge */}
         {isNew && (

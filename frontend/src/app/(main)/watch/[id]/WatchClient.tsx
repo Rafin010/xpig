@@ -28,13 +28,13 @@ export default function WatchClient({ videoId }: { videoId: string }) {
     async function loadData() {
       setIsLoading(true);
       try {
-        // Fetch specific video (assuming /api/v1/videos/{id} exists, if not we fallback to mock)
+        // Fetch specific video
         const vRes = await fetch(`https://xpig.onrender.com/api/v1/videos/${videoId}`);
         if (vRes.ok) {
           setVideoData(await vRes.json());
         }
 
-        // Fetch related videos (using discover search for now)
+        // Fetch related videos
         const relRes = await fetch(`https://xpig.onrender.com/api/v1/discover/search`);
         if (relRes.ok) {
           const rData = await relRes.json();
@@ -50,21 +50,28 @@ export default function WatchClient({ videoId }: { videoId: string }) {
     loadData();
   }, [videoId]);
   
-  // Real-time Ambient Mode
+  // Real-time Ambient Mode (Safeguarded against CORS SecurityError)
   const canvasRef = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     let animationFrameId: number;
+    let isTainted = false;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
     const renderAmbient = () => {
-      // Find the video element rendered by Vidstack
-      const videoElement = document.querySelector('video') as HTMLVideoElement;
-      if (videoElement && !videoElement.paused && !videoElement.ended) {
-        // Draw the current video frame to our background canvas
-        ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+      if (!isTainted) {
+        try {
+          // Find the video element rendered by the player
+          const videoElement = document.querySelector('video') as HTMLVideoElement;
+          if (videoElement && !videoElement.paused && !videoElement.ended && videoElement.readyState >= 2) {
+            ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+          }
+        } catch (e) {
+          // Cross-origin tainted canvas: gracefully suppress error to preserve video playback
+          isTainted = true;
+        }
       }
       animationFrameId = requestAnimationFrame(renderAmbient);
     };
@@ -98,8 +105,7 @@ export default function WatchClient({ videoId }: { videoId: string }) {
 
   if (isLoading) return <WatchPageSkeleton />;
 
-  // We use a public test HLS URL for demonstration since we haven't uploaded real files yet
-    // Dynamically resolve real video stream from Cloudflare R2
+  // Dynamically resolve real video stream from Cloudflare R2
   const realVideoUrl = 
     videoData?.sources?.find((s: any) => s.resolution === 'Original')?.source_url || 
     videoData?.sources?.[0]?.source_url || 
@@ -181,7 +187,7 @@ export default function WatchClient({ videoId }: { videoId: string }) {
           </div>
           
           <div className="mt-6 bg-[#111] rounded-xl p-4 text-sm text-zinc-300">
-            <p className="font-medium text-white mb-2">{videoData?.views || 0} views â€¢ {videoData?.created_at ? new Date(videoData.created_at).toLocaleDateString() : 'Just now'}</p>
+            <p className="font-medium text-white mb-2">{videoData?.views || 0} views • {videoData?.created_at ? new Date(videoData.created_at).toLocaleDateString() : 'Just now'}</p>
             <p>{videoData?.description || 'No description available for this video.'}</p>
           </div>
 
@@ -251,6 +257,3 @@ export default function WatchClient({ videoId }: { videoId: string }) {
     </div>
   );
 }
-
-
-
