@@ -1,6 +1,6 @@
-'use client';
+﻿'use client';
 import Link from 'next/link';
-import { Home, Compass, Radio, Users, User, Star, History, ThumbsUp, ShieldAlert, BarChart3, Settings, Database } from 'lucide-react';
+import { Home, Compass, Radio, Users, User, Star, History, ThumbsUp, ShieldAlert, BarChart3, Settings, Database } , Megaphone } from 'lucide-react';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useSidebar } from '@/context/SidebarContext';
@@ -116,7 +116,7 @@ export function Sidebar() {
             {!isCollapsed && <span className="ml-4">Support</span>}
           </Link>
           <a 
-            href="mailto:info@xpig.me?subject=Business%20and%20Advertising%20Inquiry"
+            href="mailto:admin@xpig.me?subject=Business%20and%20Advertising%20Inquiry"
             className="flex items-center gap-4 px-4 py-3 rounded-2xl transition-all duration-300 font-bold text-sm text-pink-400 hover:bg-pink-500/10 hover:text-pink-300 w-full"
             title={isCollapsed ? "Advertise" : undefined}
           >
@@ -143,5 +143,7 @@ export function Sidebar() {
     </>
   );
 }
+
+
 
 

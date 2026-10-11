@@ -11,7 +11,7 @@ export function TopAdBanner() {
   return (
     <div className="fixed top-16 left-0 right-0 z-[45] flex items-center justify-center p-2 shadow-none animate-in slide-in-from-top-10">
       <a 
-        href="mailto:info@xpig.me?subject=XPIG%20Premium%20Sponsorship%20Inquiry"
+        href="mailto:admin@xpig.me?subject=XPIG%20Premium%20Sponsorship%20Inquiry"
         className="w-full max-w-3xl h-16 bg-zinc-900 overflow-hidden relative group cursor-pointer block rounded-md border-0"
       >
         <Image 
@@ -26,7 +26,7 @@ export function TopAdBanner() {
             <span className="text-[10px] text-pink-300 font-bold tracking-widest uppercase">Premium Placement</span>
           </div>
           <div className="bg-pink-600 hover:bg-pink-500 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg transition-colors hidden md:block">
-            Email info@xpig.me
+            Email admin@xpig.me
           </div>
         </div>
       </a>
@@ -39,3 +39,4 @@ export function TopAdBanner() {
     </div>
   );
 }
+

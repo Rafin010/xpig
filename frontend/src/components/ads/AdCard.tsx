@@ -6,7 +6,7 @@ import Image from 'next/image';
 export default function AdCard() {
   return (
     <a 
-      href="mailto:info@xpig.me?subject=XPIG%20Video%20Grid%20Sponsorship" 
+      href="mailto:admin@xpig.me?subject=XPIG%20Video%20Grid%20Sponsorship" 
       className="group flex flex-col gap-2 relative cursor-pointer"
     >
       {/* Thumbnail Box */}
@@ -33,3 +33,4 @@ export default function AdCard() {
     </a>
   );
 }
+

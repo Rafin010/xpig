@@ -15,7 +15,7 @@ export function middleware(request: NextRequest) {
       const authValue = basicAuth.split(' ')[1]
       const [user, pwd] = atob(authValue).split(':')
       
-      const validUser = process.env.ADMIN_EMAIL || 'info@xpig.me';
+      const validUser = process.env.ADMIN_EMAIL || 'admin@xpig.me';
       const validPwd = process.env.ADMIN_PASSWORD || 'Rafin@xpig';
 
       if (user === validUser && pwd === validPwd) {
@@ -51,3 +51,4 @@ export const config = {
     '/((?!api|_next/static|_next/image|favicon.ico).*)',
   ],
 };
+

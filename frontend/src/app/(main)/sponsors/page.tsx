@@ -1,4 +1,4 @@
-import { Mail, ArrowRight, ShieldCheck, TrendingUp, Users } from 'lucide-react';
+﻿import { Mail, ArrowRight, ShieldCheck, TrendingUp, Users } from 'lucide-react';
 import Link from 'next/link';
 
 export const metadata = {
@@ -45,11 +45,11 @@ export default function SponsorsPage() {
           
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <a 
-              href="mailto:info@xpig.me" 
+              href="mailto:admin@xpig.me" 
               className="flex items-center gap-2 bg-pink-600 hover:bg-pink-500 text-white px-8 py-4 rounded-full font-bold text-lg transition-all hover:scale-105 shadow-lg shadow-pink-500/20"
             >
               <Mail className="w-5 h-5" />
-              Email Us: info@xpig.me
+              Email Us: admin@xpig.me
             </a>
           </div>
         </div>
@@ -57,3 +57,4 @@ export default function SponsorsPage() {
     </div>
   );
 }
+

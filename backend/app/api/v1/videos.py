@@ -100,7 +100,7 @@ async def get_video(
     # In a real app, check visibility and user permissions (age gate verification)
     return video
 
-@router.post("/upload", response_model=VideoSchema)
+@router.post("/upload")
 async def upload_video(
     background_tasks: BackgroundTasks,
     title: str = Form(...),
@@ -148,7 +148,7 @@ async def upload_video(
     from app.worker.tasks import process_video_task
     background_tasks.add_task(process_video_task, None, video.id, input_path, output_dir)
     
-    return video
+    return {"status": "uploading", "video_id": video.id, "title": video.title}
 
 from pydantic import BaseModel
 
