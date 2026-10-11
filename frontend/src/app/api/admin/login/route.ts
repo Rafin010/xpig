@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 
 export async function POST(request: Request) {
   try {
@@ -32,18 +31,6 @@ export async function POST(request: Request) {
     const isPasswordValid = allowedPasswords.includes(password);
 
     if (isEmailValid && isPasswordValid) {
-      const cookieStore = await cookies();
-      
-      // 1. Set cookie in next/headers
-      cookieStore.set('xpig_admin_session', 'authenticated_admin', {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        path: '/',
-        maxAge: 60 * 60 * 24 * 30, // 30 days
-      });
-
-      // 2. Set cookie explicitly on NextResponse header
       const response = NextResponse.json({ 
         success: true, 
         message: 'Logged in successfully',
@@ -55,7 +42,7 @@ export async function POST(request: Request) {
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
         path: '/',
-        maxAge: 60 * 60 * 24 * 30,
+        maxAge: 60 * 60 * 24 * 30, // 30 days
       });
 
       return response;
@@ -65,9 +52,9 @@ export async function POST(request: Request) {
       { success: false, message: 'Invalid Admin Email or Password. Default: admin@xpig.me / Rafin@xpig' },
       { status: 401 }
     );
-  } catch (error) {
+  } catch (error: any) {
     return NextResponse.json(
-      { success: false, message: 'Server error during authentication' },
+      { success: false, message: error?.message || 'Server error during authentication' },
       { status: 500 }
     );
   }
