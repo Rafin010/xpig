@@ -233,7 +233,7 @@ export default function WatchClient({ videoId }: { videoId: string }) {
     videoData?.sources?.[0]?.source_url || 
     videoData?.video_url || 
     videoData?.preview_url || 
-    "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8";
+    "";
   
   return (
     <div className="min-h-screen bg-black md:px-8 text-white pb-20 pt-4 md:pt-6">
@@ -244,10 +244,12 @@ export default function WatchClient({ videoId }: { videoId: string }) {
           {/* Ambient Mode & Player Wrapper */}
           <div className="relative">
             {/* Static Fallback Glow (Before Play) */}
-            <div 
-              className="absolute -inset-10 blur-[80px] opacity-30 bg-cover bg-center z-0 hidden md:block" 
-              style={{ backgroundImage: `url(${videoData?.thumbnail_url || "https://files.vidstack.io/sprite-fight/poster.webp"})` }}
-            />
+            {videoData?.thumbnail_url && (
+              <div 
+                className="absolute -inset-10 blur-[80px] opacity-30 bg-cover bg-center z-0 hidden md:block" 
+                style={{ backgroundImage: `url(${videoData.thumbnail_url})` }}
+              />
+            )}
             {/* Real-time Dynamic Glow */}
             <canvas
               ref={canvasRef}
@@ -258,12 +260,18 @@ export default function WatchClient({ videoId }: { videoId: string }) {
             
             {/* Adaptive Player Container */}
             <div className="relative z-10 w-full max-h-[80vh] flex items-center justify-center bg-zinc-950 md:rounded-xl overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)] border-y border-zinc-800 md:border-x">
-              <Player 
-                src={realVideoUrl}
-                autoPlay={true} 
-                title={videoData?.title || `Premium Video ${numericId}`} 
-                poster={videoData?.thumbnail_url || "https://files.vidstack.io/sprite-fight/poster.webp"}
-              />
+              {realVideoUrl ? (
+                <Player 
+                  src={realVideoUrl}
+                  autoPlay={true} 
+                  title={videoData?.title || `Video ${numericId}`} 
+                  poster={videoData?.thumbnail_url || undefined}
+                />
+              ) : (
+                <div className="aspect-video w-full flex flex-col items-center justify-center bg-zinc-900 text-zinc-500">
+                  <p className="text-sm font-semibold">Video stream is processing or currently unavailable.</p>
+                </div>
+              )}
             </div>
           </div>
           

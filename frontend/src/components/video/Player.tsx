@@ -87,7 +87,7 @@ export function Player({ src, poster, title, autoPlay = true }: PlayerProps) {
       onError={() => setUseFallback(true)}
       onFullscreenChange={handleFullscreenChange}
       className="w-full bg-black rounded-none md:rounded-xl overflow-hidden ring-0 outline-none mx-auto"
-      style={{ '--video-brand': '#db2777', aspectRatio, maxHeight: '78vh' } as any}
+      style={{ '--video-brand': '#ffffff', aspectRatio, maxHeight: '78vh' } as any}
     >
       <MediaProvider onLoadedMetadata={handleMetadata}>
         {poster && <Poster className="vds-poster object-cover" src={poster} alt={title} />}
@@ -95,7 +95,7 @@ export function Player({ src, poster, title, autoPlay = true }: PlayerProps) {
       <DefaultVideoLayout 
         icons={defaultLayoutIcons} 
         thumbnails={poster}
-        color="hsl(330, 81%, 60%)" 
+        color="hsl(0, 0%, 95%)" 
       />
     </MediaPlayer>
   );

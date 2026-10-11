@@ -5,6 +5,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Search, Menu, Bell, User, Plus, Settings, X, LogOut } from 'lucide-react';
 import { useSidebar } from '@/context/SidebarContext';
 import { useAuth } from '@/context/AuthContext';
+import { encodeVideoId } from '@/lib/obfuscate';
 
 
 export function Navbar() {
@@ -127,10 +128,10 @@ export function Navbar() {
             {searchResults.length > 0 && searchQuery.trim().length > 0 && (
               <div className="absolute top-full left-0 right-0 mt-1 bg-[#161616] border border-zinc-800 rounded-lg shadow-2xl overflow-hidden z-50 max-h-96 overflow-y-auto">
                 {searchResults.map((video) => (
-                  <Link key={video.id} href={`/watch/${video.id}`} onClick={() => { setSearchQuery(''); setSearchResults([]); }}
+                  <Link key={video.id} href={`/watch/${encodeVideoId(video.id)}`} onClick={() => { setSearchQuery(''); setSearchResults([]); }}
                     className="flex items-center gap-3 p-3 hover:bg-[#222] transition-colors border-b border-zinc-800/50 last:border-0 group">
                     <div className="relative w-16 h-10 bg-zinc-900 rounded overflow-hidden shrink-0">
-                      <Image src={video.thumbnail_url || "https://files.vidstack.io/sprite-fight/poster.webp"} alt={video.title} fill sizes="64px" className="object-cover" />
+                      <Image src={video.thumbnail_url || "/icon.png"} alt={video.title} fill sizes="64px" className="object-cover" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <h4 className="text-sm font-semibold text-zinc-200 truncate group-hover:text-white transition-colors">{video.title}</h4>
