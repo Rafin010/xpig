@@ -55,6 +55,8 @@ interface UserLocationData {
   maps_url: string;
 }
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://xpig.onrender.com';
+
 export default function UserManagementPage() {
   const [users, setUsers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -91,7 +93,7 @@ export default function UserManagementPage() {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const res = await fetch('https://xpig.onrender.com/api/v1/users/');
+      const res = await fetch(`${API_BASE}/api/v1/users/`);
       if (!res.ok) throw new Error('Failed to fetch users');
       const data = await res.json();
       if (Array.isArray(data)) {
@@ -131,7 +133,7 @@ export default function UserManagementPage() {
     setIsDeleting(true);
 
     try {
-      const res = await fetch(`https://xpig.onrender.com/api/v1/users/${deletingUser.id}`, {
+      const res = await fetch(`${API_BASE}/api/v1/users/${deletingUser.id}`, {
         method: 'DELETE',
       });
 
@@ -153,7 +155,7 @@ export default function UserManagementPage() {
   const handleToggleStatus = async (user: UserData) => {
     try {
       const newStatus = !user.is_active;
-      const res = await fetch(`https://xpig.onrender.com/api/v1/users/${user.id}/status`, {
+      const res = await fetch(`${API_BASE}/api/v1/users/${user.id}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_active: newStatus }),
@@ -174,7 +176,7 @@ export default function UserManagementPage() {
     setIsUpdatingRole(true);
 
     try {
-      const res = await fetch(`https://xpig.onrender.com/api/v1/users/${roleModalUser.id}/role`, {
+      const res = await fetch(`${API_BASE}/api/v1/users/${roleModalUser.id}/role`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ role: selectedRole }),
@@ -208,7 +210,7 @@ export default function UserManagementPage() {
     setLocationError(null);
 
     try {
-      const res = await fetch(`https://xpig.onrender.com/api/v1/users/${user.id}/location`);
+      const res = await fetch(`${API_BASE}/api/v1/users/${user.id}/location`);
       if (!res.ok) {
         const err = await res.json().catch(() => null);
         throw new Error(err?.detail || 'Failed to retrieve location telemetry');

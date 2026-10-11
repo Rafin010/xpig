@@ -2,12 +2,15 @@ from typing import Any, List, Optional
 import os
 import aiofiles
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, BackgroundTasks
-from sqlalchemy import select, delete, desc
+from sqlalchemy import select, delete, desc, update
 from arq import create_pool
 from arq.connections import RedisSettings
 
 from app.db.session import get_db
 from app.models.video import Video, VideoSource
+from app.models.taxonomy import video_category_table, video_tag_table
+from app.models.social import Comment, Like
+from app.models.moderation import Report, ModerationLog
 from app.api.deps import get_current_user
 from app.models.user import User
 import uuid
@@ -16,25 +19,34 @@ from app.services.media_provider import SelfHostedProvider # Replace with factor
 
 router = APIRouter()
 
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 @router.get("/", response_model=List[VideoSchema])
+@router.get("", response_model=List[VideoSchema], include_in_schema=False)
 async def get_videos(
     skip: int = 0,
-    limit: int = 100,
+    limit: int = 1000,
+    status: Optional[str] = None,
     db: AsyncSession = Depends(get_db)
 ) -> Any:
-    from sqlalchemy import desc
-    result = await db.execute(
-        select(Video)
-        .options(selectinload(Video.sources))
-        .where(Video.status == "PUBLISHED")
-        .order_by(desc(Video.id))
-        .offset(skip)
-        .limit(limit)
-    )
+    stmt = select(Video).options(selectinload(Video.sources))
+    if status and status.upper() != "ALL":
+        stmt = stmt.where(Video.status == status.upper())
+    elif not status:
+        stmt = stmt.where(Video.status == "PUBLISHED")
+        
+    stmt = stmt.order_by(desc(Video.id)).offset(skip).limit(limit)
+    result = await db.execute(stmt)
     videos = result.scalars().all()
     return videos
+
+@router.post("/publish-all-pending")
+async def publish_all_pending_videos(db: AsyncSession = Depends(get_db)) -> Any:
+    stmt = update(Video).where(Video.status == "PENDING").values(status="PUBLISHED")
+    await db.execute(stmt)
+    await db.commit()
+    return {"success": True, "message": "All pending videos have been published successfully"}
 
 class VideoCreateWithStatus(VideoCreate):
     status: Optional[str] = "PUBLISHED"
@@ -224,18 +236,32 @@ async def delete_video(
     db: AsyncSession = Depends(get_db)
 ) -> Any:
     """
-    Permanently delete video and all associated video sources.
+    Permanently delete video and all associated sources, categories, tags, comments, likes, and reports.
     """
     result = await db.execute(select(Video).where(Video.id == video_id))
     video = result.scalars().first()
     if not video:
         raise HTTPException(status_code=404, detail="Video not found")
 
-    # Remove all video sources
+    # 1. Remove all video sources
     await db.execute(delete(VideoSource).where(VideoSource.video_id == video_id))
+    
+    # 2. Remove category & tag associations
+    await db.execute(delete(video_category_table).where(video_category_table.c.video_id == video_id))
+    await db.execute(delete(video_tag_table).where(video_tag_table.c.video_id == video_id))
+
+    # 3. Remove social interactions (comments, likes)
+    await db.execute(delete(Comment).where(Comment.video_id == video_id))
+    await db.execute(delete(Like).where(Like.video_id == video_id))
+
+    # 4. Remove reports and moderation logs referencing this video
+    await db.execute(delete(Report).where(Report.video_id == video_id))
+    await db.execute(delete(ModerationLog).where(ModerationLog.target_video_id == video_id))
+
+    # 5. Delete video entity
     await db.delete(video)
     await db.commit()
-    return {"success": True, "message": f"Video {video_id} deleted successfully"}
+    return {"success": True, "message": f"Video #{video_id} deleted successfully"}
 
 class VideoUpdatePayload(BaseModel):
     title: Optional[str] = None
@@ -251,27 +277,43 @@ async def update_video(
     db: AsyncSession = Depends(get_db)
 ) -> Any:
     """
-    Update video title, description, visibility, and status.
+    Update video title, description, visibility, status, and thumbnail.
     """
     result = await db.execute(select(Video).where(Video.id == video_id))
     video = result.scalars().first()
     if not video:
         raise HTTPException(status_code=404, detail="Video not found")
 
-    if payload.title is not None:
+    if payload.title is not None and payload.title.strip():
         video.title = payload.title.strip()
     if payload.description is not None:
         video.description = payload.description.strip()
     if payload.visibility is not None:
-        video.visibility = payload.visibility
+        video.visibility = payload.visibility.strip().upper()
     if payload.status is not None:
-        video.status = payload.status
+        video.status = payload.status.strip().upper()
     if payload.thumbnail_url is not None:
-        video.thumbnail_url = payload.thumbnail_url
+        video.thumbnail_url = payload.thumbnail_url.strip()
 
     await db.commit()
     await db.refresh(video)
-    return {"success": True, "video": video}
+    return {
+        "success": True,
+        "message": f"Video #{video.id} updated successfully",
+        "video": {
+            "id": video.id,
+            "title": video.title,
+            "description": video.description,
+            "visibility": video.visibility,
+            "status": video.status,
+            "thumbnail_url": video.thumbnail_url,
+            "preview_url": video.preview_url,
+            "views": video.views,
+            "likes": video.likes,
+            "creator_id": video.creator_id,
+            "created_at": video.created_at.isoformat() if video.created_at else None
+        }
+    }
 
 @router.post("/admin-upload")
 async def admin_direct_upload(

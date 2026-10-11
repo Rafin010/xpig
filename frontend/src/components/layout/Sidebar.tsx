@@ -35,6 +35,11 @@ export function Sidebar() {
     return (
       <Link 
         href={href}
+        onClick={() => {
+          if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+            toggleSidebar();
+          }
+        }}
         className={`flex items-center ${isCollapsed ? 'justify-center lg:px-0 px-4' : 'gap-4 px-4'} py-3.5 rounded-xl transition-all duration-200 font-semibold text-[15px] ${
           isActive 
             ? 'bg-zinc-800 text-white shadow-sm' 

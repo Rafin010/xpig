@@ -5,9 +5,15 @@ from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy import delete, or_
 
 from app.db.session import get_db
 from app.models.user import User
+from app.models.video import Video, VideoSource
+from app.models.social import Comment, Like, Follow
+from app.models.moderation import Report, ModerationLog
+from app.models.payment import Subscription, Transaction
+from app.models.taxonomy import video_category_table, video_tag_table
 from app.schemas.user import User as UserSchema
 
 router = APIRouter()
@@ -62,7 +68,7 @@ async def get_all_users(
             "role": role_title,
             "created_at": u.created_at.isoformat() if u.created_at else None,
             "last_active": u.last_active.isoformat() if u.last_active else None,
-            "ip_address": telemetry.get("ip", "103.145.74.22" if u.id % 2 == 0 else "182.160.119.5")
+            "ip_address": telemetry.get("ip") or None
         })
     return {"items": items}
 
@@ -83,17 +89,44 @@ async def delete_user(
     db: AsyncSession = Depends(get_db)
 ) -> Any:
     """
-    Permanently delete a user account from database.
-    Superuser ID 1 or is_superuser accounts cannot be deleted.
+    Permanently delete a user account from database with full cascade cleanup.
+    The owner account (info.iarafin010@gmail.com) and superuser cannot be deleted.
     """
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalars().first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
         
-    if user.id == 1 or getattr(user, 'is_superuser', False):
+    if getattr(user, 'is_superuser', False) or user.email == "info.iarafin010@gmail.com":
         raise HTTPException(status_code=403, detail="The Super Admin / Owner account cannot be deleted.")
-        
+
+    # 1. Delete user's comments, likes, and follows
+    await db.execute(delete(Comment).where(Comment.user_id == user_id))
+    await db.execute(delete(Like).where(Like.user_id == user_id))
+    await db.execute(delete(Follow).where(or_(Follow.follower_id == user_id, Follow.following_id == user_id)))
+
+    # 2. Delete user's subscriptions and transactions
+    await db.execute(delete(Subscription).where(or_(Subscription.subscriber_id == user_id, Subscription.creator_id == user_id)))
+    await db.execute(delete(Transaction).where(or_(Transaction.user_id == user_id, Transaction.creator_id == user_id)))
+
+    # 3. Clean up moderation logs & reports
+    await db.execute(delete(Report).where(Report.reporter_id == user_id))
+    await db.execute(delete(ModerationLog).where(or_(ModerationLog.admin_id == user_id, ModerationLog.target_user_id == user_id)))
+
+    # 4. Find all videos created by this user and clean up their associations
+    user_videos_res = await db.execute(select(Video.id).where(Video.creator_id == user_id))
+    user_video_ids = user_videos_res.scalars().all()
+    if user_video_ids:
+        await db.execute(delete(VideoSource).where(VideoSource.video_id.in_(user_video_ids)))
+        await db.execute(delete(video_category_table).where(video_category_table.c.video_id.in_(user_video_ids)))
+        await db.execute(delete(video_tag_table).where(video_tag_table.c.video_id.in_(user_video_ids)))
+        await db.execute(delete(Comment).where(Comment.video_id.in_(user_video_ids)))
+        await db.execute(delete(Like).where(Like.video_id.in_(user_video_ids)))
+        await db.execute(delete(Report).where(Report.video_id.in_(user_video_ids)))
+        await db.execute(delete(ModerationLog).where(ModerationLog.target_video_id.in_(user_video_ids)))
+        await db.execute(delete(Video).where(Video.id.in_(user_video_ids)))
+
+    # 5. Delete user record
     await db.delete(user)
     await db.commit()
     return {"success": True, "message": f"User #{user_id} deleted successfully."}

@@ -12,7 +12,11 @@ import {
   Server, 
   ExternalLink,
   ShieldCheck,
-  X
+  X,
+  Trash2,
+  Radio,
+  RotateCcw,
+  AlertTriangle
 } from "lucide-react";
 
 interface StorageNode {
@@ -27,10 +31,26 @@ interface StorageNode {
   video_count?: number;
 }
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://xpig.onrender.com";
+
 export default function StorageSettingsPage() {
   const [nodes, setNodes] = useState<StorageNode[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Syncing state per node
+  const [syncingNodeId, setSyncingNodeId] = useState<string | number | null>(null);
+  const [activatingNodeId, setActivatingNodeId] = useState<string | number | null>(null);
+  const [deletingNode, setDeletingNode] = useState<StorageNode | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Toast banner
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 4000);
+  };
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -48,7 +68,7 @@ export default function StorageSettingsPage() {
     try {
       setLoading(true);
       setError(null);
-      const res = await fetch("https://xpig.onrender.com/api/v1/storage-nodes/");
+      const res = await fetch(`${API_BASE}/api/v1/storage-nodes/`);
       if (!res.ok) throw new Error("Failed to fetch storage nodes");
       const data = await res.json();
       setNodes(Array.isArray(data) ? data : []);
@@ -66,7 +86,7 @@ export default function StorageSettingsPage() {
   const formatBytes = (bytes: number) => {
     if (!bytes || bytes === 0) return "0.00 GB";
     const gb = bytes / (1024 * 1024 * 1024);
-    if (gb < 0.01) {
+    if (gb < 0.05) {
       const mb = bytes / (1024 * 1024);
       return `${mb.toFixed(2)} MB`;
     }
@@ -82,7 +102,7 @@ export default function StorageSettingsPage() {
     setFormError(null);
     try {
       setSubmitting(true);
-      const res = await fetch("https://xpig.onrender.com/api/v1/storage-nodes/", {
+      const res = await fetch(`${API_BASE}/api/v1/storage-nodes/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -104,11 +124,76 @@ export default function StorageSettingsPage() {
         bucket_name: "",
         public_url: "",
       });
+      showToast("Storage node created successfully!");
       fetchNodes();
     } catch (err: any) {
       setFormError(err.message || "Failed to create storage node");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  // Sync Node Telemetry
+  const handleSyncNode = async (nodeId: string | number) => {
+    try {
+      setSyncingNodeId(nodeId);
+      const res = await fetch(`${API_BASE}/api/v1/storage-nodes/${nodeId}/sync`, {
+        method: "POST"
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => null);
+        throw new Error(d?.detail || "Failed to sync storage node");
+      }
+      const data = await res.json();
+      showToast(data.message || `Node #${nodeId} synced successfully.`);
+      fetchNodes();
+    } catch (err: any) {
+      alert(err.message || "Sync failed");
+    } finally {
+      setSyncingNodeId(null);
+    }
+  };
+
+  // Activate Node for Uploads
+  const handleActivateNode = async (nodeId: string | number) => {
+    try {
+      setActivatingNodeId(nodeId);
+      const res = await fetch(`${API_BASE}/api/v1/storage-nodes/${nodeId}/activate`, {
+        method: "PATCH"
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => null);
+        throw new Error(d?.detail || "Failed to activate node");
+      }
+      const data = await res.json();
+      showToast(data.message || `Node #${nodeId} is now active.`);
+      fetchNodes();
+    } catch (err: any) {
+      alert(err.message || "Activation failed");
+    } finally {
+      setActivatingNodeId(null);
+    }
+  };
+
+  // Delete Standby Node
+  const handleConfirmDeleteNode = async () => {
+    if (!deletingNode) return;
+    try {
+      setIsDeleting(true);
+      const res = await fetch(`${API_BASE}/api/v1/storage-nodes/${deletingNode.id}`, {
+        method: "DELETE"
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => null);
+        throw new Error(d?.detail || "Failed to delete storage node");
+      }
+      showToast(`Storage node ${deletingNode.name} deleted.`);
+      setDeletingNode(null);
+      fetchNodes();
+    } catch (err: any) {
+      alert(err.message || "Delete failed");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -121,6 +206,14 @@ export default function StorageSettingsPage() {
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-20">
       
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 bg-emerald-500 text-white px-5 py-3 rounded-2xl shadow-2xl font-bold flex items-center gap-3 animate-in fade-in slide-in-from-bottom-5 duration-300">
+          <CheckCircle2 className="w-5 h-5 shrink-0" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b border-zinc-800/60 pb-6">
         <div>
@@ -129,7 +222,7 @@ export default function StorageSettingsPage() {
             Storage Accounts & Nodes
           </h1>
           <p className="text-zinc-400 mt-1">
-            Real-time multi-bucket Cloudflare R2 cluster health, capacities, and video distribution.
+            Real-time multi-bucket Cloudflare R2 cluster health, capacities, and exact video distribution.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -198,7 +291,7 @@ export default function StorageSettingsPage() {
           </div>
           <div className="text-3xl font-black text-white">{totalVideosStored}</div>
           <div className="text-xs text-emerald-400 mt-2 flex items-center gap-1">
-            <CheckCircle2 className="w-3.5 h-3.5" /> Distributed across nodes
+            <CheckCircle2 className="w-3.5 h-3.5" /> Real videos hosted on R2
           </div>
         </div>
       </div>
@@ -246,13 +339,13 @@ export default function StorageSettingsPage() {
             const rawPercent = node.max_bytes > 0 ? (node.total_used_bytes / node.max_bytes) * 100 : 0;
             const usagePercent = Math.min(100, Math.max(0, rawPercent));
             
-            // 3-Stage Color Status:
-            // Empty / Low (< 70%): Green
-            // Near full (70% - 89.99%): Yellow / Amber
-            // Full (>= 90%): Red
-            const isDanger = usagePercent >= 90;
-            const isWarning = usagePercent >= 70 && usagePercent < 90;
-            const isSafe = usagePercent < 70;
+            // 3-Stage User-Requested Color Thresholds:
+            // 1) Green: Usage < 60% (Healthy & Spacious)
+            // 2) Gold/Amber: 60% <= Usage < 85% (Warning / Near Full)
+            // 3) Red: Usage >= 85% (Critical / Full)
+            const isDanger = usagePercent >= 85 || node.is_full;
+            const isWarning = usagePercent >= 60 && usagePercent < 85;
+            const isSafe = usagePercent < 60 && !node.is_full;
 
             const progressColor = isDanger 
               ? "bg-rose-500 shadow-[0_0_12px_rgba(244,63,94,0.6)]" 
@@ -263,7 +356,7 @@ export default function StorageSettingsPage() {
             const statusBadgeText = isDanger 
               ? "Critical Full" 
               : isWarning 
-              ? "Near Full" 
+              ? "Near Full (Warning)" 
               : "Healthy (Green)";
 
             const statusBadgeStyle = isDanger
@@ -273,6 +366,8 @@ export default function StorageSettingsPage() {
               : "bg-emerald-500/15 text-emerald-400 border-emerald-500/30";
 
             const videoCount = node.video_count || 0;
+            const isSyncing = syncingNodeId === node.id;
+            const isActivating = activatingNodeId === node.id;
 
             return (
               <div
@@ -285,7 +380,8 @@ export default function StorageSettingsPage() {
               >
                 {/* Active Routing Banner */}
                 {node.is_active && (
-                  <div className="absolute top-0 right-0 bg-gradient-to-l from-pink-600 to-rose-600 text-white text-[11px] font-black uppercase tracking-wider px-3 py-1 rounded-bl-xl shadow-md">
+                  <div className="absolute top-0 right-0 bg-gradient-to-l from-pink-600 to-rose-600 text-white text-[11px] font-black uppercase tracking-wider px-3 py-1 rounded-bl-xl shadow-md flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
                     Active Uploader
                   </div>
                 )}
@@ -294,7 +390,7 @@ export default function StorageSettingsPage() {
                   {/* Node Header */}
                   <div className="flex items-start gap-3.5 mb-5">
                     <div className="w-12 h-12 bg-zinc-900 border border-zinc-800 rounded-xl flex items-center justify-center shrink-0">
-                      <Database className="w-6 h-6 text-pink-500" />
+                      <Database className={`w-6 h-6 ${node.is_active ? 'text-pink-500' : 'text-zinc-500'}`} />
                     </div>
                     <div className="pr-16 min-w-0">
                       <h3 className="font-bold text-lg text-white truncate" title={node.name}>
@@ -306,7 +402,7 @@ export default function StorageSettingsPage() {
                     </div>
                   </div>
 
-                  {/* Videos Count Badge */}
+                  {/* Real Videos Count Badge */}
                   <div className="mb-5 p-3 bg-zinc-900/80 border border-zinc-800/80 rounded-xl flex items-center justify-between">
                     <div className="flex items-center gap-2.5 text-zinc-300 text-xs font-semibold">
                       <Film className="w-4 h-4 text-pink-400 shrink-0" />
@@ -348,18 +444,22 @@ export default function StorageSettingsPage() {
                   </div>
                 </div>
 
-                {/* Footer Details */}
-                <div className="pt-4 border-t border-zinc-800/80 text-xs flex flex-col gap-2.5">
+                {/* Footer Details & Action Controls */}
+                <div className="pt-4 border-t border-zinc-800/80 text-xs flex flex-col gap-3">
                   <div className="flex justify-between items-center">
                     <span className="text-zinc-500 font-medium">Upload Routing</span>
-                    <span className={`font-semibold flex items-center gap-1 ${node.is_full ? "text-rose-400" : "text-emerald-400"}`}>
+                    <span className={`font-semibold flex items-center gap-1 ${node.is_full ? "text-rose-400" : node.is_active ? "text-emerald-400" : "text-zinc-400"}`}>
                       {node.is_full ? (
                         <>
                           <AlertCircle className="w-3.5 h-3.5" /> Full (Inactive)
                         </>
+                      ) : node.is_active ? (
+                        <>
+                          <CheckCircle2 className="w-3.5 h-3.5" /> Active (Direct Uploads)
+                        </>
                       ) : (
                         <>
-                          <CheckCircle2 className="w-3.5 h-3.5" /> Ready for Uploads
+                          <Radio className="w-3.5 h-3.5 text-zinc-500" /> Standby (Ready)
                         </>
                       )}
                     </span>
@@ -378,11 +478,104 @@ export default function StorageSettingsPage() {
                       <ExternalLink className="w-3 h-3 shrink-0" />
                     </a>
                   </div>
+
+                  {/* Actions Toolbar */}
+                  <div className="pt-3 border-t border-zinc-800/60 flex items-center gap-2">
+                    <button
+                      onClick={() => handleSyncNode(node.id)}
+                      disabled={isSyncing}
+                      className="flex-1 py-2 px-3 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700/80 text-zinc-200 hover:text-white rounded-xl font-semibold text-xs transition-all flex items-center justify-center gap-1.5 active:scale-[0.98] disabled:opacity-50"
+                      title="Sync real telemetry & video counts"
+                    >
+                      <RotateCcw className={`w-3.5 h-3.5 ${isSyncing ? "animate-spin text-pink-500" : "text-zinc-400"}`} />
+                      <span>{isSyncing ? "Syncing..." : "Sync Node"}</span>
+                    </button>
+
+                    {!node.is_active && (
+                      <button
+                        onClick={() => handleActivateNode(node.id)}
+                        disabled={isActivating || node.is_full}
+                        className="py-2 px-3 bg-pink-600/15 hover:bg-pink-600/25 border border-pink-500/40 text-pink-300 rounded-xl font-semibold text-xs transition-all flex items-center justify-center gap-1.5 active:scale-[0.98] disabled:opacity-50"
+                        title="Set as primary upload destination"
+                      >
+                        <Radio className={`w-3.5 h-3.5 ${isActivating ? "animate-pulse" : ""}`} />
+                        <span>{isActivating ? "Switching..." : "Make Active"}</span>
+                      </button>
+                    )}
+
+                    {!node.is_active && (
+                      <button
+                        onClick={() => setDeletingNode(node)}
+                        className="p-2 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 hover:text-rose-300 rounded-xl transition-all"
+                        title="Delete standby storage node"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
                 </div>
 
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deletingNode && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="bg-[#141417] border border-zinc-800 text-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-6 border-b border-zinc-800 flex items-center gap-3 bg-red-950/20">
+              <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-400 shrink-0">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-white">Delete Standby Storage Node?</h2>
+                <p className="text-xs text-zinc-400">This will remove node from XPIG cluster</p>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-zinc-300 leading-relaxed">
+                Are you sure you want to remove <strong className="text-white">"{deletingNode.name}"</strong>? 
+                Make sure this bucket does not host videos currently streamed by users.
+              </p>
+
+              <div className="p-3 bg-zinc-900 border border-zinc-800 rounded-xl text-xs space-y-1 font-mono text-zinc-400">
+                <div>Bucket: {deletingNode.bucket_name}</div>
+                <div>Videos: {deletingNode.video_count || 0}</div>
+              </div>
+
+              <div className="pt-2 flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setDeletingNode(null)}
+                  disabled={isDeleting}
+                  className="flex-1 px-4 py-2.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-700 rounded-xl font-semibold text-sm transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmDeleteNode}
+                  disabled={isDeleting}
+                  className="flex-1 px-4 py-2.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl font-bold text-sm transition-all shadow-lg shadow-rose-900/30 disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isDeleting ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-4 h-4" />
+                      Confirm Delete
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

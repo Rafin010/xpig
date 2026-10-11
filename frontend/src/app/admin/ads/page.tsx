@@ -62,6 +62,8 @@ interface SponsorCampaign {
   created_at?: string;
 }
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://xpig.onrender.com';
+
 export default function AdManagementPage() {
   const [sponsors, setSponsors] = useState<SponsorCampaign[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -89,7 +91,7 @@ export default function AdManagementPage() {
   const fetchSponsors = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch('https://xpig.onrender.com/api/v1/sponsors/?include_inactive=true');
+      const res = await fetch(`${API_BASE}/api/v1/sponsors/?include_inactive=true`);
       if (res.ok) {
         const data = await res.json();
         setSponsors(Array.isArray(data) ? data : []);
@@ -108,7 +110,7 @@ export default function AdManagementPage() {
   // Handle Status Play/Pause Toggle
   const handleToggle = async (id: number) => {
     try {
-      const res = await fetch(`https://xpig.onrender.com/api/v1/sponsors/${id}/toggle`, { method: 'PATCH' });
+      const res = await fetch(`${API_BASE}/api/v1/sponsors/${id}/toggle`, { method: 'PATCH' });
       if (res.ok) {
         const data = await res.json();
         setSponsors(prev => prev.map(s => s.id === id ? { 
@@ -125,7 +127,7 @@ export default function AdManagementPage() {
   // Handle Playlist / Fixed Slot Toggle
   const handlePlaylistToggle = async (id: number, inPlaylist: boolean, isFixed: boolean = false, slotPos: number | null = null) => {
     try {
-      const res = await fetch(`https://xpig.onrender.com/api/v1/sponsors/${id}/playlist`, {
+      const res = await fetch(`${API_BASE}/api/v1/sponsors/${id}/playlist`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -148,7 +150,7 @@ export default function AdManagementPage() {
     setLoadingReport(true);
     setReportData(null);
     try {
-      const res = await fetch(`https://xpig.onrender.com/api/v1/sponsors/${sponsor.id}/report`);
+      const res = await fetch(`${API_BASE}/api/v1/sponsors/${sponsor.id}/report`);
       if (res.ok) {
         setReportData(await res.json());
       } else {
@@ -167,7 +169,7 @@ export default function AdManagementPage() {
     setLoadingInvoice(true);
     setInvoiceData(null);
     try {
-      const res = await fetch(`https://xpig.onrender.com/api/v1/sponsors/${sponsor.id}/invoice`);
+      const res = await fetch(`${API_BASE}/api/v1/sponsors/${sponsor.id}/invoice`);
       if (res.ok) {
         setInvoiceData(await res.json());
       } else {
@@ -185,7 +187,7 @@ export default function AdManagementPage() {
     if (!deletingSponsor) return;
     setIsDeleting(true);
     try {
-      const res = await fetch(`https://xpig.onrender.com/api/v1/sponsors/${deletingSponsor.id}`, { method: 'DELETE' });
+      const res = await fetch(`${API_BASE}/api/v1/sponsors/${deletingSponsor.id}`, { method: 'DELETE' });
       if (res.ok) {
         setSponsors(prev => prev.filter(s => s.id !== deletingSponsor.id));
         setDeletingSponsor(null);

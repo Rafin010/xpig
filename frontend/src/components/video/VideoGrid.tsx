@@ -14,7 +14,7 @@ export default function VideoGrid({
   sponsors?: any[];
   activeCategory?: string;
 }) {
-  const categories = ["All", "Premium", "Verified", "Amateur", "VR", "Couples", "Solo", "Trending", "Exclusive"];
+  const categories = ["All", "Deshi", "Bangla", "Viral", "Trending", "Couples", "HD", "Premium", "Exclusive"];
 
   const bannerSponsors = sponsors.filter((s: any) => s.is_active !== false && (s.placement === 'banner' || s.placement === 'all'));
   const feedSponsors = sponsors.filter((s: any) => s.is_active !== false && (s.placement === 'feed' || s.placement === 'all' || !s.placement));
@@ -50,7 +50,7 @@ export default function VideoGrid({
   return (
     <>
       {/* Category Pills */}
-      <div className="flex items-center gap-3 mb-6 overflow-x-auto pb-2 custom-scrollbar">
+      <div className="flex items-center gap-2 sm:gap-2.5 mb-5 sm:mb-7 overflow-x-auto pb-1.5 pt-0.5 custom-scrollbar touch-pan-x -mx-3 px-3 sm:mx-0 sm:px-0">
         {categories.map((cat) => {
           const isActive = activeCategory === cat;
           const href = cat === "All" ? "/" : `/?category=${encodeURIComponent(cat)}`;
@@ -58,10 +58,10 @@ export default function VideoGrid({
             <Link 
               key={cat} 
               href={href}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+              className={`px-3.5 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap transition-all ${
                 isActive 
                   ? 'bg-white text-black font-bold shadow-md shadow-white/10' 
-                  : 'bg-[#1a1a1a] text-zinc-300 hover:bg-[#2a2a2a] border border-zinc-800'
+                  : 'bg-[#18181b] text-zinc-300 hover:bg-[#27272a] hover:text-white border border-zinc-800'
               }`}
             >
               {cat}
@@ -75,8 +75,9 @@ export default function VideoGrid({
         <SponsorBanner sponsor={bannerSponsors[0]} />
       )}
 
-      <h1 className="text-2xl font-bold text-white mb-6 tracking-tight">
-        {activeCategory === "All" ? "Recommended For You" : `${activeCategory} Videos`}
+      <h1 className="text-lg sm:text-xl md:text-2xl font-black text-white mb-4 sm:mb-6 tracking-tight flex items-center gap-2 sm:gap-2.5">
+        <span>{activeCategory === "All" ? "Recommended For You" : `${activeCategory} Videos`}</span>
+        <span className="w-2 h-2 rounded-full bg-pink-500 animate-pulse" />
       </h1>
 
       {videos.length === 0 ? (
@@ -84,7 +85,7 @@ export default function VideoGrid({
           <p className="text-lg font-semibold">No videos found for this page.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 sm:gap-x-5 gap-y-6 sm:gap-y-8">
           {combinedItems.map((item) => (
             item.type === 'sponsor' ? (
               <SponsorCard key={item.key} sponsor={item.data} />

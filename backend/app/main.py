@@ -13,6 +13,8 @@ async def startup_event():
     # Import all models here so metadata is populated
     from app.models.user import User
     from app.models.video import Video
+    from app.models.sponsor import Sponsor
+    from app.models.storage import StorageNode
     
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

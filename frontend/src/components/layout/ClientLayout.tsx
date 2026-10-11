@@ -10,11 +10,11 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex flex-1 pt-16 md:pb-0 pb-16">
-      <Suspense fallback={<aside className="hidden lg:block w-64 bg-[#0a0a0a] border-r border-zinc-800" />}>
+      <Suspense fallback={<aside className="hidden lg:block w-72 bg-[#0a0a0a] border-r border-zinc-800" />}>
         <Sidebar />
       </Suspense>
       <main className={`flex-1 w-full transition-all duration-300 min-h-[calc(100vh-4rem)] ${
-        isCollapsed ? 'lg:pl-0' : 'lg:pl-64'
+        isCollapsed ? 'lg:pl-0' : 'lg:pl-72'
       }`}>
         {children}
       </main>

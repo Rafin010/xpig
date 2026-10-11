@@ -1,6 +1,7 @@
 import VideoGrid from '@/components/video/VideoGrid';
 import Link from 'next/link';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { SeoContent } from '@/components/layout/SeoContent';
 
 
 async function getVideosData(page: number, category: string = 'All') {
@@ -75,19 +76,19 @@ export default async function HomePage({
   };
 
   return (
-    <div className="w-full h-full p-4 md:p-6 bg-[#050505] min-h-screen flex flex-col">
+    <div className="w-full h-full px-3 sm:px-6 md:px-8 pt-5 sm:pt-7 pb-24 sm:pb-16 bg-[#050505] min-h-screen flex flex-col">
       <div className="flex-1">
         <VideoGrid videos={data.items} sponsors={sponsors} activeCategory={activeCategory} />
       </div>
 
       {/* Professional Tube Pagination */}
       {totalPages > 1 && (
-        <div className="mt-14 mb-10 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-zinc-800/80 pt-6">
-          <div className="text-xs text-zinc-500 font-medium order-2 sm:order-1">
+        <div className="mt-10 sm:mt-14 mb-8 sm:mb-10 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-zinc-800/80 pt-6">
+          <div className="text-xs text-zinc-500 font-medium order-2 sm:order-1 text-center sm:text-left">
             Showing <span className="text-zinc-300 font-bold">{(currentPage - 1) * pageSize + 1}</span> - <span className="text-zinc-300 font-bold">{Math.min(currentPage * pageSize, totalItems)}</span> of <span className="text-zinc-200 font-bold">{totalItems}</span> videos
           </div>
 
-          <div className="flex items-center gap-1.5 order-1 sm:order-2">
+          <div className="flex items-center justify-center flex-wrap gap-1.5 order-1 sm:order-2 max-w-full">
             {/* First Page */}
             {currentPage > 1 && (
               <Link
@@ -111,7 +112,7 @@ export default async function HomePage({
             )}
 
             {/* Page Numbers */}
-            <div className="flex items-center gap-1 bg-[#121214] p-1 rounded-xl border border-zinc-800">
+            <div className="flex items-center gap-1 bg-[#121214] p-1 rounded-xl border border-zinc-800 max-w-full overflow-x-auto">
               {paginationPages.map((p, idx) => {
                 if (p === '...') {
                   return (
@@ -164,6 +165,9 @@ export default async function HomePage({
           </div>
         </div>
       )}
+
+      {/* Ultra Pro SEO Semantic Keyword & Category Section */}
+      <SeoContent />
     </div>
   );
 }

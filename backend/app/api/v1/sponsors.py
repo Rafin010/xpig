@@ -20,6 +20,7 @@ class PlaylistUpdate(BaseModel):
     fixed_slot_position: Optional[int] = None # 1 or 2
 
 @router.get("/", response_model=List[SponsorSchema])
+@router.get("", response_model=List[SponsorSchema], include_in_schema=False)
 async def get_sponsors(
     placement: Optional[str] = Query(None, description="Filter by placement: 'banner', 'feed', or 'all'"),
     include_inactive: bool = Query(False, description="Include inactive/completed sponsors for admin"),
@@ -57,6 +58,7 @@ async def get_sponsors(
     return sponsors
 
 @router.post("/", response_model=SponsorSchema)
+@router.post("", response_model=SponsorSchema, include_in_schema=False)
 async def create_sponsor(
     sponsor_in: SponsorCreate,
     db: AsyncSession = Depends(get_db)

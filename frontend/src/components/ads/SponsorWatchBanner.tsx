@@ -1,13 +1,27 @@
 'use client';
 
 import { ExternalLink, CheckCircle2 } from 'lucide-react';
+import { useEffect, useRef } from 'react';
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://xpig.onrender.com';
 
 export default function SponsorWatchBanner({ sponsor }: { sponsor: any }) {
+  const hasTrackedImpression = useRef(false);
+
+  useEffect(() => {
+    if (sponsor?.id && !hasTrackedImpression.current) {
+      hasTrackedImpression.current = true;
+      try {
+        fetch(`${API_BASE}/api/v1/sponsors/${sponsor.id}/impression`, { method: 'POST' }).catch(() => {});
+      } catch (e) {}
+    }
+  }, [sponsor?.id]);
+
   if (!sponsor) return null;
 
   const handleClick = () => {
     try {
-      fetch(`https://xpig.onrender.com/api/v1/sponsors/${sponsor.id}/click`, { method: 'POST' }).catch(() => {});
+      fetch(`${API_BASE}/api/v1/sponsors/${sponsor.id}/click`, { method: 'POST' }).catch(() => {});
     } catch (e) {}
   };
 

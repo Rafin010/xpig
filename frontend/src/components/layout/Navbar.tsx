@@ -135,7 +135,14 @@ export function Navbar() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <h4 className="text-sm font-semibold text-zinc-200 truncate group-hover:text-white transition-colors">{video.title}</h4>
-                      <p className="text-xs text-zinc-500">Creator {video.creator_id}</p>
+                      <div className="flex items-center gap-1 mt-0.5">
+                        <span className="text-xs text-zinc-400 font-medium">xpig</span>
+                        <svg className="w-3 h-3 text-[#0095F6] fill-[#0095F6] shrink-0" viewBox="0 0 24 24">
+                          <title>Verified Creator</title>
+                          <path d="M10.5 2.2c.8-.5 1.8-.5 2.6 0l1.4.9c.5.3 1.1.4 1.7.3l1.7-.3c1-.2 1.9.3 2.4 1.2l.8 1.5c.3.5.7.9 1.3 1.1l1.6.5c1 .3 1.6 1.2 1.6 2.2v1.7c0 .6.3 1.2.7 1.6l1.2 1.2c.7.7.7 1.9 0 2.6l-1.2 1.2c-.4.4-.7 1-.7 1.6v1.7c0 1-.6 1.9-1.6 2.2l-1.6.5c-.6.2-1 .6-1.3 1.1l-.8 1.5c-.5.9-1.4 1.4-2.4 1.2l-1.7-.3c-.6-.1-1.2 0-1.7.3l-1.4.9c-.8.5-1.8.5-2.6 0l-1.4-.9c-.5-.3-1.1-.4-1.7-.3l-1.7.3c-1 .2-1.9-.3-2.4-1.2l-.8-1.5c-.3-.5-.7-.9-1.3-1.1l-1.6-.5c-1-.3-1.6-1.2-1.6-2.2v-1.7c0-.6-.3-1.2-.7-1.6l-1.2-1.2c-.7-.7-.7-1.9 0-2.6l1.2-1.2c.4-.4.7-1 .7-1.6v-1.7c0-1 .6-1.9 1.6-2.2l1.6-.5c.6-.2 1-.6 1.3-1.1l.8-1.5c.5-.9 1.4-1.4 2.4-1.2l1.7.3c.6.1 1.2 0 1.7-.3l1.4-.9z"/>
+                          <path d="M9.5 12.5l2 2 4.5-4.5" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </div>
                     </div>
                   </Link>
                 ))}

@@ -24,7 +24,10 @@ import {
   ExternalLink,
   ShieldAlert,
   Save,
-  Check
+  Check,
+  Calendar,
+  Clock,
+  Sparkles
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
@@ -43,7 +46,7 @@ interface Video {
   preview_url?: string;
 }
 
-const ITEMS_PER_PAGE = 50;
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://xpig.onrender.com';
 
 export default function VideoManagementPage() {
   const { user } = useAuth();
@@ -55,6 +58,7 @@ export default function VideoManagementPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState<number>(50);
 
   // Edit Video Modal State
   const [editingVideo, setEditingVideo] = useState<Video | null>(null);
@@ -97,9 +101,17 @@ export default function VideoManagementPage() {
     try {
       setLoading(true);
       setError(null);
-      const res = await fetch('https://xpig.onrender.com/api/v1/videos/');
-      if (!res.ok) throw new Error('Failed to fetch videos');
-      const data = await res.json();
+      // Fetch up to 1000 videos so ALL uploaded content (200+ videos) loads completely
+      let res = await fetch(`${API_BASE}/api/v1/videos/?limit=1000&status=ALL`);
+      let data;
+      if (res.ok) {
+        data = await res.json();
+      } else {
+        // Fallback without status parameter
+        res = await fetch(`${API_BASE}/api/v1/videos/?limit=1000`);
+        if (!res.ok) throw new Error('Failed to fetch videos');
+        data = await res.json();
+      }
       
       let list: Video[] = [];
       if (Array.isArray(data)) {
@@ -132,12 +144,31 @@ export default function VideoManagementPage() {
     fetchVideos();
   }, []);
 
+  // Status counts for quick filter buttons
+  const publishedCount = useMemo(() => {
+    return videos.filter(v => (v.status || '').toUpperCase() === 'PUBLISHED').length;
+  }, [videos]);
+
+  const pendingCount = useMemo(() => {
+    return videos.filter(v => {
+      const s = (v.status || '').toUpperCase();
+      return s === 'PENDING' || s === 'PENDING_REVIEW';
+    }).length;
+  }, [videos]);
+
   // Filtered list based on Search and Status Filter
   const filteredVideos = useMemo(() => {
     let result = videos;
 
     if (statusFilter !== 'ALL') {
-      result = result.filter(v => (v.status || '').toUpperCase() === statusFilter.toUpperCase());
+      if (statusFilter === 'PENDING') {
+        result = result.filter(v => {
+          const s = (v.status || '').toUpperCase();
+          return s === 'PENDING' || s === 'PENDING_REVIEW';
+        });
+      } else {
+        result = result.filter(v => (v.status || '').toUpperCase() === statusFilter.toUpperCase());
+      }
     }
 
     if (searchQuery.trim()) {
@@ -154,13 +185,13 @@ export default function VideoManagementPage() {
   }, [videos, searchQuery, statusFilter]);
 
   // Pagination calculation
-  const totalPages = Math.max(1, Math.ceil(filteredVideos.length / ITEMS_PER_PAGE));
+  const totalPages = Math.max(1, Math.ceil(filteredVideos.length / itemsPerPage));
   
   // Current page items
   const paginatedVideos = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    return filteredVideos.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  }, [filteredVideos, currentPage]);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredVideos.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredVideos, currentPage, itemsPerPage]);
 
   // Handle Search Input Change
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -188,7 +219,7 @@ export default function VideoManagementPage() {
     setSavingEdit(true);
 
     try {
-      const res = await fetch(`https://xpig.onrender.com/api/v1/videos/${editingVideo.id}`, {
+      const res = await fetch(`${API_BASE}/api/v1/videos/${editingVideo.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editFormData),
@@ -232,7 +263,7 @@ export default function VideoManagementPage() {
     setDeleting(true);
 
     try {
-      const res = await fetch(`https://xpig.onrender.com/api/v1/videos/${deletingVideo.id}`, {
+      const res = await fetch(`${API_BASE}/api/v1/videos/${deletingVideo.id}`, {
         method: 'DELETE',
       });
 
@@ -289,7 +320,7 @@ export default function VideoManagementPage() {
     formData.append('status', uploadStatus);
 
     const xhr = new XMLHttpRequest();
-    xhr.open('POST', 'https://xpig.onrender.com/api/v1/videos/admin-upload', true);
+    xhr.open('POST', `${API_BASE}/api/v1/videos/admin-upload`, true);
 
     xhr.upload.onprogress = (event) => {
       if (event.lengthComputable) {
@@ -430,25 +461,76 @@ export default function VideoManagementPage() {
       {/* Main Video Moderation Table Container */}
       <div className="bg-[#111113] border border-zinc-800/80 rounded-2xl shadow-xl overflow-hidden flex flex-col">
         
-        {/* Search, Filter & Count Bar */}
-        <div className="p-5 border-b border-zinc-800/80 flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4 bg-zinc-900/40">
-          <div className="flex items-center gap-3">
-            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+        {/* Search, Filter & Quick Tabs Bar */}
+        <div className="p-5 border-b border-zinc-800/80 flex flex-col lg:flex-row justify-between items-stretch lg:items-center gap-4 bg-zinc-900/40">
+          
+          {/* Quick Filter Tabs */}
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => {
+                setStatusFilter('ALL');
+                setCurrentPage(1);
+              }}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                statusFilter === 'ALL'
+                  ? 'bg-gradient-to-r from-pink-600 to-rose-600 text-white shadow-md shadow-pink-900/20'
+                  : 'bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800'
+              }`}
+            >
               <span>All Videos</span>
-              <span className="px-2.5 py-0.5 rounded-full bg-pink-500/15 border border-pink-500/30 text-pink-400 text-xs font-mono font-bold">
-                {filteredVideos.length}
+              <span className={`px-2 py-0.5 rounded-full text-[11px] font-mono font-bold ${
+                statusFilter === 'ALL' ? 'bg-black/30 text-white' : 'bg-zinc-800 text-zinc-400'
+              }`}>
+                {videos.length}
               </span>
-            </h3>
-            {searchQuery && (
-              <span className="text-xs text-zinc-400">
-                Filtered from {videos.length} total
+            </button>
+
+            <button
+              onClick={() => {
+                setStatusFilter('PUBLISHED');
+                setCurrentPage(1);
+              }}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                statusFilter === 'PUBLISHED'
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-900/20'
+                  : 'bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-emerald-400 hover:bg-zinc-800'
+              }`}
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-400" />
+              <span>Published</span>
+              <span className={`px-2 py-0.5 rounded-full text-[11px] font-mono font-bold ${
+                statusFilter === 'PUBLISHED' ? 'bg-black/30 text-white' : 'bg-zinc-800 text-zinc-400'
+              }`}>
+                {publishedCount}
               </span>
+            </button>
+
+            {pendingCount > 0 && (
+              <button
+                onClick={() => {
+                  setStatusFilter('PENDING');
+                  setCurrentPage(1);
+                }}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                  statusFilter === 'PENDING'
+                    ? 'bg-amber-600 text-white shadow-md shadow-amber-900/20'
+                    : 'bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-amber-400 hover:bg-zinc-800'
+                }`}
+              >
+                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                <span>Pending Drafts</span>
+                <span className={`px-2 py-0.5 rounded-full text-[11px] font-mono font-bold ${
+                  statusFilter === 'PENDING' ? 'bg-black/30 text-white' : 'bg-zinc-800 text-zinc-400'
+                }`}>
+                  {pendingCount}
+                </span>
+              </button>
             )}
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
             {/* Live Search Input */}
-            <div className="relative flex-1 sm:w-80">
+            <div className="relative flex-1 sm:w-72">
               <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" />
               <input 
                 type="text" 
@@ -470,21 +552,24 @@ export default function VideoManagementPage() {
               )}
             </div>
 
-            {/* Status Filter Dropdown */}
-            <select
-              value={statusFilter}
-              onChange={(e) => {
-                setStatusFilter(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="bg-zinc-900 border border-zinc-700/80 rounded-xl px-3 py-2 text-sm text-zinc-300 focus:outline-none focus:border-pink-500 transition-all"
-            >
-              <option value="ALL">All Status</option>
-              <option value="PUBLISHED">Published</option>
-              <option value="PENDING_REVIEW">Pending</option>
-              <option value="FLAGGED">Flagged</option>
-              <option value="REJECTED">Rejected</option>
-            </select>
+            {/* Items Per Page Selector */}
+            <div className="flex items-center gap-1.5 bg-zinc-900 border border-zinc-700/80 rounded-xl px-2.5 py-1.5 text-xs text-zinc-400">
+              <span className="font-semibold text-zinc-500">Show:</span>
+              <select
+                value={itemsPerPage}
+                onChange={(e) => {
+                  setItemsPerPage(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="bg-transparent text-white font-bold focus:outline-none cursor-pointer"
+              >
+                <option value={25} className="bg-zinc-900 text-white">25</option>
+                <option value={50} className="bg-zinc-900 text-white">50</option>
+                <option value={100} className="bg-zinc-900 text-white">100</option>
+                <option value={200} className="bg-zinc-900 text-white">200</option>
+                <option value={1000} className="bg-zinc-900 text-white">All ({videos.length})</option>
+              </select>
+            </div>
           </div>
         </div>
         
@@ -493,7 +578,7 @@ export default function VideoManagementPage() {
           {loading ? (
             <div className="p-16 text-center flex flex-col items-center justify-center gap-3">
               <RefreshCw className="w-8 h-8 text-pink-500 animate-spin" />
-              <p className="text-sm text-zinc-400 font-medium">Loading videos and sources...</p>
+              <p className="text-sm text-zinc-400 font-medium">Loading all videos from catalog...</p>
             </div>
           ) : paginatedVideos.length === 0 ? (
             <div className="p-16 text-center text-zinc-500 flex flex-col items-center justify-center gap-3">
@@ -512,32 +597,55 @@ export default function VideoManagementPage() {
             <table className="w-full text-left text-sm whitespace-nowrap">
               <thead className="bg-[#141416] text-zinc-400 border-b border-zinc-800/80">
                 <tr>
-                  <th className="px-5 py-3.5 font-bold text-xs uppercase tracking-wider w-16 text-center"># Serial</th>
-                  <th className="px-5 py-3.5 font-bold text-xs uppercase tracking-wider">Video & Details</th>
-                  <th className="px-5 py-3.5 font-bold text-xs uppercase tracking-wider">Upload Date</th>
-                  <th className="px-5 py-3.5 font-bold text-xs uppercase tracking-wider">Reach / Views</th>
-                  <th className="px-5 py-3.5 font-bold text-xs uppercase tracking-wider">Status</th>
-                  <th className="px-5 py-3.5 font-bold text-xs uppercase tracking-wider text-right">Actions</th>
+                  <th className="px-5 py-3.5 font-bold text-xs uppercase tracking-wider w-28 text-center">
+                    # Serial / ID
+                  </th>
+                  <th className="px-5 py-3.5 font-bold text-xs uppercase tracking-wider">
+                    Video & Details
+                  </th>
+                  <th className="px-5 py-3.5 font-bold text-xs uppercase tracking-wider">
+                    Upload Date & Time
+                  </th>
+                  <th className="px-5 py-3.5 font-bold text-xs uppercase tracking-wider">
+                    Reach / Views
+                  </th>
+                  <th className="px-5 py-3.5 font-bold text-xs uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-5 py-3.5 font-bold text-xs uppercase tracking-wider text-right">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-800/50 text-zinc-300">
                 {paginatedVideos.map((vid, idx) => {
                   // Global serial number: #1 is the newest video at top of Page 1!
-                  const serialNumber = (currentPage - 1) * ITEMS_PER_PAGE + idx + 1;
+                  const serialNumber = (currentPage - 1) * itemsPerPage + idx + 1;
                   const normalizedStatus = (vid.status || 'PUBLISHED').toUpperCase();
 
                   return (
                     <tr key={vid.id} className="hover:bg-zinc-900/50 transition-colors group">
                       
-                      {/* Serial Number Column */}
+                      {/* Serial Number & Database ID Column */}
                       <td className="px-5 py-4 text-center">
-                        <span className={`inline-flex items-center justify-center font-mono font-black text-xs px-2 py-1 rounded-lg ${
-                          serialNumber === 1 
-                            ? 'bg-gradient-to-r from-pink-600 to-rose-600 text-white shadow-sm' 
-                            : 'bg-zinc-900 border border-zinc-800 text-zinc-400 group-hover:text-white'
-                        }`}>
-                          #{serialNumber}
-                        </span>
+                        <div className="flex flex-col items-center justify-center gap-1.5">
+                          <span 
+                            title={`Position #${serialNumber} in current list`}
+                            className={`inline-flex items-center justify-center font-mono font-black text-xs px-2.5 py-1 rounded-lg shadow-sm border ${
+                              serialNumber === 1 
+                                ? 'bg-gradient-to-r from-pink-600 to-rose-600 text-white border-pink-500 shadow-pink-900/30' 
+                                : 'bg-zinc-900/90 border-zinc-700/80 text-white group-hover:border-zinc-500'
+                            }`}
+                          >
+                            #{serialNumber}
+                          </span>
+                          <span 
+                            title={`Database Video ID: ${vid.id}`}
+                            className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-md text-[11px] font-mono font-bold bg-black/60 border border-pink-500/30 text-pink-400"
+                          >
+                            ID: {vid.id}
+                          </span>
+                        </div>
                       </td>
 
                       {/* Video Thumbnail & Title Column */}
@@ -546,7 +654,7 @@ export default function VideoManagementPage() {
                           <Link 
                             href={`/watch/${vid.id}`} 
                             target="_blank"
-                            className="relative w-20 h-12 bg-zinc-900 border border-zinc-800 rounded-lg overflow-hidden shrink-0 group/thumb block"
+                            className="relative w-24 h-14 bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden shrink-0 group/thumb block shadow-md"
                           >
                             {vid.thumbnail_url ? (
                               <img 
@@ -555,29 +663,38 @@ export default function VideoManagementPage() {
                                 className="w-full h-full object-cover group-hover/thumb:scale-105 transition-transform duration-300" 
                               />
                             ) : (
-                              <div className="w-full h-full flex items-center justify-center text-zinc-600">
-                                <PlayCircle className="w-6 h-6" />
+                              <div className="w-full h-full flex flex-col items-center justify-center text-zinc-600 bg-zinc-900">
+                                <PlayCircle className="w-5 h-5 text-zinc-500" />
+                                <span className="text-[9px] text-zinc-500 font-mono mt-0.5">No Thumb</span>
                               </div>
                             )}
-                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/thumb:opacity-100 flex items-center justify-center transition-opacity">
+                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover/thumb:opacity-100 flex items-center justify-center transition-opacity">
                               <ExternalLink className="w-4 h-4 text-white" />
                             </div>
                           </Link>
 
                           <div className="min-w-0 max-w-md">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-[11px] font-bold font-mono text-pink-400 bg-pink-950/40 border border-pink-800/50 px-1.5 py-0.5 rounded">
+                                Video #{vid.id}
+                              </span>
+                              <span className="text-[11px] font-medium text-zinc-500 capitalize">
+                                {vid.visibility?.toLowerCase() || 'public'}
+                              </span>
+                            </div>
                             <Link 
                               href={`/watch/${vid.id}`} 
                               target="_blank"
-                              className="font-bold text-white hover:text-pink-400 transition-colors line-clamp-1 block"
+                              className="font-bold text-white hover:text-pink-400 transition-colors line-clamp-1 block text-sm"
                               title={vid.title}
                             >
                               {vid.title}
                             </Link>
-                            <div className="flex items-center gap-2 mt-1 text-xs text-zinc-500 font-mono">
-                              <span>ID: {vid.id}</span>
-                              <span>•</span>
-                              <span className="capitalize">{vid.visibility?.toLowerCase() || 'public'}</span>
-                            </div>
+                            {vid.description && (
+                              <p className="text-xs text-zinc-500 line-clamp-1 mt-0.5">
+                                {vid.description}
+                              </p>
+                            )}
                           </div>
                         </div>
                       </td>
@@ -585,42 +702,53 @@ export default function VideoManagementPage() {
                       {/* Upload Date Column */}
                       <td className="px-5 py-4 text-zinc-400 font-medium">
                         {vid.created_at ? (
-                          <div className="text-xs">
-                            <div className="text-zinc-300 font-semibold">
-                              {new Date(vid.created_at).toLocaleDateString(undefined, {
-                                year: 'numeric',
-                                month: 'short',
-                                day: 'numeric',
-                              })}
+                          <div className="text-xs space-y-0.5">
+                            <div className="text-zinc-200 font-bold flex items-center gap-1.5">
+                              <Calendar className="w-3.5 h-3.5 text-zinc-400" />
+                              <span>
+                                {new Date(vid.created_at).toLocaleDateString('en-US', {
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric',
+                                })}
+                              </span>
                             </div>
-                            <div className="text-zinc-500 font-mono text-[11px] mt-0.5">
-                              {new Date(vid.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            <div className="text-zinc-400 font-mono text-[11px] flex items-center gap-1.5 pl-5">
+                              <Clock className="w-3 h-3 text-zinc-500" />
+                              <span>
+                                {new Date(vid.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                              </span>
                             </div>
                           </div>
                         ) : (
-                          <span className="text-xs text-zinc-600">Unknown</span>
+                          <span className="text-xs text-zinc-600 font-mono">No Date</span>
                         )}
                       </td>
 
                       {/* Reach & Views Column */}
                       <td className="px-5 py-4">
-                        <div className="font-semibold text-white text-xs flex items-center gap-1.5">
+                        <div className="font-bold text-white text-xs flex items-center gap-1.5">
                           <Eye className="w-3.5 h-3.5 text-pink-400" />
                           <span>{(vid.views || 0).toLocaleString()} views</span>
                         </div>
-                        <div className="text-[11px] text-zinc-500 font-mono mt-0.5">
-                          {vid.total_watch_seconds ? `${vid.total_watch_seconds}s watch time` : '0s watch time'}
+                        <div className="text-[11px] text-zinc-500 font-mono mt-1">
+                          {vid.total_watch_seconds ? `${vid.total_watch_seconds.toLocaleString()}s watch time` : '0s watch time'}
                         </div>
                       </td>
 
                       {/* Status Column */}
                       <td className="px-5 py-4">
-                        <span className={`px-2.5 py-1 rounded-md text-xs font-bold border ${
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold border shadow-sm ${
                           normalizedStatus === 'PUBLISHED' ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' : 
-                          normalizedStatus === 'PENDING_REVIEW' ? 'bg-amber-400/15 text-amber-400 border-amber-400/30' : 
+                          normalizedStatus === 'PENDING' || normalizedStatus === 'PENDING_REVIEW' ? 'bg-amber-400/15 text-amber-400 border-amber-400/30' : 
                           normalizedStatus === 'FLAGGED' ? 'bg-rose-500/15 text-rose-400 border-rose-500/30' :
                           'bg-zinc-800 text-zinc-400 border-zinc-700'
                         }`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${
+                            normalizedStatus === 'PUBLISHED' ? 'bg-emerald-400' :
+                            normalizedStatus === 'PENDING' || normalizedStatus === 'PENDING_REVIEW' ? 'bg-amber-400 animate-pulse' :
+                            'bg-zinc-500'
+                          }`} />
                           {normalizedStatus}
                         </span>
                       </td>
@@ -628,17 +756,25 @@ export default function VideoManagementPage() {
                       {/* Action Buttons */}
                       <td className="px-5 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
+                          <Link
+                            href={`/watch/${vid.id}`}
+                            target="_blank"
+                            className="p-2 text-zinc-400 hover:text-white bg-zinc-900/80 hover:bg-zinc-800 rounded-lg border border-zinc-800 hover:border-zinc-700 transition-all shadow-sm"
+                            title="Watch / Preview Video"
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                          </Link>
                           <button 
                             onClick={() => handleOpenEdit(vid)}
-                            className="p-2 text-zinc-400 hover:text-white bg-zinc-900 hover:bg-zinc-800 rounded-lg border border-zinc-800 hover:border-zinc-700 transition-colors" 
-                            title="Edit Video Metadata"
+                            className="p-2 text-zinc-400 hover:text-pink-400 bg-zinc-900/80 hover:bg-pink-950/30 rounded-lg border border-zinc-800 hover:border-pink-800/50 transition-all shadow-sm" 
+                            title="Edit Video Title, Status & Details"
                           >
                             <Edit3 className="w-4 h-4" />
                           </button>
                           <button 
                             onClick={() => setDeletingVideo(vid)}
-                            className="p-2 text-zinc-400 hover:text-rose-400 bg-zinc-900 hover:bg-rose-950/40 rounded-lg border border-zinc-800 hover:border-rose-900/60 transition-colors" 
-                            title="Delete Video"
+                            className="p-2 text-zinc-400 hover:text-rose-400 bg-zinc-900/80 hover:bg-rose-950/40 rounded-lg border border-zinc-800 hover:border-rose-900/60 transition-all shadow-sm" 
+                            title="Permanently Delete Video"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -653,12 +789,12 @@ export default function VideoManagementPage() {
           )}
         </div>
 
-        {/* 50-per-page Professional Pagination Bar */}
+        {/* Dynamic Items-Per-Page Professional Pagination Bar */}
         {totalPages > 1 && (
           <div className="p-4 border-t border-zinc-800/80 bg-zinc-900/40 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="text-xs text-zinc-400 font-medium">
-              Showing <span className="text-white font-bold">{(currentPage - 1) * ITEMS_PER_PAGE + 1}</span> to{' '}
-              <span className="text-white font-bold">{Math.min(currentPage * ITEMS_PER_PAGE, filteredVideos.length)}</span> of{' '}
+              Showing <span className="text-white font-bold">{(currentPage - 1) * itemsPerPage + 1}</span> to{' '}
+              <span className="text-white font-bold">{Math.min(currentPage * itemsPerPage, filteredVideos.length)}</span> of{' '}
               <span className="text-white font-bold">{filteredVideos.length}</span> videos (Page {currentPage} of {totalPages})
             </div>
 

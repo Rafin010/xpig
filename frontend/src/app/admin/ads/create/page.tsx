@@ -15,10 +15,73 @@ import {
   DollarSign, 
   Receipt,
   ShieldCheck,
-  CheckCircle2
+  CheckCircle2,
+  Sparkles,
+  AlertCircle,
+  HelpCircle,
+  Radio,
+  Zap
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://xpig.onrender.com';
+
+// Ready-to-use production ad templates
+const AD_PRESETS = [
+  {
+    id: 'casino',
+    label: '🎰 Sports Betting / Casino',
+    name: '1xBet Official',
+    title: '100% Welcome Bonus on First Deposit - Play & Win Big',
+    description: 'Instant crypto & bKash payouts, 24/7 VIP support, verified licensed sportsbook.',
+    thumbnail_url: 'https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=800&auto=format&fit=crop&q=80',
+    target_url: 'https://1xbet.com',
+    badge_text: 'SPONSORED',
+    placement: 'feed' as const,
+    target_impressions: 50000,
+    pricing_model: 'CPM' as const,
+  },
+  {
+    id: 'vpn',
+    label: '🛡️ Anonymous VPN / Proxy',
+    name: 'CyberVPN Pro',
+    title: 'Browse 100% Anonymously - 70% Off + 3 Months Free',
+    description: 'Zero logs recorded, bypass strict ISP throttling, ultra-fast 10Gbps private streaming nodes.',
+    thumbnail_url: 'https://images.unsplash.com/photo-1563986768609-322da13575f3?w=800&auto=format&fit=crop&q=80',
+    target_url: 'https://nordvpn.com',
+    badge_text: 'VERIFIED PARTNER',
+    placement: 'all' as const,
+    target_impressions: 100000,
+    pricing_model: 'CPM' as const,
+  },
+  {
+    id: 'telegram',
+    label: '✈️ Telegram VIP Channel',
+    name: 'XPIG Telegram VIP',
+    title: 'Join XPIG Official Telegram - Daily Content Drops & Leaks',
+    description: 'Exclusive private video link drops directly in Telegram without redirects or ads.',
+    thumbnail_url: 'https://images.unsplash.com/photo-1614680376593-902f749f7ffc?w=800&auto=format&fit=crop&q=80',
+    target_url: 'https://t.me/xpig_official',
+    badge_text: 'EXCLUSIVE',
+    placement: 'banner' as const,
+    target_impressions: 25000,
+    pricing_model: 'CPM' as const,
+  },
+  {
+    id: 'tech',
+    label: '🛍️ Tech & Gadgets Store',
+    name: 'Aura Tech & Gear',
+    title: 'Private Audio Gear & Smart Accessories - Cash on Delivery',
+    description: 'Discreet bubble-wrapped delivery, 1-year replacement warranty on all imported gadgets.',
+    thumbnail_url: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&auto=format&fit=crop&q=80',
+    target_url: 'https://amazon.com',
+    badge_text: 'PROMOTED',
+    placement: 'feed' as const,
+    target_impressions: 10000,
+    pricing_model: 'CPM' as const,
+  }
+];
 
 export default function CreateAdCampaign() {
   const router = useRouter();
@@ -35,7 +98,7 @@ export default function CreateAdCampaign() {
   const [placement, setPlacement] = useState<'feed' | 'banner' | 'all'>('feed');
 
   // Ad Engine & Impression Quota
-  const [targetImpressions, setTargetImpressions] = useState<number>(100000);
+  const [targetImpressions, setTargetImpressions] = useState<number>(50000);
   const [pricingModel, setPricingModel] = useState<'CPM' | 'FLAT_RATE' | 'CPC'>('CPM');
   const [inCardPlaylist, setInCardPlaylist] = useState<boolean>(true);
 
@@ -46,6 +109,7 @@ export default function CreateAdCampaign() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [previewTab, setPreviewTab] = useState<'banner' | 'card'>('card');
 
   // Auto calculate budget based on model & quota
@@ -54,6 +118,22 @@ export default function CreateAdCampaign() {
     : pricingModel === 'CPC'
     ? Math.round((targetImpressions * 0.03) * 0.25)
     : 150.00;
+
+  // 1-Click Template Loader
+  const handleApplyPreset = (preset: typeof AD_PRESETS[0]) => {
+    setName(preset.name);
+    setTitle(preset.title);
+    setDescription(preset.description);
+    setThumbnailUrl(preset.thumbnail_url);
+    setTargetUrl(preset.target_url);
+    setBadgeText(preset.badge_text);
+    setPlacement(preset.placement);
+    setTargetImpressions(preset.target_impressions);
+    setPricingModel(preset.pricing_model);
+    setBillingCompany(preset.name);
+    setBillingEmail(`billing@${preset.name.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`);
+    setSubmitError(null);
+  };
 
   // Handle local file upload
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -66,10 +146,11 @@ export default function CreateAdCampaign() {
     }
 
     setIsUploadingImage(true);
+    setSubmitError(null);
     try {
       const formData = new FormData();
       formData.append('file', file);
-      const res = await fetch('https://xpig.onrender.com/api/v1/sponsors/upload-creative', {
+      const res = await fetch(`${API_BASE}/api/v1/sponsors/upload-creative`, {
         method: 'POST',
         body: formData,
       });
@@ -97,45 +178,65 @@ export default function CreateAdCampaign() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !title || !thumbnailUrl || !targetUrl) {
-      alert('Please fill in Sponsor Name, Campaign Title, Creative Image, and Target URL.');
+    setSubmitError(null);
+
+    if (!name.trim()) {
+      setSubmitError('Please enter the Sponsor Brand Name.');
+      return;
+    }
+    if (!title.trim()) {
+      setSubmitError('Please enter a Campaign Headline Title.');
+      return;
+    }
+    if (!thumbnailUrl.trim()) {
+      setSubmitError('Please upload or select a Creative Banner Image.');
+      return;
+    }
+    if (!targetUrl.trim()) {
+      setSubmitError('Please provide the Target Destination URL (where clicks redirect).');
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const res = await fetch('https://xpig.onrender.com/api/v1/sponsors/', {
+      const res = await fetch(`${API_BASE}/api/v1/sponsors/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name,
-          title,
-          description: description || null,
-          thumbnail_url: thumbnailUrl,
-          video_url: videoUrl || null,
-          target_url: targetUrl,
-          badge_text: badgeText || 'SPONSORED',
+          name: name.trim(),
+          title: title.trim(),
+          description: description.trim() || null,
+          thumbnail_url: thumbnailUrl.trim(),
+          video_url: videoUrl.trim() || null,
+          target_url: targetUrl.trim(),
+          badge_text: badgeText.trim() || 'SPONSORED',
           placement,
           is_active: true,
-          target_impressions: targetImpressions,
-          budget: calculatedBudget,
+          target_impressions: Number(targetImpressions) || 10000,
+          budget: Number(calculatedBudget) || 25.0,
           pricing_model: pricingModel,
           status: 'ACTIVE',
           in_card_playlist: inCardPlaylist,
-          billing_company: billingCompany || name,
-          billing_email: billingEmail || `billing@${name.toLowerCase().replace(/\s+/g, '')}.com`,
-          billing_tax_id: billingTaxId || `TAX-${Math.floor(100000 + Math.random() * 900000)}`,
+          billing_company: billingCompany.trim() || name.trim(),
+          billing_email: billingEmail.trim() || `billing@${name.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`,
+          billing_tax_id: billingTaxId.trim() || `TAX-${Math.floor(100000 + Math.random() * 900000)}`,
         }),
       });
 
       if (res.ok) {
         router.push('/admin/ads');
       } else {
-        alert('Failed to launch campaign. Please check input fields.');
+        const errData = await res.json().catch(() => null);
+        const detailMsg = typeof errData?.detail === 'string'
+          ? errData.detail
+          : Array.isArray(errData?.detail)
+          ? errData.detail.map((d: any) => d.msg || JSON.stringify(d)).join(', ')
+          : 'Failed to launch campaign. Please verify all inputs.';
+        setSubmitError(detailMsg);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert('Network error connecting to ad server.');
+      setSubmitError(err?.message || 'Network error connecting to ad server.');
     } finally {
       setIsSubmitting(false);
     }
@@ -162,6 +263,42 @@ export default function CreateAdCampaign() {
           <ArrowLeft className="w-4 h-4" /> Back to Campaigns
         </Link>
       </div>
+
+      {/* 1-Click Fast Presets Box */}
+      <div className="p-5 bg-gradient-to-r from-zinc-950 via-zinc-900 to-zinc-950 border border-zinc-800 rounded-2xl shadow-xl space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Zap className="w-4 h-4 text-amber-400" />
+            <h3 className="font-bold text-sm text-white">1-Click Quick Sponsor Templates</h3>
+          </div>
+          <span className="text-[11px] text-zinc-400">Click any preset to auto-fill high converting copy & tested creatives</span>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+          {AD_PRESETS.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => handleApplyPreset(p)}
+              className="p-3 bg-zinc-900/90 hover:bg-zinc-800/90 border border-zinc-800 hover:border-pink-500/50 rounded-xl text-left transition-all group"
+            >
+              <div className="font-bold text-xs text-zinc-200 group-hover:text-white truncate">{p.label}</div>
+              <div className="text-[11px] text-zinc-500 group-hover:text-pink-400 mt-1 font-mono truncate">{p.name}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Submit Error Alert */}
+      {submitError && (
+        <div className="p-4 bg-rose-950/40 border border-rose-800/80 rounded-2xl text-sm text-rose-300 flex items-start gap-3 shadow-lg animate-in fade-in">
+          <AlertCircle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <span className="font-bold block">Validation Error:</span>
+            <span>{submitError}</span>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Form Column */}
@@ -236,7 +373,7 @@ export default function CreateAdCampaign() {
                 <span className="text-[11px] text-emerald-400 font-mono font-bold">Auto-Paced</span>
               </div>
               <p className="text-xs text-zinc-400">
-                The ad engine serves higher-volume campaigns with proportionally higher probability weight until their guaranteed quota is fulfilled.
+                The ad engine serves higher-volume campaigns with proportionally higher weight until their guaranteed quota is fulfilled.
               </p>
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -307,7 +444,7 @@ export default function CreateAdCampaign() {
                     type="text"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    placeholder="e.g., Spring Mega Sale 50% Off"
+                    placeholder="e.g., 100% Welcome Bonus on First Deposit"
                     className="w-full bg-zinc-900 border border-zinc-700/80 rounded-xl px-3.5 py-2.5 text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 text-sm"
                     required
                   />
@@ -324,7 +461,7 @@ export default function CreateAdCampaign() {
                       setName(e.target.value);
                       if (!billingCompany) setBillingCompany(e.target.value);
                     }}
-                    placeholder="e.g., CyberVPN Global"
+                    placeholder="e.g., 1xBet Official"
                     className="w-full bg-zinc-900 border border-zinc-700/80 rounded-xl px-3.5 py-2.5 text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 text-sm"
                     required
                   />
@@ -339,7 +476,7 @@ export default function CreateAdCampaign() {
                   type="text"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="e.g., Ultra-fast anonymous proxy with 30-day money back guarantee"
+                  placeholder="e.g., Instant withdrawals, 24/7 VIP support, verified licensed sportsbook"
                   className="w-full bg-zinc-900 border border-zinc-700/80 rounded-xl px-3.5 py-2.5 text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 text-sm"
                 />
               </div>
@@ -387,7 +524,7 @@ export default function CreateAdCampaign() {
                     type="url"
                     value={targetUrl}
                     onChange={(e) => setTargetUrl(e.target.value)}
-                    placeholder="https://sponsor.com/promo"
+                    placeholder="https://1xbet.com or https://t.me/channel"
                     className="w-full bg-zinc-900 border border-zinc-700/80 rounded-xl px-3.5 py-2.5 text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 text-xs font-mono"
                     required
                   />
@@ -474,7 +611,7 @@ export default function CreateAdCampaign() {
                     type="text"
                     value={billingTaxId}
                     onChange={(e) => setBillingTaxId(e.target.value)}
-                    placeholder="e.g. EU12345678"
+                    placeholder="e.g. TAX-894721"
                     className="w-full bg-zinc-900 border border-zinc-700/80 rounded-xl px-3 py-2 text-white text-xs font-mono"
                   />
                 </div>

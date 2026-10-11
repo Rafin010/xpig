@@ -123,33 +123,64 @@ export default function WatchClient({ videoId }: { videoId: string }) {
     return () => cancelAnimationFrame(animationFrameId);
   }, [isLoading]);
 
-  // Real-time tracking for analytics and views
+  // Real-time tracking: mark as watched locally + record view in database immediately
   useEffect(() => {
-    let isFirstPing = true;
+    if (!numericId) return;
+
+    // 1. Mark as watched in localStorage so "NEW" badge is removed permanently
+    try {
+      const watched = JSON.parse(localStorage.getItem('xpig_watched_videos') || '[]');
+      const idNum = Number(numericId);
+      if (Array.isArray(watched) && !watched.includes(idNum)) {
+        watched.push(idNum);
+        localStorage.setItem('xpig_watched_videos', JSON.stringify(watched));
+      }
+    } catch (e) {}
+
+    // 2. Send immediate initial view ping to database
+    let isMounted = true;
+    const recordView = async () => {
+      try {
+        const res = await fetch(`https://xpig.onrender.com/api/v1/videos/${numericId}/ping`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            watch_time: 1,
+            is_new_view: true
+          })
+        });
+        if (res.ok && isMounted) {
+          const data = await res.json();
+          if (typeof data.views === 'number') {
+            setVideoData((prev: any) => prev ? { ...prev, views: data.views } : prev);
+          }
+        }
+      } catch (e) {}
+    };
+
+    recordView();
+
+    // 3. Periodic watch time accumulator during active playback
     const interval = setInterval(async () => {
       const videoElement = document.querySelector('video');
       if (videoElement && !videoElement.paused) {
         try {
-          const res = await fetch(`https://xpig.onrender.com/api/v1/videos/${numericId}/ping`, {
+          await fetch(`https://xpig.onrender.com/api/v1/videos/${numericId}/ping`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              watch_time: 5,
-              is_new_view: isFirstPing
+              watch_time: 10,
+              is_new_view: false
             })
           });
-          if (res.ok) {
-            const data = await res.json();
-            if (typeof data.views === 'number') {
-              setVideoData((prev: any) => prev ? { ...prev, views: data.views } : prev);
-            }
-          }
-          isFirstPing = false;
         } catch (e) {}
       }
-    }, 5000);
+    }, 10000);
 
-    return () => clearInterval(interval);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
   }, [numericId]);
 
   // Guest-friendly Like toggle (persists to localStorage + backend)
@@ -236,7 +267,7 @@ export default function WatchClient({ videoId }: { videoId: string }) {
     "";
   
   return (
-    <div className="min-h-screen bg-black md:px-8 text-white pb-20 pt-4 md:pt-6">
+    <div className="min-h-screen bg-black md:px-8 text-white pb-28 sm:pb-20 pt-3 md:pt-6">
       <div className="max-w-[1440px] mx-auto grid grid-cols-1 lg:grid-cols-3 gap-0 md:gap-8">
         
         {/* Left Col - Video Player & Details */}
@@ -263,6 +294,7 @@ export default function WatchClient({ videoId }: { videoId: string }) {
               {realVideoUrl ? (
                 <Player 
                   src={realVideoUrl}
+                  fallbackSrc={videoData?.preview_url && videoData?.preview_url !== realVideoUrl ? videoData.preview_url : undefined}
                   autoPlay={true} 
                   title={videoData?.title || `Video ${numericId}`} 
                   poster={videoData?.thumbnail_url || undefined}
@@ -283,12 +315,29 @@ export default function WatchClient({ videoId }: { videoId: string }) {
             <div className="flex flex-wrap items-center justify-between mt-4 pb-6 border-b border-zinc-800 gap-4">
               {/* Creator Info */}
               <div className="flex items-center gap-3">
-                <div className="w-11 h-11 bg-zinc-800 border border-zinc-700/80 rounded-full flex items-center justify-center font-bold text-base text-zinc-200 shadow-sm">
-                  {videoData?.creator_id ? `C${videoData.creator_id}` : 'U'}
+                <div className="w-12 h-12 rounded-full bg-gradient-to-b from-zinc-700/60 to-zinc-900 border border-zinc-500/40 p-1 flex-shrink-0 flex items-center justify-center overflow-hidden shadow-md shadow-black/40">
+                  <Image 
+                    src="/pig-logo.png" 
+                    alt="xpig" 
+                    width={32} 
+                    height={32} 
+                    className="object-contain" 
+                  />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-base text-white">Creator {videoData?.creator_id || 'Unknown'}</h3>
-                  <p className="text-xs text-zinc-400">0 followers</p>
+                  <div className="flex items-center gap-1.5">
+                    <h3 className="font-bold text-base text-white">xpig</h3>
+                    {/* Meta Verified Blue Rosette Badge */}
+                    <svg 
+                      className="w-4 h-4 text-[#0095F6] fill-[#0095F6] shrink-0 drop-shadow-[0_0_6px_rgba(0,149,246,0.4)]" 
+                      viewBox="0 0 24 24"
+                    >
+                      <title>Verified Creator</title>
+                      <path d="M10.5 2.2c.8-.5 1.8-.5 2.6 0l1.4.9c.5.3 1.1.4 1.7.3l1.7-.3c1-.2 1.9.3 2.4 1.2l.8 1.5c.3.5.7.9 1.3 1.1l1.6.5c1 .3 1.6 1.2 1.6 2.2v1.7c0 .6.3 1.2.7 1.6l1.2 1.2c.7.7.7 1.9 0 2.6l-1.2 1.2c-.4.4-.7 1-.7 1.6v1.7c0 1-.6 1.9-1.6 2.2l-1.6.5c-.6.2-1 .6-1.3 1.1l-.8 1.5c-.5.9-1.4 1.4-2.4 1.2l-1.7-.3c-.6-.1-1.2 0-1.7.3l-1.4.9c-.8.5-1.8.5-2.6 0l-1.4-.9c-.5-.3-1.1-.4-1.7-.3l-1.7.3c-1 .2-1.9-.3-2.4-1.2l-.8-1.5c-.3-.5-.7-.9-1.3-1.1l-1.6-.5c-1-.3-1.6-1.2-1.6-2.2v-1.7c0-.6-.3-1.2-.7-1.6l-1.2-1.2c-.7-.7-.7-1.9 0-2.6l1.2-1.2c.4-.4.7-1 .7-1.6v-1.7c0-1 .6-1.9 1.6-2.2l1.6-.5c.6-.2 1-.6 1.3-1.1l.8-1.5c.5-.9 1.4-1.4 2.4-1.2l1.7.3c.6.1 1.2 0 1.7-.3l1.4-.9z"/>
+                      <path d="M9.5 12.5l2 2 4.5-4.5" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </div>
+                  <p className="text-xs text-zinc-400">Official Content Platform</p>
                 </div>
                 <button 
                   onClick={handleFollowToggle}
@@ -366,13 +415,13 @@ export default function WatchClient({ videoId }: { videoId: string }) {
                 href={`/watch/${encodeVideoId(video.id)}`}
                 className="flex gap-3 group rounded-[12px] p-1.5 hover:bg-zinc-900/80 transition-colors"
               >
-                <div className="w-40 aspect-video bg-zinc-900 rounded-[10px] overflow-hidden relative shrink-0 border border-zinc-800/60">
+                <div className="w-32 sm:w-40 aspect-video bg-zinc-900 rounded-[10px] overflow-hidden relative shrink-0 border border-zinc-800/60">
                   {video.thumbnail_url ? (
                     <Image 
                       src={video.thumbnail_url} 
                       alt={video.title} 
                       fill 
-                      sizes="160px"
+                      sizes="(max-width: 640px) 128px, 160px"
                       className="object-cover group-hover:scale-105 transition-transform duration-300" 
                     />
                   ) : (
@@ -389,9 +438,14 @@ export default function WatchClient({ videoId }: { videoId: string }) {
                   <h4 className="text-xs font-medium text-zinc-200 line-clamp-2 group-hover:text-white transition-colors leading-snug">
                     {video.title}
                   </h4>
-                  <p className="text-[11px] text-zinc-400 mt-1 truncate">
-                    Creator {video.creator_id}
-                  </p>
+                  <div className="flex items-center gap-1 mt-1">
+                    <span className="text-[11px] text-zinc-400 font-medium">xpig</span>
+                    <svg className="w-3 h-3 text-[#0095F6] fill-[#0095F6] shrink-0" viewBox="0 0 24 24">
+                      <title>Verified Creator</title>
+                      <path d="M10.5 2.2c.8-.5 1.8-.5 2.6 0l1.4.9c.5.3 1.1.4 1.7.3l1.7-.3c1-.2 1.9.3 2.4 1.2l.8 1.5c.3.5.7.9 1.3 1.1l1.6.5c1 .3 1.6 1.2 1.6 2.2v1.7c0 .6.3 1.2.7 1.6l1.2 1.2c.7.7.7 1.9 0 2.6l-1.2 1.2c-.4.4-.7 1-.7 1.6v1.7c0 1-.6 1.9-1.6 2.2l-1.6.5c-.6.2-1 .6-1.3 1.1l-.8 1.5c-.5.9-1.4 1.4-2.4 1.2l-1.7-.3c-.6-.1-1.2 0-1.7.3l-1.4.9c-.8.5-1.8.5-2.6 0l-1.4-.9c-.5-.3-1.1-.4-1.7-.3l-1.7.3c-1 .2-1.9-.3-2.4-1.2l-.8-1.5c-.3-.5-.7-.9-1.3-1.1l-1.6-.5c-1-.3-1.6-1.2-1.6-2.2v-1.7c0-.6-.3-1.2-.7-1.6l-1.2-1.2c-.7-.7-.7-1.9 0-2.6l1.2-1.2c.4-.4.7-1 .7-1.6v-1.7c0-1 .6-1.9 1.6-2.2l1.6-.5c.6-.2 1-.6 1.3-1.1l.8-1.5c.5-.9 1.4-1.4 2.4-1.2l1.7.3c.6.1 1.2 0 1.7-.3l1.4-.9z"/>
+                      <path d="M9.5 12.5l2 2 4.5-4.5" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </div>
                   <p className="text-[10px] text-zinc-500 mt-0.5">
                     {video.views || 0} views
                   </p>
