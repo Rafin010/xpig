@@ -42,7 +42,6 @@ export function Player({ src, poster, title, autoPlay = true }: PlayerProps) {
       viewType="video"
       streamType="on-demand"
       logLevel="warn"
-      crossOrigin
       playsInline
       autoPlay={autoPlay}
       muted={true}

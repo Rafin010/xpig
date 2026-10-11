@@ -25,7 +25,15 @@ async def get_videos(
     limit: int = 100,
     db: AsyncSession = Depends(get_db)
 ) -> Any:
-    result = await db.execute(select(Video).options(selectinload(Video.sources)).offset(skip).limit(limit))
+    from sqlalchemy import desc
+    result = await db.execute(
+        select(Video)
+        .options(selectinload(Video.sources))
+        .where(Video.status == "PUBLISHED")
+        .order_by(desc(Video.id))
+        .offset(skip)
+        .limit(limit)
+    )
     videos = result.scalars().all()
     return videos
 

@@ -37,41 +37,51 @@ async def search_videos(
     tag_id: Optional[int] = None,
     category: Optional[str] = None,
     page: int = 1,
-    size: int = 20,
+    size: int = 24,
     db: AsyncSession = Depends(get_db)
 ) -> Any:
     """
     Search videos by keyword, filter by category or tag.
-    Returns paginated results.
+    Returns paginated results with accurate database total count.
     """
-    # For now, return all since we don't have PUBLISHED set everywhere
-    stmt = select(Video)
+    from sqlalchemy import func
+    from sqlalchemy.orm import selectinload
+
+    base_conditions = []
     
     if q:
-        stmt = stmt.where(or_(
+        base_conditions.append(or_(
             Video.title.ilike(f"%{q}%"),
             Video.description.ilike(f"%{q}%")
         ))
         
     if category_id:
-        stmt = stmt.filter(Video.categories.any(id=category_id))
+        base_conditions.append(Video.categories.any(id=category_id))
         
     if tag_id:
-        stmt = stmt.filter(Video.tags.any(id=tag_id))
+        base_conditions.append(Video.tags.any(id=tag_id))
         
     if category and category != "All":
-        # Temporary fallback: filter by title or description matching the category if we don't have DB tags yet
-        # Once pipeline is ready we will properly tag them.
-        stmt = stmt.where(or_(
+        base_conditions.append(or_(
             Video.title.ilike(f"%{category}%"),
             Video.description.ilike(f"%{category}%")
         ))
-        
-    # Apply sorting (newest first for now)
-    stmt = stmt.order_by(desc(Video.created_at))
+
+    # 1. Real total count from database
+    count_stmt = select(func.count(Video.id))
+    if base_conditions:
+        count_stmt = count_stmt.where(and_(*base_conditions))
+    total_res = await db.execute(count_stmt)
+    total = total_res.scalar() or 0
+
+    # 2. Query paginated videos (ordered by ID descending so newest videos appear first)
+    stmt = select(Video)
+    if base_conditions:
+        stmt = stmt.where(and_(*base_conditions))
+
+    stmt = stmt.order_by(desc(Video.id))
     
     # Eagerly load relationships to prevent MissingGreenlet errors
-    from sqlalchemy.orm import selectinload
     stmt = stmt.options(
         selectinload(Video.creator),
         selectinload(Video.sources),
@@ -85,9 +95,6 @@ async def search_videos(
     
     results = await db.execute(stmt_paged)
     videos = results.scalars().all()
-    
-    # In a real app, you'd do a separate count query or window function
-    total = len(videos) # Mock total for now
     
     return SearchResult(
         items=videos,

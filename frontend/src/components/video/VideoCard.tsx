@@ -12,7 +12,7 @@ export default function VideoCard({ video }: { video: any }) {
   const handleMouseEnter = () => {
     previewTimeout.current = setTimeout(() => {
       setIsHovered(true);
-    }, 500);
+    }, 120);
   };
 
   const handleMouseLeave = () => {
@@ -22,7 +22,7 @@ export default function VideoCard({ video }: { video: any }) {
 
   const isNew = video.created_at && (new Date().getTime() - new Date(video.created_at).getTime()) < 72 * 60 * 60 * 1000;
   
-  const playUrl = video.preview_url || video.video_url;
+  const playUrl = video.preview_url || video.sources?.[0]?.source_url || video.video_url;
 
   return (
     <Link 
@@ -41,7 +41,8 @@ export default function VideoCard({ video }: { video: any }) {
             muted 
             loop 
             playsInline
-            className="w-full h-full object-cover scale-105 transition-all duration-700"
+            preload="auto"
+            className="w-full h-full object-cover scale-105 transition-all duration-300 pointer-events-none"
           />
         ) : (
           <>

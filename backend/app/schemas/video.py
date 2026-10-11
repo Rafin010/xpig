@@ -25,6 +25,7 @@ class VideoBase(BaseModel):
     description: Optional[str] = None
     visibility: Optional[str] = "PRIVATE"
     thumbnail_url: Optional[str] = None
+    preview_url: Optional[str] = None
 
 class VideoCreate(VideoBase):
     pass
@@ -35,11 +36,13 @@ class VideoUpdate(BaseModel):
     visibility: Optional[str] = None
     status: Optional[str] = None
     thumbnail_url: Optional[str] = None
+    preview_url: Optional[str] = None
 
 class VideoInDBBase(VideoBase):
     id: int
     creator_id: int
-    thumbnail_url: Optional[str]
+    thumbnail_url: Optional[str] = None
+    preview_url: Optional[str] = None
     duration: int
     status: str
     created_at: datetime
