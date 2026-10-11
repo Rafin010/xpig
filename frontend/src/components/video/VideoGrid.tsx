@@ -1,16 +1,32 @@
 'use client';
 
 import VideoCard from './VideoCard';
+import SponsorCard from '../ads/SponsorCard';
 import Link from 'next/link';
 
 export default function VideoGrid({ 
   videos = [], 
+  sponsors = [],
   activeCategory = "All" 
 }: { 
   videos?: any[]; 
+  sponsors?: any[];
   activeCategory?: string;
 }) {
   const categories = ["All", "Premium", "Verified", "Amateur", "VR", "Couples", "Solo", "Trending", "Exclusive"];
+
+  // Interleave sponsors only if real active sponsors are present
+  const combinedItems: { type: 'video' | 'sponsor'; data: any; key: string }[] = [];
+  
+  let sponsorIndex = 0;
+  videos.forEach((video, index) => {
+    // If active sponsors exist, insert at index 3 and index 7
+    if (sponsors.length > sponsorIndex && (index === 3 || index === 7)) {
+      const sp = sponsors[sponsorIndex++];
+      combinedItems.push({ type: 'sponsor', data: sp, key: `sponsor-${sp.id}` });
+    }
+    combinedItems.push({ type: 'video', data: video, key: `video-${video.id}-${index}` });
+  });
 
   return (
     <>
@@ -45,8 +61,12 @@ export default function VideoGrid({
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-8">
-          {videos.map((video, index) => (
-            <VideoCard key={`${video.id}-${index}`} video={video} />
+          {combinedItems.map((item) => (
+            item.type === 'sponsor' ? (
+              <SponsorCard key={item.key} sponsor={item.data} />
+            ) : (
+              <VideoCard key={item.key} video={item.data} />
+            )
           ))}
         </div>
       )}

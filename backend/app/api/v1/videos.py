@@ -180,4 +180,41 @@ async def ping_video(
         video.views = (video.views or 0) + 1
         
     await db.commit()
-    return {"status": "ok"}
+    return {"status": "ok", "views": video.views or 0, "total_watch_seconds": video.total_watch_seconds or 0}
+
+class LikePayload(BaseModel):
+    action: Optional[str] = "toggle"
+    is_liked: Optional[bool] = None
+
+@router.post("/{video_id}/like")
+async def toggle_video_like(
+    video_id: int,
+    payload: Optional[LikePayload] = None,
+    db: AsyncSession = Depends(get_db)
+) -> Any:
+    result = await db.execute(select(Video).where(Video.id == video_id))
+    video = result.scalars().first()
+    if not video:
+        raise HTTPException(status_code=404, detail="Video not found")
+
+    current_likes = video.likes or 0
+    if payload and payload.is_liked is not None:
+        if payload.is_liked:
+            current_likes += 1
+            new_is_liked = True
+        else:
+            current_likes = max(0, current_likes - 1)
+            new_is_liked = False
+    elif payload and payload.action == "unlike":
+        current_likes = max(0, current_likes - 1)
+        new_is_liked = False
+    elif payload and payload.action == "like":
+        current_likes += 1
+        new_is_liked = True
+    else:
+        current_likes += 1
+        new_is_liked = True
+
+    video.likes = current_likes
+    await db.commit()
+    return {"status": "ok", "likes": video.likes, "is_liked": new_is_liked}

@@ -14,6 +14,7 @@ class Video(Base):
     duration = Column(Integer, default=0) # in seconds
     views = Column(Integer, default=0)
     total_watch_seconds = Column(Integer, default=0)
+    likes = Column(Integer, default=0)
     status = Column(String, default="PENDING") # PENDING, APPROVED, REJECTED, FLAGGED, REMOVED
     visibility = Column(String, default="PRIVATE") # PUBLIC, UNLISTED, PRIVATE
     

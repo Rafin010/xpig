@@ -118,7 +118,7 @@ export function Navbar() {
               <input 
                 type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search videos, creators..." autoFocus={isMobileSearchOpen}
-                className="w-full bg-[#1e1e1e] border border-zinc-800 rounded-l-md pl-4 pr-4 py-2 text-sm text-white focus:outline-none focus:border-pink-600 transition-colors placeholder:text-zinc-500"
+                className="w-full bg-[#1e1e1e] border border-zinc-800 rounded-l-md pl-4 pr-4 py-2 text-sm text-white focus:outline-none focus:border-zinc-500 transition-colors placeholder:text-zinc-500"
               />
               <button className="px-5 bg-[#2a2a2a] hover:bg-[#333] border border-l-0 border-zinc-800 rounded-r-md text-zinc-400 transition-colors flex items-center justify-center">
                 <Search className="w-4 h-4" />
@@ -133,7 +133,7 @@ export function Navbar() {
                       <Image src={video.thumbnail_url || "https://files.vidstack.io/sprite-fight/poster.webp"} alt={video.title} fill sizes="64px" className="object-cover" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h4 className="text-sm font-semibold text-zinc-200 truncate group-hover:text-pink-400">{video.title}</h4>
+                      <h4 className="text-sm font-semibold text-zinc-200 truncate group-hover:text-white transition-colors">{video.title}</h4>
                       <p className="text-xs text-zinc-500">Creator {video.creator_id}</p>
                     </div>
                   </Link>
@@ -149,8 +149,8 @@ export function Navbar() {
         <button onClick={() => setIsMobileSearchOpen(true)} className="md:hidden p-2 text-zinc-400 hover:text-white transition-colors">
           <Search className="w-5 h-5" />
         </button>
-        <Link href="/upload" className="hidden md:flex items-center gap-2 px-4 py-2 bg-pink-600 hover:bg-pink-500 text-white rounded-full font-medium text-sm transition-colors">
-          <Plus className="w-4 h-4" /> <span>Upload</span>
+        <Link href="/upload" className="hidden md:flex items-center gap-2 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 border border-zinc-700/80 rounded-full font-medium text-sm transition-all shadow-sm">
+          <Plus className="w-4 h-4 text-zinc-300" /> <span>Upload</span>
         </Link>
         <button className="p-2 text-zinc-400 hover:text-white transition-colors hidden sm:block">
           <Bell className="w-5 h-5" />
@@ -158,7 +158,7 @@ export function Navbar() {
 
         {/* Profile Dropdown */}
         <div className="relative group ml-1">
-          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 p-[2px] cursor-pointer overflow-hidden">
+          <div className="w-9 h-9 rounded-full bg-zinc-800 border border-zinc-700/80 p-[2px] cursor-pointer overflow-hidden">
             {isAuthenticated && user ? (
               <img src={user.picture} alt={user.name} className="w-full h-full rounded-full object-cover" />
             ) : (
@@ -211,7 +211,7 @@ export function Navbar() {
                     onChange={(e) => setManualEmail(e.target.value)}
                     disabled={isLocked}
                     placeholder="Email Address" 
-                    className="w-full bg-[#111] border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-pink-600 transition-colors disabled:opacity-50" 
+                    className="w-full bg-[#111] border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-500 transition-colors disabled:opacity-50" 
                   />
                   <input 
                     type="password" 
@@ -219,12 +219,12 @@ export function Navbar() {
                     onChange={(e) => setManualPassword(e.target.value)}
                     disabled={isLocked}
                     placeholder="Password" 
-                    className="w-full bg-[#111] border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-pink-600 transition-colors disabled:opacity-50" 
+                    className="w-full bg-[#111] border border-zinc-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-zinc-500 transition-colors disabled:opacity-50" 
                   />
                   <button 
                     onClick={handleManualLogin}
                     disabled={isLocked || !manualEmail || !manualPassword}
-                    className="w-full bg-pink-600 hover:bg-pink-500 text-white py-2.5 rounded-xl font-bold transition-colors shadow-lg shadow-pink-900/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700 py-2.5 rounded-xl font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isLocked ? `Locked (${lockTimer}s)` : 'Log In / Sign Up'}
                   </button>

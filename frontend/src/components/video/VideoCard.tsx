@@ -66,7 +66,7 @@ export default function VideoCard({ video }: { video: any }) {
       onMouseLeave={handleMouseLeave}
     >
       {/* Thumbnail Box */}
-      <div className="aspect-[16/9] bg-[#1a1a1a] rounded-lg overflow-hidden relative border border-zinc-800/50 group-hover:border-zinc-700 transition-colors">
+      <div className="aspect-[16/9] bg-[#1a1a1a] rounded-[12px] overflow-hidden relative border border-zinc-800/60 group-hover:border-zinc-700 transition-colors">
         
         {/* Preloaded video preview in DOM (opacity controlled for 0ms latency) */}
         {playUrl && (
@@ -100,7 +100,7 @@ export default function VideoCard({ video }: { video: any }) {
 
         {/* NEW Badge (Automatically hidden once watched) */}
         {isNew && (
-          <div className="absolute top-2 left-2 px-2 py-0.5 bg-pink-600 rounded text-[10px] font-black text-white tracking-widest uppercase z-20 shadow-lg shadow-pink-900/50">
+          <div className="absolute top-2 left-2 px-2 py-0.5 bg-red-600 rounded text-[10px] font-black text-white tracking-widest uppercase z-20 shadow-md">
             NEW
           </div>
         )}
@@ -115,12 +115,12 @@ export default function VideoCard({ video }: { video: any }) {
 
       {/* Video Meta */}
       <div className="flex gap-3 mt-1 px-1">
-        <div className="w-9 h-9 bg-pink-500 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-bold text-white shadow-lg">
+        <div className="w-9 h-9 bg-zinc-800 border border-zinc-700/80 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-semibold text-zinc-300">
           {video.creator_id?.toString().slice(0,2) || "U"}
         </div>
         
         <div className="flex flex-col overflow-hidden">
-          <h3 className="font-medium text-[15px] text-zinc-100 leading-snug line-clamp-2 group-hover:text-pink-400 transition-colors">
+          <h3 className="font-medium text-[15px] text-zinc-100 leading-snug line-clamp-2 group-hover:text-white transition-colors">
             {video.title}
           </h3>
           

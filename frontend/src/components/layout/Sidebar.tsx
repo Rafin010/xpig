@@ -35,14 +35,14 @@ export function Sidebar() {
     return (
       <Link 
         href={href}
-        className={`flex items-center ${isCollapsed ? 'justify-center lg:px-0 px-4' : 'gap-4 px-4'} py-3 rounded-2xl transition-all duration-300 font-bold text-sm ${
+        className={`flex items-center ${isCollapsed ? 'justify-center lg:px-0 px-4' : 'gap-4 px-4'} py-3 rounded-xl transition-all duration-200 font-semibold text-sm ${
           isActive 
-            ? 'bg-gradient-to-r from-pink-600 to-pink-500 text-white' 
-            : 'text-zinc-400 hover:bg-[#222] hover:text-white'
+            ? 'bg-zinc-800 text-white shadow-sm' 
+            : 'text-zinc-400 hover:bg-zinc-800/60 hover:text-white'
         }`}
         title={isCollapsed ? label : undefined}
       >
-        <Icon className={`w-5 h-5 ${isActive ? 'drop-shadow-md' : 'drop-shadow-sm'}`} />
+        <Icon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-zinc-400'}`} />
         <span className={isCollapsed ? 'lg:hidden block ml-4' : 'block'}>{label}</span>
       </Link>
     );
@@ -101,7 +101,7 @@ export function Sidebar() {
           
           <Link 
             href="/support"
-            className="group flex items-center px-4 py-3 rounded-2xl transition-all duration-300 font-bold text-sm text-zinc-400 hover:bg-[#222] hover:text-white w-full"
+            className="group flex items-center px-4 py-3 rounded-xl transition-all duration-200 font-semibold text-sm text-zinc-400 hover:bg-zinc-800/60 hover:text-white w-full"
             title={isCollapsed ? "Support Us" : undefined}
           >
             <div className="w-5 h-5 flex-shrink-0 flex items-center justify-center">
@@ -119,11 +119,11 @@ export function Sidebar() {
         
         {!isCollapsed && (
           <div>
-            <div className="flex flex-wrap gap-x-3 gap-y-2 text-[13px] font-bold text-zinc-500 mb-2">
-              <Link href="/sponsors" target="_blank" rel="noopener noreferrer" className="text-pink-600 hover:text-pink-500">Sponsors</Link>
-              <Link href="/terms" className="hover:text-zinc-300">Terms</Link>
-              <Link href="/privacy" className="hover:text-zinc-300">Privacy</Link>
-              <Link href="/dmca" className="hover:text-zinc-300">DMCA</Link>
+            <div className="flex flex-wrap gap-x-3 gap-y-2 text-[13px] font-medium text-zinc-500 mb-2">
+              <Link href="/sponsors" target="_blank" rel="noopener noreferrer" className="text-zinc-400 hover:text-white transition-colors">Sponsors</Link>
+              <Link href="/terms" className="hover:text-zinc-300 transition-colors">Terms</Link>
+              <Link href="/privacy" className="hover:text-zinc-300 transition-colors">Privacy</Link>
+              <Link href="/dmca" className="hover:text-zinc-300 transition-colors">DMCA</Link>
             </div>
           <p className="text-xs text-zinc-600 mt-2">&copy; 2026 XPIG Platform</p>
           </div>

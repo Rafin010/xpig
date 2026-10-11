@@ -19,6 +19,16 @@ async function getVideosData(page: number, category: string = 'All') {
   }
 }
 
+async function getActiveSponsors() {
+  try {
+    const res = await fetch(`https://xpig.onrender.com/api/v1/sponsors/`, { cache: 'no-store' });
+    if (!res.ok) return [];
+    return await res.json();
+  } catch (err) {
+    return [];
+  }
+}
+
 export default async function HomePage({ 
   searchParams 
 }: { 
@@ -27,7 +37,10 @@ export default async function HomePage({
   const sp = await searchParams;
   const currentPage = Math.max(1, parseInt(sp.page || '1', 10));
   const activeCategory = sp.category || 'All';
-  const data = await getVideosData(currentPage, activeCategory);
+  const [data, sponsors] = await Promise.all([
+    getVideosData(currentPage, activeCategory),
+    getActiveSponsors()
+  ]);
   
   const totalItems = data.total || 0;
   const pageSize = data.size || 24;
@@ -64,14 +77,14 @@ export default async function HomePage({
   return (
     <div className="w-full h-full p-4 md:p-6 bg-[#050505] min-h-screen flex flex-col">
       <div className="flex-1">
-        <VideoGrid videos={data.items} activeCategory={activeCategory} />
+        <VideoGrid videos={data.items} sponsors={sponsors} activeCategory={activeCategory} />
       </div>
 
       {/* Professional Tube Pagination */}
       {totalPages > 1 && (
         <div className="mt-14 mb-10 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-zinc-800/80 pt-6">
           <div className="text-xs text-zinc-500 font-medium order-2 sm:order-1">
-            Showing <span className="text-zinc-300 font-bold">{(currentPage - 1) * pageSize + 1}</span> - <span className="text-zinc-300 font-bold">{Math.min(currentPage * pageSize, totalItems)}</span> of <span className="text-pink-500 font-bold">{totalItems}</span> videos
+            Showing <span className="text-zinc-300 font-bold">{(currentPage - 1) * pageSize + 1}</span> - <span className="text-zinc-300 font-bold">{Math.min(currentPage * pageSize, totalItems)}</span> of <span className="text-zinc-200 font-bold">{totalItems}</span> videos
           </div>
 
           <div className="flex items-center gap-1.5 order-1 sm:order-2">
@@ -79,7 +92,7 @@ export default async function HomePage({
             {currentPage > 1 && (
               <Link
                 href={getPageUrl(1)}
-                className="p-2 rounded-xl bg-[#121214] border border-zinc-800 text-zinc-400 hover:text-white hover:border-pink-500 transition-colors"
+                className="p-2 rounded-xl bg-[#121214] border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-600 transition-colors"
                 title="First Page"
               >
                 <ChevronsLeft className="w-4 h-4" />
@@ -90,7 +103,7 @@ export default async function HomePage({
             {currentPage > 1 && (
               <Link
                 href={getPageUrl(currentPage - 1)}
-                className="flex items-center gap-1 px-3 py-2 rounded-xl bg-[#121214] border border-zinc-800 text-zinc-400 hover:text-white hover:border-pink-500 transition-colors font-semibold text-xs"
+                className="flex items-center gap-1 px-3 py-2 rounded-xl bg-[#121214] border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-600 transition-colors font-semibold text-xs"
               >
                 <ChevronLeft className="w-4 h-4" />
                 <span>Prev</span>
@@ -117,7 +130,7 @@ export default async function HomePage({
                     href={getPageUrl(pageNum)}
                     className={`w-9 h-9 flex items-center justify-center rounded-lg text-xs font-bold transition-all ${
                       isActive
-                        ? 'bg-gradient-to-r from-pink-600 to-pink-500 text-white shadow-lg shadow-pink-500/25'
+                        ? 'bg-white text-black font-bold shadow-md shadow-white/10'
                         : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
                     }`}
                   >
@@ -131,7 +144,7 @@ export default async function HomePage({
             {currentPage < totalPages && (
               <Link
                 href={getPageUrl(currentPage + 1)}
-                className="flex items-center gap-1 px-3 py-2 rounded-xl bg-[#121214] border border-zinc-800 text-zinc-400 hover:text-white hover:border-pink-500 transition-colors font-semibold text-xs"
+                className="flex items-center gap-1 px-3 py-2 rounded-xl bg-[#121214] border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-600 transition-colors font-semibold text-xs"
               >
                 <span>Next</span>
                 <ChevronRight className="w-4 h-4" />
@@ -142,7 +155,7 @@ export default async function HomePage({
             {currentPage < totalPages && (
               <Link
                 href={getPageUrl(totalPages)}
-                className="p-2 rounded-xl bg-[#121214] border border-zinc-800 text-zinc-400 hover:text-white hover:border-pink-500 transition-colors"
+                className="p-2 rounded-xl bg-[#121214] border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-600 transition-colors"
                 title="Last Page"
               >
                 <ChevronsRight className="w-4 h-4" />
