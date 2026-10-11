@@ -30,27 +30,52 @@ async def get_platform_stats(db: AsyncSession = Depends(get_db)):
         "total_watch_seconds": total_watch_seconds or 0
     }
 
+import json
+from datetime import datetime, timezone
 from pydantic import BaseModel
+from typing import Optional
 
 class InvitePayload(BaseModel):
     email: str
 
+class HeartbeatPayload(BaseModel):
+    email: str
+    duration_increment: Optional[int] = 1
+
+def get_telemetry(user: User) -> dict:
+    if user.age_verification_status and user.age_verification_status.startswith("{"):
+        try:
+            return json.loads(user.age_verification_status)
+        except Exception:
+            pass
+    return {
+        "lat": None,
+        "lng": None,
+        "maps_url": None,
+        "ip": None,
+        "duration_mins": 0,
+        "is_online": False
+    }
+
+def update_telemetry(user: User, data: dict):
+    current = get_telemetry(user)
+    current.update(data)
+    user.age_verification_status = json.dumps(current)
+
 @router.post("/cofounders")
 async def add_cofounder(payload: InvitePayload, db: AsyncSession = Depends(get_db)):
-    # Check if user exists
-    result = await db.execute(select(User).where(User.email == payload.email))
+    clean_email = payload.email.strip().lower()
+    result = await db.execute(select(User).where(User.email == clean_email))
     user = result.scalars().first()
     
     if user:
-        # Just update their role
         user.is_cofounder = True
         await db.commit()
         return {"success": True, "message": "Updated existing user to co-founder"}
     
-    # Create placeholder user
-    username = payload.email.split('@')[0].lower() + "co"
+    username = clean_email.split('@')[0].lower() + "co"
     user = User(
-        email=payload.email,
+        email=clean_email,
         username=username,
         hashed_password="invited_cofounder",
         is_cofounder=True
@@ -64,15 +89,58 @@ async def get_cofounders(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).where(User.is_cofounder == True))
     users = result.scalars().all()
     
-    return [
-        {
+    data = []
+    now = datetime.now(timezone.utc)
+    for u in users:
+        t = get_telemetry(u)
+        is_currently_online = False
+        if u.last_active:
+            # Active within last 3 minutes is considered online
+            active_time = u.last_active
+            if active_time.tzinfo is None:
+                active_time = active_time.replace(tzinfo=timezone.utc)
+            diff_mins = (now - active_time).total_seconds() / 60
+            is_currently_online = diff_mins < 3
+
+        data.append({
             "id": u.id,
             "email": u.email,
             "username": u.username,
-            "last_active": u.last_active.isoformat() if u.last_active else None
-        }
-        for u in users
-    ]
+            "last_active": u.last_active.isoformat() if u.last_active else None,
+            "is_online": is_currently_online,
+            "latitude": t.get("lat"),
+            "longitude": t.get("lng"),
+            "maps_url": t.get("maps_url"),
+            "ip": t.get("ip"),
+            "duration_mins": t.get("duration_mins", 0)
+        })
+    return data
+
+@router.post("/cofounders/heartbeat")
+async def cofounder_heartbeat(payload: HeartbeatPayload, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(User).where(User.email == payload.email.strip().lower()))
+    user = result.scalars().first()
+    if not user or not user.is_cofounder:
+        raise HTTPException(status_code=404, detail="Co-founder not found")
+    
+    user.last_active = datetime.now(timezone.utc)
+    t = get_telemetry(user)
+    new_dur = t.get("duration_mins", 0) + (payload.duration_increment or 1)
+    update_telemetry(user, {"duration_mins": new_dur, "is_online": True})
+    await db.commit()
+    return {"status": "ok", "duration_mins": new_dur}
+
+@router.delete("/cofounders/{user_id}")
+async def revoke_cofounder(user_id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalars().first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    user.is_cofounder = False
+    await db.commit()
+    return {"success": True, "message": "Revoked co-founder access"}
+
 
 # --- Upload Pipeline Background Task ---
 async def process_and_upload_video(
