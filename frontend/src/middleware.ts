@@ -1,48 +1,62 @@
-﻿import { NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
   const hostname = request.headers.get('host') || '';
   const url = request.nextUrl.clone();
+  const session = request.cookies.get('xpig_admin_session')?.value;
+  const isAuthenticated = session === 'authenticated_admin';
 
-  // If visiting admin.xpig.me, map it to the /admin route system and protect with Basic Auth
+  // 1. Handle admin.xpig.me subdomain
   if (hostname.startsWith('admin.xpig.me')) {
-    
-    // BASIC AUTH CHECK
-    const basicAuth = request.headers.get('authorization')
-    
-    if (basicAuth) {
-      const authValue = basicAuth.split(' ')[1]
-      const [user, pwd] = atob(authValue).split(':')
-      
-      const validUser = process.env.ADMIN_EMAIL || 'admin@xpig.me';
-      const validPwd = process.env.ADMIN_PASSWORD || 'Rafin@xpig';
-
-      if (user === validUser && pwd === validPwd) {
-        // Auth successful, rewrite to /admin
-        if (!url.pathname.startsWith('/admin')) {
-          url.pathname = `/admin${url.pathname === '/' ? '' : url.pathname}`;
-          return NextResponse.rewrite(url);
-        }
-        return NextResponse.next();
+    // If requesting /login, rewrite to internal /admin/login route
+    if (url.pathname === '/login') {
+      if (isAuthenticated) {
+        return NextResponse.redirect(new URL('/', request.url));
       }
+      url.pathname = '/admin/login';
+      return NextResponse.rewrite(url);
     }
 
-    // Auth failed or missing, prompt Basic Auth
-    return new NextResponse('Auth Required', {
-      status: 401,
-      headers: {
-        'WWW-Authenticate': 'Basic realm="XPIG Admin Secure Area"'
+    // If requesting /admin/login directly
+    if (url.pathname === '/admin/login') {
+      if (isAuthenticated) {
+        return NextResponse.redirect(new URL('/', request.url));
       }
-    });
+      return NextResponse.next();
+    }
+
+    // If not authenticated, redirect to /login
+    if (!isAuthenticated) {
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+
+    // Authenticated: rewrite root & subroutes to internal /admin structure
+    if (!url.pathname.startsWith('/admin')) {
+      url.pathname = `/admin${url.pathname === '/' ? '' : url.pathname}`;
+      return NextResponse.rewrite(url);
+    }
+
+    return NextResponse.next();
   }
 
-  // If someone tries to access /admin from the main domain, block them
+  // 2. Handle localhost or direct path /admin
   if (url.pathname.startsWith('/admin')) {
-    return NextResponse.redirect(new URL('/', request.url));
+    if (url.pathname === '/admin/login') {
+      if (isAuthenticated) {
+        return NextResponse.redirect(new URL('/admin', request.url));
+      }
+      return NextResponse.next();
+    }
+
+    if (!isAuthenticated) {
+      return NextResponse.redirect(new URL('/admin/login', request.url));
+    }
+
+    return NextResponse.next();
   }
 
-  // Normal routing for main domain
+  // Normal routing for public domain
   return NextResponse.next();
 }
 
@@ -51,4 +65,3 @@ export const config = {
     '/((?!api|_next/static|_next/image|favicon.ico).*)',
   ],
 };
-

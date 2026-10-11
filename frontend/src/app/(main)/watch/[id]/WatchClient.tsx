@@ -4,6 +4,9 @@ import { Player } from '@/components/video/Player';
 import { ThumbsUp, MessageSquare, Share2, Heart, PlayCircle, CheckCircle2, Eye } from 'lucide-react';
 import Link from 'next/link';
 import { useSidebar } from '@/context/SidebarContext';
+import WatchPageSkeleton from '@/components/skeletons/WatchPageSkeleton';
+import AdCard from '@/components/ads/AdCard';
+import VideoCard from '@/components/video/VideoCard';
 
 export default function WatchClient({ videoId }: { videoId: string }) {
   const { isCollapsed, toggleSidebar } = useSidebar();

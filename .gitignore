@@ -36,5 +36,4 @@ logs/
 # Video Storage Archive
 XPIG-STORAG/
 *.mp4
-*.ts
 *.m3u8
