@@ -38,9 +38,15 @@ export function Player({ src, fallbackSrc, poster, title, autoPlay = true }: Pla
           setAspectRatio(`${target.videoWidth} / ${target.videoHeight}`);
           setIsAudioOnly(false);
         } else {
-          // No video frames detected (Audio-only track / Tape recording)
-          setIsAudioOnly(true);
-          setAspectRatio('16 / 9');
+          // No video frames detected in current stream
+          if (fallbackSrc && currentSrc !== fallbackSrc) {
+            console.log('[Player] No video track on primary stream, switching to visual preview:', fallbackSrc);
+            setCurrentSrc(fallbackSrc);
+            setIsAudioOnly(false);
+          } else {
+            setIsAudioOnly(true);
+            setAspectRatio('16 / 9');
+          }
         }
       }
     } catch (err) {}
@@ -85,35 +91,38 @@ export function Player({ src, fallbackSrc, poster, title, autoPlay = true }: Pla
     }
   };
 
-  // Audio Equalizer Waveform Bars component
+  // Audio Equalizer Waveform Bars component with video poster background
   const AudioWaveVisualizer = () => {
     const bars = [40, 75, 25, 90, 60, 30, 85, 45, 95, 70, 35, 80, 50, 100, 65, 30, 85, 40, 90, 60, 25, 75, 50, 85];
     return (
-      <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-6 bg-gradient-to-b from-zinc-950/80 via-zinc-900/95 to-black pointer-events-none">
+      <div 
+        className="absolute inset-0 z-20 flex flex-col items-center justify-center p-6 pointer-events-none bg-cover bg-center"
+        style={poster ? { backgroundImage: `linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.88)), url(${poster})` } : { backgroundColor: '#09090b' }}
+      >
         {/* Glow circle */}
         <div className="absolute w-64 h-64 bg-pink-600/15 rounded-full blur-3xl animate-pulse" />
         
         {/* Disc / Tape Icon */}
-        <div className="relative mb-6">
-          <div className={`w-24 h-24 rounded-full bg-zinc-900/90 border-2 border-pink-500/40 flex items-center justify-center shadow-[0_0_30px_rgba(236,72,153,0.3)] ${isPlaying ? 'animate-[spin_6s_linear_infinite]' : ''}`}>
-            <Disc className="w-12 h-12 text-pink-500" />
+        <div className="relative mb-4">
+          <div className={`w-20 h-20 rounded-full bg-zinc-900/90 border-2 border-pink-500/40 flex items-center justify-center shadow-[0_0_30px_rgba(236,72,153,0.3)] ${isPlaying ? 'animate-[spin_6s_linear_infinite]' : ''}`}>
+            <Disc className="w-10 h-10 text-pink-500" />
           </div>
           <div className="absolute -bottom-2 -right-2 px-2.5 py-0.5 bg-pink-600 text-white font-mono font-bold text-[10px] uppercase rounded-full shadow-md flex items-center gap-1">
-            <Volume2 className="w-3 h-3" /> Audio Tape
+            <Volume2 className="w-3 h-3" /> Audio Track
           </div>
         </div>
 
         {/* Audio Title */}
-        <h3 className="text-white font-bold text-base md:text-lg text-center max-w-md line-clamp-1 mb-1">
+        <h3 className="text-white font-bold text-base md:text-lg text-center max-w-md line-clamp-1 mb-1 drop-shadow-md">
           {title || "Audio Track / Voice Recording"}
         </h3>
-        <p className="text-zinc-400 text-xs mb-6 flex items-center gap-1.5">
+        <p className="text-zinc-300 text-xs mb-4 flex items-center gap-1.5 drop-shadow">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
           Audio Track Playing • Visual Waveform Active
         </p>
 
         {/* Dynamic Animated Equalizer Bars */}
-        <div className="flex items-end justify-center gap-1.5 h-16 w-full max-w-sm px-4">
+        <div className="flex items-end justify-center gap-1.5 h-12 w-full max-w-sm px-4">
           {bars.map((h, i) => (
             <div
               key={i}
@@ -128,10 +137,10 @@ export function Player({ src, fallbackSrc, poster, title, autoPlay = true }: Pla
 
         {/* Stream Toggle Switcher if visual clip exists */}
         {fallbackSrc && (
-          <div className="mt-6 pointer-events-auto">
+          <div className="mt-5 pointer-events-auto">
             <button
               onClick={toggleStreamSource}
-              className="px-4 py-2 bg-zinc-800/90 hover:bg-zinc-700 border border-zinc-600/60 rounded-xl text-xs font-bold text-white transition-all shadow-lg flex items-center gap-2 active:scale-95"
+              className="px-4 py-2 bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-600/70 rounded-xl text-xs font-bold text-white transition-all shadow-xl flex items-center gap-2 active:scale-95 hover:border-pink-500"
             >
               <Film className="w-3.5 h-3.5 text-pink-400" />
               <span>{currentSrc === src ? 'Switch to Video Clip (Visual)' : 'Switch to Full Audio'}</span>
@@ -142,6 +151,8 @@ export function Player({ src, fallbackSrc, poster, title, autoPlay = true }: Pla
     );
   };
 
+  const isLooping = currentSrc === fallbackSrc;
+
   if (useFallback) {
     return (
       <div 
@@ -149,6 +160,24 @@ export function Player({ src, fallbackSrc, poster, title, autoPlay = true }: Pla
         style={{ aspectRatio, maxHeight: '78vh' }}
       >
         {isAudioOnly && <AudioWaveVisualizer />}
+        {fallbackSrc && (
+          <button
+            onClick={toggleStreamSource}
+            className="absolute top-3 right-3 z-30 px-3 py-1.5 rounded-lg bg-zinc-900/90 hover:bg-zinc-800 backdrop-blur-md border border-zinc-700 text-xs font-semibold text-white flex items-center gap-1.5 shadow-lg transition-all active:scale-95 hover:border-pink-500/60"
+          >
+            {currentSrc === fallbackSrc ? (
+              <>
+                <Volume2 className="w-3.5 h-3.5 text-pink-400" />
+                <span>Full Audio</span>
+              </>
+            ) : (
+              <>
+                <Film className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Video Clip</span>
+              </>
+            )}
+          </button>
+        )}
         <video
           ref={videoFallbackRef}
           src={currentSrc}
@@ -156,6 +185,7 @@ export function Player({ src, fallbackSrc, poster, title, autoPlay = true }: Pla
           controls
           autoPlay={autoPlay}
           muted={true}
+          loop={isLooping}
           playsInline
           onLoadedMetadata={handleMetadata}
           onPlay={() => handlePlayState(true)}
@@ -169,6 +199,24 @@ export function Player({ src, fallbackSrc, poster, title, autoPlay = true }: Pla
   return (
     <div className="relative w-full overflow-hidden rounded-none md:rounded-xl bg-black">
       {isAudioOnly && <AudioWaveVisualizer />}
+      {fallbackSrc && (
+        <button
+          onClick={toggleStreamSource}
+          className="absolute top-3 right-3 z-30 px-3 py-1.5 rounded-lg bg-zinc-900/90 hover:bg-zinc-800 backdrop-blur-md border border-zinc-700 text-xs font-semibold text-white flex items-center gap-1.5 shadow-lg transition-all active:scale-95 hover:border-pink-500/60"
+        >
+          {currentSrc === fallbackSrc ? (
+            <>
+              <Volume2 className="w-3.5 h-3.5 text-pink-400" />
+              <span>Full Audio</span>
+            </>
+          ) : (
+            <>
+              <Film className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Video Clip</span>
+            </>
+          )}
+        </button>
+      )}
       <MediaPlayer 
         ref={playerRef}
         title={title} 
@@ -179,6 +227,7 @@ export function Player({ src, fallbackSrc, poster, title, autoPlay = true }: Pla
         playsInline
         autoPlay={autoPlay}
         muted={true}
+        loop={isLooping}
         onError={() => setUseFallback(true)}
         onPlay={() => handlePlayState(true)}
         onPause={() => handlePlayState(false)}
