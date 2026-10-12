@@ -65,12 +65,15 @@ export function Player({ src, poster, previewUrl, title, autoPlay = true }: Play
     } catch (err) {}
   };
 
-  // Determine thumbnail asset for seekbar hover scrub preview
-  const scrubThumbnail = previewUrl || poster;
+  // Seeker thumbnail preview requires a valid image (JPEG/PNG/WebP), never an MP4 video file
+  const isVideoUrl = (url?: string) => 
+    url ? (url.endsWith('.mp4') || url.endsWith('.webm') || url.includes('.mp4?') || url.includes('.webm?')) : false;
+
+  const validImageThumbnail = (!isVideoUrl(previewUrl) && previewUrl) ? previewUrl : (poster || '/player-watermark.png');
 
   // Vidstack requires ThumbnailImageInit[] format to support direct image URLs for seekbar hover scrub preview
-  const thumbnailData = scrubThumbnail
-    ? [{ url: scrubThumbnail, startTime: 0, endTime: 999999 }]
+  const thumbnailData = validImageThumbnail
+    ? [{ url: validImageThumbnail, startTime: 0, endTime: 999999 }]
     : undefined;
 
   return (
@@ -109,15 +112,6 @@ export function Player({ src, poster, previewUrl, title, autoPlay = true }: Play
         {/* Vidstack native debounced gesture controls */}
         <Gesture className="vds-gesture absolute inset-0 z-0" event="pointerup" action="toggle:paused" />
         <Gesture className="vds-gesture absolute inset-0 z-0" event="dblpointerup" action="toggle:fullscreen" />
-
-        {/* XPIG.me Official Single Watermark (Bottom-Right Original Position, 40% Opacity) */}
-        <div className="absolute bottom-12 right-3 md:bottom-14 md:right-4 z-20 pointer-events-none select-none opacity-40">
-          <img 
-            src="/player-watermark.png" 
-            alt="XPIG.me" 
-            className="h-5 md:h-6.5 w-auto object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]" 
-          />
-        </div>
 
         <DefaultVideoLayout 
           noGestures
