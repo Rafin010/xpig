@@ -68,6 +68,11 @@ export function Player({ src, poster, previewUrl, title, autoPlay = true }: Play
   // Determine thumbnail asset for seekbar hover scrub preview
   const scrubThumbnail = previewUrl || poster;
 
+  // Vidstack requires ThumbnailImageInit[] format to support direct image URLs for seekbar hover scrub preview
+  const thumbnailData = scrubThumbnail
+    ? [{ url: scrubThumbnail, startTime: 0, endTime: 999999 }]
+    : undefined;
+
   return (
     <div 
       ref={containerRef}
@@ -105,19 +110,19 @@ export function Player({ src, poster, previewUrl, title, autoPlay = true }: Play
         <Gesture className="vds-gesture absolute inset-0 z-0" event="pointerup" action="toggle:paused" />
         <Gesture className="vds-gesture absolute inset-0 z-0" event="dblpointerup" action="toggle:fullscreen" />
 
-        {/* XPIG.me Official Player Watermark Logo (Subtle 40% Opacity Broadcast Badge) */}
-        <div className="absolute top-3 right-3 md:top-4 md:right-4 z-20 pointer-events-none select-none opacity-40">
+        {/* XPIG.me Official Single Watermark (Bottom-Right Original Position, 40% Opacity) */}
+        <div className="absolute bottom-12 right-3 md:bottom-14 md:right-4 z-20 pointer-events-none select-none opacity-40">
           <img 
             src="/player-watermark.png" 
             alt="XPIG.me" 
-            className="h-6 md:h-7.5 w-auto object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.7)]" 
+            className="h-5 md:h-6.5 w-auto object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]" 
           />
         </div>
 
         <DefaultVideoLayout 
           noGestures
           icons={defaultLayoutIcons} 
-          thumbnails={scrubThumbnail}
+          thumbnails={thumbnailData}
           color="hsl(330, 81%, 60%)" 
         />
       </MediaPlayer>

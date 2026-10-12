@@ -82,7 +82,7 @@ export default function ProfilePage() {
                     alt="Verified Badge" 
                     width={26} 
                     height={26} 
-                    className="w-6 h-6 sm:w-7 sm:h-7 object-contain drop-shadow-[0_0_10px_rgba(0,149,246,0.5)]" 
+                    className="w-6 h-6 sm:w-7 sm:h-7 object-contain" 
                     priority
                   />
                 </span>

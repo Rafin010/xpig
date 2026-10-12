@@ -97,8 +97,8 @@ vds-menu, .vds-menu-items, .vds-tooltip-content, .vds-chapters-menu, .vds-settin
   display: flex !important;
   flex-direction: column !important;
   align-items: center !important;
-  position: relative !important;
   filter: drop-shadow(0 10px 25px rgba(0, 0, 0, 0.8)) !important;
+  pointer-events: none !important;
 }
 
 .vds-time-slider .vds-slider-thumbnail {
@@ -106,22 +106,26 @@ vds-menu, .vds-menu-items, .vds-tooltip-content, .vds-chapters-menu, .vds-settin
   border: 1px solid rgba(255, 255, 255, 0.25) !important;
   overflow: hidden !important;
   background-color: #000000 !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.8) !important;
+}
+
+.vds-time-slider .vds-slider-thumbnail img {
+  object-fit: cover !important;
+  border-radius: 7px !important;
 }
 
 .vds-time-slider .vds-slider-value {
-  position: absolute !important;
-  bottom: 6px !important;
-  background: rgba(0, 0, 0, 0.75) !important;
+  background: rgba(0, 0, 0, 0.85) !important;
   backdrop-filter: blur(4px) !important;
   border-radius: 4px !important;
-  padding: 1px 7px !important;
+  padding: 2px 8px !important;
   font-size: 11px !important;
   font-weight: 700 !important;
   letter-spacing: 0.05em !important;
   color: #ffffff !important;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9) !important;
-  border: 1px solid rgba(255, 255, 255, 0.15) !important;
-  z-index: 10 !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  margin-top: 4px !important;
 }
 
 /* xHamster / YouTube-style fixed aspect-ratio theatrical stage & natural video fit */

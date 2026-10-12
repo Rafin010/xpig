@@ -160,13 +160,13 @@ export default function VideoCard({ video }: { video: any }) {
             <span className="text-[13px] font-bold text-zinc-300 group-hover:text-white transition-colors truncate">
               xpig
             </span>
-            {/* Real Meta Verified Blue Badge Image */}
+            {/* Real Meta Verified Blue Badge Image (Flat & Solid, No Glow) */}
             <Image 
               src="/verified-badge.png" 
               alt="Verified Creator" 
               width={16} 
               height={16} 
-              className="w-4 h-4 object-contain shrink-0 drop-shadow-[0_0_6px_rgba(0,149,246,0.5)]" 
+              className="w-4 h-4 object-contain shrink-0" 
             />
           </div>
 

@@ -55,7 +55,7 @@ export default function SettingsPage() {
                 alt="Verified" 
                 width={20} 
                 height={20} 
-                className="w-5 h-5 object-contain inline-block shrink-0 drop-shadow-[0_0_8px_rgba(0,149,246,0.4)]" 
+                className="w-5 h-5 object-contain inline-block shrink-0" 
               />
             </div>
             <p className="text-sm text-zinc-400">{user.email}</p>

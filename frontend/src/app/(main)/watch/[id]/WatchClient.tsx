@@ -359,13 +359,13 @@ export default function WatchClient({ videoId }: { videoId: string }) {
                 <div>
                   <div className="flex items-center gap-1.5">
                     <h3 className="font-bold text-base text-white">xpig</h3>
-                    {/* Meta Verified Blue Rosette Badge */}
+                    {/* Meta Verified Blue Rosette Badge (Flat & Solid, No Glow) */}
                     <Image 
                       src="/verified-badge.png" 
                       alt="Verified Creator" 
                       width={18} 
                       height={18} 
-                      className="w-4 h-4 object-contain shrink-0 drop-shadow-[0_0_6px_rgba(0,149,246,0.4)]" 
+                      className="w-4 h-4 object-contain shrink-0" 
                     />
                   </div>
                   <p className="text-xs text-zinc-400">Official Content Platform</p>
@@ -473,7 +473,7 @@ export default function WatchClient({ videoId }: { videoId: string }) {
                       alt="Verified Creator" 
                       width={14} 
                       height={14} 
-                      className="w-3.5 h-3.5 object-contain shrink-0 drop-shadow-[0_0_4px_rgba(0,149,246,0.4)]" 
+                      className="w-3.5 h-3.5 object-contain shrink-0" 
                     />
                   </div>
                   <p className="text-[10px] text-zinc-500 mt-0.5">
