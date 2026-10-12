@@ -1,6 +1,6 @@
 'use client';
 
-import { MediaPlayer, MediaProvider, Poster } from '@vidstack/react';
+import { MediaPlayer, MediaProvider, Poster, Gesture } from '@vidstack/react';
 import { DefaultVideoLayout, defaultLayoutIcons } from '@vidstack/react/player/layouts/default';
 import '@vidstack/react/player/styles/default/theme.css';
 import '@vidstack/react/player/styles/default/layouts/video.css';
@@ -29,20 +29,6 @@ export function Player({ src, poster, previewUrl, title, autoPlay = true }: Play
         playerRef.current.pause().catch(() => {});
       }
     }
-  };
-
-  const handlePlayerClick = (e: React.MouseEvent) => {
-    // If the click is inside interactive control buttons, ignore toggling
-    const target = e.target as HTMLElement;
-    if (
-      target.closest('.vds-button') ||
-      target.closest('.vds-slider') ||
-      target.closest('.vds-menu') ||
-      target.closest('button:not([data-play-toggle])')
-    ) {
-      return;
-    }
-    togglePlay();
   };
 
   // Outside click listener to hide player controls and icons immediately
@@ -85,8 +71,7 @@ export function Player({ src, poster, previewUrl, title, autoPlay = true }: Play
   return (
     <div 
       ref={containerRef}
-      onClick={handlePlayerClick}
-      className="relative w-full aspect-video bg-black rounded-none md:rounded-xl overflow-hidden cursor-pointer select-none group flex items-center justify-center"
+      className="relative w-full aspect-video bg-black rounded-none md:rounded-xl overflow-hidden select-none group flex items-center justify-center"
     >
       <MediaPlayer 
         ref={playerRef}
@@ -115,7 +100,13 @@ export function Player({ src, poster, previewUrl, title, autoPlay = true }: Play
             />
           )}
         </MediaProvider>
+
+        {/* Vidstack native debounced gesture controls */}
+        <Gesture className="vds-gesture absolute inset-0 z-0" event="pointerup" action="toggle:paused" />
+        <Gesture className="vds-gesture absolute inset-0 z-0" event="dblpointerup" action="toggle:fullscreen" />
+
         <DefaultVideoLayout 
+          noGestures
           icons={defaultLayoutIcons} 
           thumbnails={scrubThumbnail}
           color="hsl(330, 81%, 60%)" 

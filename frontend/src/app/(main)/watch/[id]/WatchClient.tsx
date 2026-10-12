@@ -400,10 +400,16 @@ export default function WatchClient({ videoId }: { videoId: string }) {
                 {/* YouTube-Style Share Button */}
                 <button 
                   onClick={handleShare}
-                  className="flex items-center gap-2 px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-800 hover:border-zinc-700 rounded-full transition-all text-sm font-semibold shadow-sm active:scale-95 cursor-pointer"
+                  className="group flex items-center gap-2 px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-800 hover:border-zinc-700 rounded-full transition-all text-sm font-semibold shadow-sm active:scale-95 cursor-pointer"
                   title="Share video link"
                 >
-                  <Share2 className="w-4 h-4 text-pink-500" />
+                  <svg 
+                    viewBox="0 0 24 24" 
+                    className="w-4 h-4 fill-current text-zinc-300 group-hover:text-white transition-colors"
+                    aria-hidden="true"
+                  >
+                    <path d="M15 5.63 20.66 12 15 18.37V14h-1c-3.96 0-7.14 1-9.75 3.09 1.84-4.07 5.11-6.4 9.89-7.1l.86-.13V5.63M14 3v6C8.62 9.77 5.25 12.63 3 17.5 5.75 14.5 9.5 13 14 13v6l8-7-8-7z"/>
+                  </svg>
                   <span>Share {sharesCount > 0 ? `(${sharesCount})` : ''}</span>
                 </button>
               </div>
