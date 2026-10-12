@@ -47,6 +47,7 @@ class VideoInDBBase(VideoBase):
     status: str
     views: Optional[int] = 0
     likes: Optional[int] = 0
+    shares_count: Optional[int] = 0
     created_at: datetime
     updated_at: Optional[datetime]
 

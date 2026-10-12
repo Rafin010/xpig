@@ -97,3 +97,30 @@ media-player .vds-poster {
   background-color: #000000 !important;
 }
 
+/* TikTok / YouTube Live floating heart bubbles animation */
+@keyframes float-heart {
+  0% {
+    opacity: 0;
+    transform: translateY(0) translateX(0) scale(0.6) rotate(0deg);
+  }
+  15% {
+    opacity: 0.95;
+    transform: translateY(-30px) translateX(calc(var(--drift) * 0.2)) scale(1.1) rotate(var(--rot));
+  }
+  60% {
+    opacity: 0.8;
+    transform: translateY(-160px) translateX(calc(var(--drift) * 0.7)) scale(1) rotate(calc(var(--rot) * -0.5));
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-280px) translateX(var(--drift)) scale(0.8) rotate(var(--rot));
+  }
+}
+
+.animate-float-heart {
+  animation-name: float-heart;
+  animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
+  animation-fill-mode: forwards;
+}
+
+

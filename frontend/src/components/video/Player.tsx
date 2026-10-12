@@ -4,23 +4,24 @@ import { MediaPlayer, MediaProvider, Poster } from '@vidstack/react';
 import { DefaultVideoLayout, defaultLayoutIcons } from '@vidstack/react/player/layouts/default';
 import '@vidstack/react/player/styles/default/theme.css';
 import '@vidstack/react/player/styles/default/layouts/video.css';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Play } from 'lucide-react';
 
 interface PlayerProps {
   src: string;
   fallbackSrc?: string;
   poster?: string;
+  previewUrl?: string;
   title?: string;
   autoPlay?: boolean;
 }
 
-export function Player({ src, poster, title, autoPlay = true }: PlayerProps) {
+export function Player({ src, poster, previewUrl, title, autoPlay = true }: PlayerProps) {
   const playerRef = useRef<any>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
 
-  const togglePlay = (e?: React.MouseEvent) => {
-    e?.stopPropagation();
+  const togglePlay = () => {
     if (playerRef.current) {
       if (playerRef.current.paused) {
         playerRef.current.play().catch(() => {});
@@ -29,6 +30,38 @@ export function Player({ src, poster, title, autoPlay = true }: PlayerProps) {
       }
     }
   };
+
+  const handlePlayerClick = (e: React.MouseEvent) => {
+    // If the click is inside interactive control buttons, ignore toggling
+    const target = e.target as HTMLElement;
+    if (
+      target.closest('.vds-button') ||
+      target.closest('.vds-slider') ||
+      target.closest('.vds-menu') ||
+      target.closest('button:not([data-play-toggle])')
+    ) {
+      return;
+    }
+    togglePlay();
+  };
+
+  // Outside click listener to hide player controls and icons immediately
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        if (playerRef.current) {
+          try {
+            // Dismiss controls overlay when clicking outside the player
+            if (typeof playerRef.current.remote?.hideControls === 'function') {
+              playerRef.current.remote.hideControls();
+            }
+          } catch (err) {}
+        }
+      }
+    };
+    document.addEventListener('pointerdown', handleOutsideClick);
+    return () => document.removeEventListener('pointerdown', handleOutsideClick);
+  }, []);
 
   const handleFullscreenChange = (isFullscreen: boolean) => {
     try {
@@ -46,9 +79,13 @@ export function Player({ src, poster, title, autoPlay = true }: PlayerProps) {
     } catch (err) {}
   };
 
+  // Determine thumbnail asset for seekbar hover scrub preview
+  const scrubThumbnail = previewUrl || poster;
+
   return (
     <div 
-      onClick={togglePlay}
+      ref={containerRef}
+      onClick={handlePlayerClick}
       className="relative w-full aspect-video bg-black rounded-none md:rounded-xl overflow-hidden cursor-pointer select-none group flex items-center justify-center"
     >
       <MediaPlayer 
@@ -62,6 +99,7 @@ export function Player({ src, poster, title, autoPlay = true }: PlayerProps) {
         autoPlay={autoPlay}
         muted={false}
         aspectRatio="16/9"
+        controlsDelay={2000}
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
         onFullscreenChange={handleFullscreenChange}
@@ -79,16 +117,20 @@ export function Player({ src, poster, title, autoPlay = true }: PlayerProps) {
         </MediaProvider>
         <DefaultVideoLayout 
           icons={defaultLayoutIcons} 
-          thumbnails={poster}
+          thumbnails={scrubThumbnail}
           color="hsl(330, 81%, 60%)" 
         />
       </MediaPlayer>
 
-      {/* Center Glassmorphism Play Button */}
+      {/* Center Glassmorphism Play Button (Only visible when paused) */}
       {!isPlaying && (
         <button
           type="button"
-          onClick={togglePlay}
+          data-play-toggle="true"
+          onClick={(e) => {
+            e.stopPropagation();
+            togglePlay();
+          }}
           aria-label="Play video"
           className="absolute inset-0 m-auto w-20 h-20 md:w-24 md:h-24 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-xl border border-white/40 flex items-center justify-center shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] transition-all transform hover:scale-110 active:scale-95 z-20 cursor-pointer pointer-events-auto"
         >

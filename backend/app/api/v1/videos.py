@@ -230,6 +230,21 @@ async def toggle_video_like(
     await db.commit()
     return {"status": "ok", "likes": video.likes, "is_liked": new_is_liked}
 
+@router.post("/{video_id}/share")
+async def track_video_share(
+    video_id: int,
+    db: AsyncSession = Depends(get_db)
+) -> Any:
+    result = await db.execute(select(Video).where(Video.id == video_id))
+    video = result.scalars().first()
+    if not video:
+        raise HTTPException(status_code=404, detail="Video not found")
+
+    current_shares = (getattr(video, "shares_count", 0) or 0) + 1
+    video.shares_count = current_shares
+    await db.commit()
+    return {"status": "ok", "shares_count": current_shares}
+
 @router.delete("/{video_id}")
 async def delete_video(
     video_id: int,

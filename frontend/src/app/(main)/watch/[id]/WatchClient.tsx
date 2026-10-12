@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
 import { Player } from '@/components/video/Player';
-import { ThumbsUp, Share2, Check, CheckCircle2, Eye } from 'lucide-react';
+import { Heart, Share2, Check, CheckCircle2, Eye } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useSidebar } from '@/context/SidebarContext';
@@ -10,6 +10,8 @@ import WatchPageSkeleton from '@/components/skeletons/WatchPageSkeleton';
 import VideoCard from '@/components/video/VideoCard';
 import SponsorWatchBanner from '@/components/ads/SponsorWatchBanner';
 import { decodeVideoId, encodeVideoId } from '@/lib/obfuscate';
+import { FloatingHearts } from '@/components/video/FloatingHearts';
+import { ShareModal } from '@/components/video/ShareModal';
 
 function formatDuration(duration: any, id?: number): string {
   if (typeof duration === 'number' && duration > 0) {
@@ -47,6 +49,9 @@ export default function WatchClient({ videoId }: { videoId: string }) {
   const [isFollowing, setIsFollowing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [shareCopied, setShareCopied] = useState(false);
+  const [heartBurst, setHeartBurst] = useState(0);
+  const [isShareOpen, setIsShareOpen] = useState(false);
+  const [sharesCount, setSharesCount] = useState<number>(0);
 
   // Auto-collapse sidebar on video open
   useEffect(() => {
@@ -88,6 +93,9 @@ export default function WatchClient({ videoId }: { videoId: string }) {
         if (vRes.ok) {
           const vData = await vRes.json();
           setVideoData(vData);
+          if (typeof vData.shares_count === 'number') {
+            setSharesCount(vData.shares_count);
+          }
         }
 
         // Fetch related videos
@@ -205,10 +213,15 @@ export default function WatchClient({ videoId }: { videoId: string }) {
     };
   }, [numericId]);
 
-  // Guest-friendly Like toggle (persists to localStorage + backend)
+  // Guest-friendly Love / Heart toggle (persists to localStorage + backend)
   const handleLikeToggle = async () => {
     const nextLiked = !isLiked;
     setIsLiked(nextLiked);
+
+    // Trigger floating heart bubbles swarm on like
+    if (nextLiked) {
+      setHeartBurst((prev) => prev + 1);
+    }
 
     // Save in localStorage for persistent guest session
     try {
@@ -249,24 +262,19 @@ export default function WatchClient({ videoId }: { videoId: string }) {
     } catch (e) {}
   };
 
-  // One-click Share (native share or clipboard fallback)
-  const handleShare = async () => {
-    const shareUrl = window.location.href;
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: videoData?.title || 'XPIG Video',
-          url: shareUrl,
-        });
-        return;
-      } catch (e) {}
-    }
-
+  // Track live share count in backend
+  const handleShareTrack = async () => {
+    setSharesCount((prev) => prev + 1);
     try {
-      await navigator.clipboard.writeText(shareUrl);
-      setShareCopied(true);
-      setTimeout(() => setShareCopied(false), 2500);
+      await fetch(`https://xpig.onrender.com/api/v1/videos/${numericId}/share`, {
+        method: 'POST'
+      });
     } catch (e) {}
+  };
+
+  // Open YouTube-style Share Modal
+  const handleShare = () => {
+    setIsShareOpen(true);
   };
 
   // Follow (auth gated)
@@ -313,12 +321,14 @@ export default function WatchClient({ videoId }: { videoId: string }) {
             
             {/* Theatrical Fixed 16:9 Stage */}
             <div className="relative z-10 w-full aspect-video bg-black md:rounded-xl overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)] border-y border-zinc-800 md:border-x flex items-center justify-center">
+              <FloatingHearts burstCount={heartBurst} />
               {realVideoUrl ? (
                 <Player 
                   src={realVideoUrl}
                   autoPlay={true} 
                   title={videoData?.title || `Video ${numericId}`} 
                   poster={videoData?.thumbnail_url || undefined}
+                  previewUrl={videoData?.preview_url || undefined}
                 />
               ) : (
                 <div className="aspect-video w-full flex flex-col items-center justify-center bg-zinc-900 text-zinc-500">
@@ -371,39 +381,30 @@ export default function WatchClient({ videoId }: { videoId: string }) {
                 </button>
               </div>
 
-              {/* Actions: Likes & Share */}
+              {/* Actions: Love Reaction & YouTube-Style Share */}
               <div className="flex items-center gap-2.5">
-                {/* Like Button (Guests Allowed) */}
+                {/* Love / Heart Button (Guests Allowed with TikTok/YouTube Live floating hearts) */}
                 <button 
                   onClick={handleLikeToggle}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all text-sm font-semibold ${
+                  className={`group flex items-center gap-2 px-4 py-2 rounded-full transition-all text-sm font-semibold cursor-pointer active:scale-95 ${
                     isLiked 
-                      ? 'bg-zinc-800 text-emerald-400 border border-emerald-500/40 shadow-sm' 
-                      : 'bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800'
+                      ? 'bg-rose-500/15 text-rose-400 border border-rose-500/40 shadow-[0_0_15px_rgba(244,63,94,0.25)]' 
+                      : 'bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 hover:border-rose-500/30'
                   }`}
-                  title="Like this video"
+                  title="Love this video"
                 >
-                  <ThumbsUp className={`w-4 h-4 ${isLiked ? 'fill-emerald-400 text-emerald-400' : ''}`} />
-                  <span>{videoData?.likes ?? (isLiked ? 1 : 0)}</span>
+                  <Heart className={`w-4 h-4 transition-transform group-hover:scale-115 active:scale-125 ${isLiked ? 'fill-rose-500 text-rose-500' : 'text-zinc-400 group-hover:text-rose-400'}`} />
+                  <span className="font-bold">{videoData?.likes ?? (isLiked ? 1 : 0)}</span>
                 </button>
 
-                {/* Share Button (Native / Clipboard) */}
+                {/* YouTube-Style Share Button */}
                 <button 
                   onClick={handleShare}
-                  className="flex items-center gap-2 px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 rounded-full transition-all text-sm font-semibold"
+                  className="flex items-center gap-2 px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white border border-zinc-800 hover:border-zinc-700 rounded-full transition-all text-sm font-semibold shadow-sm active:scale-95 cursor-pointer"
                   title="Share video link"
                 >
-                  {shareCopied ? (
-                    <>
-                      <Check className="w-4 h-4 text-emerald-400" />
-                      <span className="text-emerald-400 font-bold">Copied!</span>
-                    </>
-                  ) : (
-                    <>
-                      <Share2 className="w-4 h-4" />
-                      <span>Share</span>
-                    </>
-                  )}
+                  <Share2 className="w-4 h-4 text-pink-500" />
+                  <span>Share {sharesCount > 0 ? `(${sharesCount})` : ''}</span>
                 </button>
               </div>
             </div>
@@ -490,6 +491,15 @@ export default function WatchClient({ videoId }: { videoId: string }) {
           </div>
         </div>
       )}
+
+      {/* YouTube-Style Share Dialog Modal */}
+      <ShareModal
+        isOpen={isShareOpen}
+        onClose={() => setIsShareOpen(false)}
+        title={videoData?.title || 'XPIG Video'}
+        shareUrl={typeof window !== 'undefined' ? window.location.href : `https://xpig.me/watch/${videoId}`}
+        onShareTrack={handleShareTrack}
+      />
     </div>
   );
 }
