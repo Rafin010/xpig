@@ -70,3 +70,30 @@ vds-menu, .vds-menu-items, .vds-tooltip-content, .vds-chapters-menu, .vds-settin
 .vds-button:hover {
   color: #ec4899 !important;
 }
+
+/* xHamster / YouTube-style fixed aspect-ratio theatrical stage & natural video fit */
+media-player,
+media-provider,
+.vds-video-layout {
+  background-color: #000000 !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+media-player video {
+  object-fit: contain !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  margin: auto !important;
+  background-color: #000000 !important;
+}
+
+media-player .vds-poster {
+  object-fit: contain !important;
+  width: 100% !important;
+  height: 100% !important;
+  background-color: #000000 !important;
+}
+

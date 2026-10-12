@@ -289,8 +289,8 @@ export default function WatchClient({ videoId }: { videoId: string }) {
               className="absolute -inset-10 w-[calc(100%+80px)] h-[calc(100%+80px)] blur-[80px] opacity-60 z-0 hidden md:block pointer-events-none transition-opacity duration-500"
             />
             
-            {/* Adaptive Player Container */}
-            <div className="relative z-10 w-full max-h-[80vh] flex items-center justify-center bg-zinc-950 md:rounded-xl overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)] border-y border-zinc-800 md:border-x">
+            {/* Theatrical Fixed 16:9 Stage */}
+            <div className="relative z-10 w-full aspect-video bg-black md:rounded-xl overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)] border-y border-zinc-800 md:border-x flex items-center justify-center">
               {realVideoUrl ? (
                 <Player 
                   src={realVideoUrl}
