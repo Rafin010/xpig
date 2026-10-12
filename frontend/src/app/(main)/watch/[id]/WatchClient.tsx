@@ -294,7 +294,6 @@ export default function WatchClient({ videoId }: { videoId: string }) {
               {realVideoUrl ? (
                 <Player 
                   src={realVideoUrl}
-                  fallbackSrc={videoData?.preview_url && videoData?.preview_url !== realVideoUrl ? videoData.preview_url : undefined}
                   autoPlay={true} 
                   title={videoData?.title || `Video ${numericId}`} 
                   poster={videoData?.thumbnail_url || undefined}

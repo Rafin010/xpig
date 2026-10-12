@@ -3,15 +3,35 @@ import type { Metadata } from 'next';
 import WatchClient from './WatchClient';
 import { decodeVideoId } from '@/lib/obfuscate';
 
+function formatIsoDuration(dur: any): string {
+  if (!dur || dur === 0) return "PT5M00S";
+  const num = typeof dur === 'number' ? dur : parseInt(String(dur), 10);
+  if (!isNaN(num) && num > 0) {
+    const m = Math.floor(num / 60);
+    const s = num % 60;
+    return `PT${m}M${s}S`;
+  }
+  const str = String(dur);
+  if (str.includes(':')) {
+    const parts = str.split(':');
+    return `PT${parts[0]}M${parts[1] || '00'}S`;
+  }
+  return "PT5M00S";
+}
+
 async function fetchVideoData(id: string) {
   try {
     const numericId = decodeVideoId(id);
-    const res = await fetch(`https://xpig.onrender.com/api/v1/videos/${numericId}`, { cache: 'no-store' });
+    if (!numericId) return null;
+    const res = await fetch(`https://xpig.onrender.com/api/v1/videos/${numericId}`, { 
+      cache: 'no-store',
+      signal: AbortSignal.timeout(3500)
+    });
     if (res.ok) {
       return await res.json();
     }
   } catch (err) {
-    console.error("Error fetching video for SEO:", err);
+    // Non-blocking: WatchClient handles client-side loading gracefully
   }
   return null;
 }
@@ -92,7 +112,7 @@ export default async function WatchPage({ params }: { params: Promise<{ id: stri
     "description": video.description || `${video.title || 'Video'} - Watch exclusive Bangla and Deshi adult video collection on XPIG.me.`,
     "thumbnailUrl": [video.thumbnail_url || "https://xpig.me/og-image.jpg"],
     "uploadDate": video.created_at || new Date().toISOString(),
-    "duration": video.duration ? `PT${video.duration.replace(':', 'M')}S` : "PT5M00S",
+    "duration": formatIsoDuration(video.duration),
     "contentUrl": video.sources?.[0]?.source_url || video.video_url || "",
     "embedUrl": `https://xpig.me/watch/${resolvedParams.id}`,
     "publisher": {

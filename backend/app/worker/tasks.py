@@ -64,6 +64,23 @@ async def process_video_task(ctx, video_id: int, input_path: str, output_dir: st
         lambda: subprocess.run(ffmpeg_preview_cmd, capture_output=True)
     )
     
+    # Probe real duration with ffprobe
+    duration_seconds = 0
+    try:
+        probe_cmd = [
+            "ffprobe", "-v", "error", "-show_entries", "format=duration",
+            "-of", "default=noprint_wrappers=1:nokey=1", input_path
+        ]
+        probe_res = await loop.run_in_executor(
+            None,
+            lambda: subprocess.run(probe_cmd, capture_output=True, text=True)
+        )
+        if probe_res.returncode == 0 and probe_res.stdout.strip():
+            duration_seconds = int(float(probe_res.stdout.strip()))
+            logger.info(f"Video {video_id} duration: {duration_seconds}s")
+    except Exception as e:
+        logger.warning(f"Failed to probe duration for video {video_id}: {e}")
+    
     # --- PHASE 1: Quick DB check to get active R2 node credentials ---
     async with SessionLocal() as db:
         active_node = await StorageService.get_active_node(db, final_file_size)
@@ -128,6 +145,8 @@ async def process_video_task(ctx, video_id: int, input_path: str, output_dir: st
         video = await db.get(Video, video_id)
         if video:
             video.status = "PUBLISHED"
+            if duration_seconds > 0:
+                video.duration = duration_seconds
             if thumbnail_url:
                 video.thumbnail_url = thumbnail_url
             if preview_url:
