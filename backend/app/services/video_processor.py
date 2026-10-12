@@ -19,18 +19,17 @@ def _run_ffmpeg(input_path, output_path, watermark_path):
     if not os.path.exists(watermark_path):
         raise FileNotFoundError(f"Watermark not found at {watermark_path}")
         
-    main = ffmpeg.input(input_path)
-    logo = ffmpeg.input(watermark_path)
-    
-    # Scale logo and overlay at bottom right
-    # 10px padding from right (W-w-10), 10px from bottom (H-h-10)
-    (
-        ffmpeg
-        .filter([main, logo], 'overlay', 'W-w-10', 'H-h-10')
-        .output(output_path, vcodec='libx264', acodec='copy')
-        .overwrite_output()
-        .run(capture_stdout=True, capture_stderr=True)
-    )
+    # Scale logo to 7% video width and set opacity to 40% (0.40)
+    cmd = [
+        "ffmpeg", "-y", "-i", input_path, "-i", watermark_path,
+        "-filter_complex", "[1:v]scale=w=trunc(iw*0.07/2)*2:h=-2,format=rgba,colorchannelmixer=aa=0.40[wm];[0:v][wm]overlay=W-w-15:H-h-15:eof_action=repeat[outv]",
+        "-map", "[outv]", "-map", "0:a?",
+        "-c:v", "libx264", "-preset", "veryfast", "-crf", "23",
+        "-c:a", "copy",
+        output_path
+    ]
+    import subprocess
+    subprocess.run(cmd, check=True, capture_output=True)
 
 async def extract_thumbnail(input_path: str, output_path: str, time: str = "00:00:02"):
     """

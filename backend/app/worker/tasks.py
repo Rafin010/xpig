@@ -21,7 +21,7 @@ async def process_video_task(ctx, video_id: int, input_path: str, output_dir: st
     
     ffmpeg_cmd = [
         "ffmpeg", "-y", "-i", input_path, "-i", watermark_image,
-        "-filter_complex", "[1:v]scale=w=trunc(iw*0.15/2)*2:h=-2[wm];[0:v][wm]overlay=W-w-10:H-h-10:eof_action=repeat[outv]",
+        "-filter_complex", "[1:v]scale=w=trunc(iw*0.07/2)*2:h=-2,format=rgba,colorchannelmixer=aa=0.40[wm];[0:v][wm]overlay=W-w-15:H-h-15:eof_action=repeat[outv]",
         "-map", "[outv]", "-map", "0:a?",
         "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-crf", "23",
         "-c:a", "copy",
