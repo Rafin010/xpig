@@ -90,7 +90,7 @@ export function Navbar() {
   }, []);
 
   return (
-    <nav className="fixed top-0 left-0 right-0 h-16 bg-black/50 backdrop-blur-xl z-50 flex items-center justify-between px-4 border-b border-white/10 shadow-sm">
+    <nav className="fixed top-0 left-0 right-0 h-16 bg-[#181818]/90 backdrop-blur-xl z-50 flex items-center justify-between px-4 border-b border-zinc-800/80 shadow-sm">
       {/* Left: Menu & Logo */}
       <div className={`flex items-center gap-4 ${isMobileSearchOpen ? 'hidden md:flex' : 'flex'}`}>
         <button onClick={toggleSidebar} className="p-2 text-zinc-400 hover:text-white transition-colors">

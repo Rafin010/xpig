@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #181818;
+  --foreground: #ededed;
 }
 
 @theme inline {
@@ -14,7 +14,7 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
+    --background: #181818;
     --foreground: #ededed;
   }
 }
@@ -40,13 +40,14 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #ec4899;
 }
+
 /* Vidstack Glassmorphism Overrides */
 vds-menu, .vds-menu-items, .vds-tooltip-content, .vds-chapters-menu, .vds-settings-menu {
-  background: rgba(15, 15, 15, 0.35) !important;
+  background: rgba(18, 18, 18, 0.5) !important;
   backdrop-filter: blur(16px) saturate(180%) !important;
   -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
   border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5) !important;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6) !important;
   border-radius: 16px !important;
 }
 
@@ -69,6 +70,58 @@ vds-menu, .vds-menu-items, .vds-tooltip-content, .vds-chapters-menu, .vds-settin
 
 .vds-button:hover {
   color: #ec4899 !important;
+}
+
+/* Audio Soundwave Graph on Scrubber Track (Matching tube player audio heatmap) */
+.vds-time-slider {
+  position: relative !important;
+}
+
+.vds-time-slider::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--slider-height, 4px) + 2px);
+  height: 24px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 60' preserveAspectRatio='none'%3E%3Cdefs%3E%3ClinearGradient id='w' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0%25' stop-color='%23ffffff' stop-opacity='0.6'/%3E%3Cstop offset='100%25' stop-color='%23ffffff' stop-opacity='0.05'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M 0,55 Q 25,48 50,52 T 100,38 T 150,45 T 200,25 T 250,35 T 300,18 T 350,30 T 400,12 T 450,28 T 500,8 T 550,22 T 600,14 T 650,25 T 700,10 T 750,20 T 800,15 T 850,28 T 900,18 T 950,35 T 1000,50 L 1000,60 L 0,60 Z' fill='url(%23w)'/%3E%3Cpath d='M 0,55 Q 25,48 50,52 T 100,38 T 150,45 T 200,25 T 250,35 T 300,18 T 350,30 T 400,12 T 450,28 T 500,8 T 550,22 T 600,14 T 650,25 T 700,10 T 750,20 T 800,15 T 850,28 T 900,18 T 950,35 T 1000,50' fill='none' stroke='rgba(255,255,255,0.7)' stroke-width='1.5'/%3E%3C/svg%3E");
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  pointer-events: none;
+  opacity: 0.75;
+  z-index: 1;
+}
+
+/* Vidstack Scrubber Thumbnail Preview & Timestamp Overlay */
+.vds-time-slider .vds-slider-preview {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  position: relative !important;
+  filter: drop-shadow(0 10px 25px rgba(0, 0, 0, 0.8)) !important;
+}
+
+.vds-time-slider .vds-slider-thumbnail {
+  border-radius: 8px !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  overflow: hidden !important;
+  background-color: #000000 !important;
+}
+
+.vds-time-slider .vds-slider-value {
+  position: absolute !important;
+  bottom: 6px !important;
+  background: rgba(0, 0, 0, 0.75) !important;
+  backdrop-filter: blur(4px) !important;
+  border-radius: 4px !important;
+  padding: 1px 7px !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.05em !important;
+  color: #ffffff !important;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  z-index: 10 !important;
 }
 
 /* xHamster / YouTube-style fixed aspect-ratio theatrical stage & natural video fit */
@@ -97,30 +150,28 @@ media-player .vds-poster {
   background-color: #000000 !important;
 }
 
-/* TikTok / YouTube Live floating heart bubbles animation */
-@keyframes float-heart {
+/* Fullscreen floating emoji shower animation (bottom of viewport to top) */
+@keyframes float-screen-emoji {
   0% {
     opacity: 0;
-    transform: translateY(0) translateX(0) scale(0.6) rotate(0deg);
+    transform: translateY(105vh) translateX(0) scale(0.7) rotate(0deg);
   }
-  15% {
+  10% {
+    opacity: 1;
+    transform: translateY(85vh) translateX(calc(var(--drift) * 0.25)) scale(1.15) rotate(var(--rot));
+  }
+  70% {
     opacity: 0.95;
-    transform: translateY(-30px) translateX(calc(var(--drift) * 0.2)) scale(1.1) rotate(var(--rot));
-  }
-  60% {
-    opacity: 0.8;
-    transform: translateY(-160px) translateX(calc(var(--drift) * 0.7)) scale(1) rotate(calc(var(--rot) * -0.5));
+    transform: translateY(25vh) translateX(calc(var(--drift) * 0.8)) scale(1.05) rotate(calc(var(--rot) * -0.6));
   }
   100% {
     opacity: 0;
-    transform: translateY(-280px) translateX(var(--drift)) scale(0.8) rotate(var(--rot));
+    transform: translateY(-10vh) translateX(var(--drift)) scale(0.9) rotate(var(--rot));
   }
 }
 
-.animate-float-heart {
-  animation-name: float-heart;
-  animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
+.animate-screen-emoji {
+  animation-name: float-screen-emoji;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
   animation-fill-mode: forwards;
 }
-
-

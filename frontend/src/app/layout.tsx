@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#0a0a0a",
+  themeColor: "#181818",
 };
 
 export const metadata: Metadata = {
@@ -167,7 +167,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           }}
         />
       </head>
-      <body suppressHydrationWarning className="min-h-full flex flex-col bg-[#0a0a0a] text-white overflow-x-hidden">
+      <body suppressHydrationWarning className="min-h-full flex flex-col bg-[#181818] text-white overflow-x-hidden">
         <Providers>
           {children}
         </Providers>

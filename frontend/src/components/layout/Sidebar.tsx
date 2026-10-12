@@ -62,7 +62,7 @@ export function Sidebar() {
           onClick={toggleSidebar}
         />
       )}
-      <aside className={`fixed left-0 top-16 bottom-0 transition-all duration-300 bg-black/50 backdrop-blur-xl border-r border-white/5 z-[60] flex flex-col
+      <aside className={`fixed left-0 top-16 bottom-0 transition-all duration-300 bg-[#181818]/95 backdrop-blur-xl border-r border-zinc-800/80 z-[60] flex flex-col
         ${isCollapsed ? '-translate-x-full' : 'translate-x-0 w-72'}
       `}>
       

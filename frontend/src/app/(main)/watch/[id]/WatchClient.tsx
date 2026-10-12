@@ -10,7 +10,7 @@ import WatchPageSkeleton from '@/components/skeletons/WatchPageSkeleton';
 import VideoCard from '@/components/video/VideoCard';
 import SponsorWatchBanner from '@/components/ads/SponsorWatchBanner';
 import { decodeVideoId, encodeVideoId } from '@/lib/obfuscate';
-import { FloatingHearts } from '@/components/video/FloatingHearts';
+import { FloatingHearts, playDopamineChime } from '@/components/video/FloatingHearts';
 import { ShareModal } from '@/components/video/ShareModal';
 
 function formatDuration(duration: any, id?: number): string {
@@ -221,6 +221,7 @@ export default function WatchClient({ videoId }: { videoId: string }) {
     // Trigger floating heart bubbles swarm on like
     if (nextLiked) {
       setHeartBurst((prev) => prev + 1);
+      playDopamineChime();
     }
 
     // Save in localStorage for persistent guest session
@@ -297,7 +298,7 @@ export default function WatchClient({ videoId }: { videoId: string }) {
     "";
   
   return (
-    <div className="min-h-screen bg-black md:px-8 text-white pb-28 sm:pb-20 pt-3 md:pt-6">
+    <div className="min-h-screen bg-[#181818] md:px-8 text-white pb-28 sm:pb-20 pt-3 md:pt-6">
       <div className="max-w-[1440px] mx-auto grid grid-cols-1 lg:grid-cols-3 gap-0 md:gap-8">
         
         {/* Left Col - Video Player & Details */}
@@ -319,8 +320,8 @@ export default function WatchClient({ videoId }: { videoId: string }) {
               className="absolute -inset-10 w-[calc(100%+80px)] h-[calc(100%+80px)] blur-[80px] opacity-60 z-0 hidden md:block pointer-events-none transition-opacity duration-500"
             />
             
-            {/* Theatrical Fixed 16:9 Stage */}
-            <div className="relative z-10 w-full aspect-video bg-black md:rounded-xl overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)] border-y border-zinc-800 md:border-x flex items-center justify-center">
+            {/* Theatrical Fixed 16:9 Stage (Borderless) */}
+            <div className="relative z-10 w-full aspect-video bg-black md:rounded-xl overflow-hidden shadow-[0_10px_40px_rgba(0,0,0,0.6)] flex items-center justify-center">
               <FloatingHearts burstCount={heartBurst} />
               {realVideoUrl ? (
                 <Player 
@@ -383,17 +384,17 @@ export default function WatchClient({ videoId }: { videoId: string }) {
 
               {/* Actions: Love Reaction & YouTube-Style Share */}
               <div className="flex items-center gap-2.5">
-                {/* Love / Heart Button (Guests Allowed with TikTok/YouTube Live floating hearts) */}
+                {/* Love / Heart Button (Solid, No Glow) */}
                 <button 
                   onClick={handleLikeToggle}
                   className={`group flex items-center gap-2 px-4 py-2 rounded-full transition-all text-sm font-semibold cursor-pointer active:scale-95 ${
                     isLiked 
-                      ? 'bg-rose-500/15 text-rose-400 border border-rose-500/40 shadow-[0_0_15px_rgba(244,63,94,0.25)]' 
-                      : 'bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 hover:border-rose-500/30'
+                      ? 'bg-rose-600 text-white border border-rose-600 shadow-sm' 
+                      : 'bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800 hover:border-zinc-700'
                   }`}
                   title="Love this video"
                 >
-                  <Heart className={`w-4 h-4 transition-transform group-hover:scale-115 active:scale-125 ${isLiked ? 'fill-rose-500 text-rose-500' : 'text-zinc-400 group-hover:text-rose-400'}`} />
+                  <Heart className={`w-4 h-4 transition-transform group-hover:scale-115 active:scale-125 ${isLiked ? 'fill-white text-white' : 'text-zinc-400 group-hover:text-rose-400'}`} />
                   <span className="font-bold">{videoData?.likes ?? (isLiked ? 1 : 0)}</span>
                 </button>
 

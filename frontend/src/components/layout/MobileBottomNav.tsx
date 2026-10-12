@@ -11,7 +11,7 @@ export function MobileBottomNav() {
   const isUploadActive = pathname === '/upload';
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-[#0a0a0a]/95 backdrop-blur-xl border-t border-zinc-800/80 z-50 flex items-center justify-around px-2 pb-safe shadow-[0_-4px_30px_rgba(0,0,0,0.8)] select-none">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-[#181818]/95 backdrop-blur-xl border-t border-zinc-800/80 z-50 flex items-center justify-around px-2 pb-safe shadow-[0_-4px_30px_rgba(0,0,0,0.8)] select-none">
       
       {/* 1. Home Tab */}
       <Link 
