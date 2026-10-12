@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>সহ-প্রতিষ্ঠাতা অংশীদারি চুক্তিপত্র (Co-Founder Partnership Agreement) - XPIG.me</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;600;700&family=Noto+Serif+Bengali:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    @media print {
+      body {
+        background: #fff !important;
+        padding: 0 !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .page-container {
+        box-shadow: none !important;
+        border: none !important;
+        margin: 0 !important;
+        padding: 20mm 20mm !important;
+        width: 100% !important;
+      }
+      .page-break {
+        page-break-before: always;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: #f1f3f6;
+      font-family: 'Hind+Siliguri', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: #1a1a1a;
+      line-height: 1.8;
+      padding: 30px 15px;
+    }
+
+    .toolbar {
+      max-width: 900px;
+      margin: 0 auto 25px auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #1e1e24;
+      padding: 14px 24px;
+      border-radius: 14px;
+      color: #fff;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    }
+
+    .toolbar h3 {
+      font-size: 16px;
+      font-weight: 600;
+      color: #f472b6;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .toolbar button {
+      background: linear-gradient(135deg, #ec4899, #db2777);
+      color: white;
+      border: none;
+      padding: 10px 22px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+      box-shadow: 0 4px 14px rgba(236,72,153,0.35);
+    }
+
+    .toolbar button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(236,72,153,0.5);
+    }
+
+    .page-container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: #ffffff;
+      padding: 55px 65px;
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+      border: 1px solid #e2e8f0;
+      position: relative;
+    }
+
+    .legal-border {
+      border: 3px double #0f172a;
+      padding: 40px 45px;
+      position: relative;
+      background: #fff;
+    }
+
+    .watermark {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(-30deg);
+      opacity: 0.04;
+      pointer-events: none;
+      width: 480px;
+      height: 480px;
+      z-index: 0;
+    }
+
+    .content-relative {
+      position: relative;
+      z-index: 1;
+    }
+
+    .header-section {
+      text-align: center;
+      border-bottom: 2px solid #0f172a;
+      padding-bottom: 25px;
+      margin-bottom: 30px;
+    }
+
+    .logo-img {
+      width: 75px;
+      height: 75px;
+      object-fit: contain;
+      margin-bottom: 12px;
+    }
+
+    .doc-category {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: #db2777;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .doc-title {
+      font-family: 'Noto Serif Bengali', serif;
+      font-size: 26px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 8px;
+      line-height: 1.4;
+    }
+
+    .doc-subtitle {
+      font-size: 14px;
+      color: #475569;
+      font-weight: 600;
+    }
+
+    .section-title {
+      font-family: 'Noto Serif Bengali', serif;
+      font-size: 17px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-top: 28px;
+      margin-bottom: 12px;
+      padding-bottom: 5px;
+      border-bottom: 1.5px solid #e2e8f0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-title span {
+      background: #0f172a;
+      color: #fff;
+      font-size: 12px;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-family: sans-serif;
+    }
+
+    p, li {
+      font-size: 14.5px;
+      color: #334155;
+      text-align: justify;
+      margin-bottom: 10px;
+    }
+
+    ul, ol {
+      padding-left: 24px;
+      margin-bottom: 15px;
+    }
+
+    li {
+      margin-bottom: 6px;
+    }
+
+    .party-card {
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin-bottom: 14px;
+      font-size: 14px;
+    }
+
+    .party-card h4 {
+      font-size: 15px;
+      color: #0f172a;
+      font-weight: 700;
+      margin-bottom: 8px;
+      border-bottom: 1px dashed #cbd5e1;
+      padding-bottom: 4px;
+    }
+
+    .form-field {
+      border-bottom: 1px dotted #64748b;
+      display: inline-block;
+      min-width: 140px;
+      padding: 0 4px;
+      font-weight: 600;
+      color: #0f172a;
+    }
+
+    .legal-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 15px 0 20px 0;
+      font-size: 14px;
+    }
+
+    .legal-table th, .legal-table td {
+      border: 1px solid #94a3b8;
+      padding: 10px 14px;
+      text-align: left;
+    }
+
+    .legal-table th {
+      background: #0f172a;
+      color: #fff;
+      font-weight: 700;
+    }
+
+    .highlight-box {
+      background: #fdf2f8;
+      border-left: 4px solid #db2777;
+      padding: 14px 18px;
+      border-radius: 0 8px 8px 0;
+      margin: 16px 0;
+      font-size: 13.5px;
+      color: #831843;
+    }
+
+    .signature-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+      margin-top: 50px;
+      padding-top: 20px;
+    }
+
+    .signature-card {
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 20px;
+      background: #f8fafc;
+      text-align: center;
+    }
+
+    .sign-line {
+      border-bottom: 1.5px solid #0f172a;
+      height: 60px;
+      margin-bottom: 10px;
+    }
+
+    .signature-card h5 {
+      font-size: 15px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 6px;
+    }
+
+    .signature-card p {
+      font-size: 13px;
+      color: #64748b;
+      margin-bottom: 4px;
+      text-align: center;
+    }
+
+    .witness-section {
+      margin-top: 35px;
+      padding-top: 20px;
+      border-top: 1px dashed #94a3b8;
+    }
+
+    .witness-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 25px;
+      margin-top: 15px;
+    }
+
+    .footer-note {
+      text-align: center;
+      margin-top: 40px;
+      padding-top: 15px;
+      border-top: 1px solid #e2e8f0;
+      font-size: 12px;
+      color: #64748b;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Action Bar (Print / Copy) -->
+  <div class="toolbar no-print">
+    <h3>
+      <span>📄</span> XPIG.ME - সহ-প্রতিষ্ঠাতা আইনি চুক্তিপত্র (Co-Founder Agreement)
+    </h3>
+    <button onclick="window.print()">
+      <span>🖨️</span> PDF হিসেবে প্রিন্ট বা সেভ করুন
+    </button>
+  </div>
+
+  <div class="page-container">
+    <div class="legal-border">
+      
+      <!-- Watermark Background Logo -->
+      <img src="https://xpig.me/pig-logo.png" alt="XPIG Watermark" class="watermark">
+
+      <div class="content-relative">
+
+        <!-- Header -->
+        <div class="header-section">
+          <img src="https://xpig.me/pig-logo.png" alt="XPIG Official Logo" class="logo-img">
+          <div class="doc-category">CONFIDENTIAL & LEGALLY BINDING AGREEMENT</div>
+          <h1 class="doc-title">সহ-প্রতিষ্ঠাতা অংশীদারি ও যৌথ দায়বদ্ধতা চুক্তিপত্র</h1>
+          <div class="doc-subtitle">XPIG.ME ডিজিটাল প্ল্যাটফর্ম পরিচালনা, শেয়ার বণ্টন ও দায়িত্ব বণ্টন সম্পর্কিত দ্বিপাক্ষিক চুক্তি</div>
+        </div>
+
+        <p>
+          আজকের তারিখ: <span class="form-field">....... / ....... / ২০২৬ খ্রিঃ</span>। এই দ্বিপাক্ষিক চুক্তিপত্রটি <strong>XPIG.me</strong> প্ল্যাটফর্মের যৌথ পরিচালনা ও অংশীদারিত্বের উদ্দেশ্যে নিম্নে বর্ণিত দুই পক্ষের মধ্যে পারস্পরিক সুস্থ মস্তিষ্ক ও সম্মতিতে সম্পাদিত হলো।
+        </p>
+
+        <!-- Parties Information -->
+        <div class="section-title"><span>০১</span> চুক্তির পক্ষসমূহ (Contracting Parties)</div>
+        
+        <div class="party-card">
+          <h4>প্রথম পক্ষ (মূল প্রতিষ্ঠাতা / Super Admin & Principal Founder):</h4>
+          <p><strong>নাম:</strong> <span class="form-field" style="min-width: 280px;">...........................................................................</span></p>
+          <p><strong>পিতা/স্বামীর নাম:</strong> <span class="form-field" style="min-width: 250px;">...........................................................................</span></p>
+          <p><strong>জাতীয় পরিচয়পত্র (NID) নং:</strong> <span class="form-field" style="min-width: 200px;">.............................................................</span></p>
+          <p><strong>বর্তমান ঠিকানা:</strong> <span class="form-field" style="min-width: 320px;">...........................................................................</span></p>
+          <p><strong>মোবাইল নং:</strong> <span class="form-field" style="min-width: 180px;">.....................................</span> | <strong>ইমেইল:</strong> <span class="form-field" style="min-width: 180px;">.....................................</span></p>
+        </div>
+
+        <div class="party-card">
+          <h4>দ্বিতীয় পক্ষ (সহ-প্রতিষ্ঠাতা / Co-Founder):</h4>
+          <p><strong>নাম:</strong> <span class="form-field" style="min-width: 280px;">...........................................................................</span></p>
+          <p><strong>পিতা/স্বামীর নাম:</strong> <span class="form-field" style="min-width: 250px;">...........................................................................</span></p>
+          <p><strong>জাতীয় পরিচয়পত্র (NID) নং:</strong> <span class="form-field" style="min-width: 200px;">.............................................................</span></p>
+          <p><strong>বর্তমান ঠিকানা:</strong> <span class="form-field" style="min-width: 320px;">...........................................................................</span></p>
+          <p><strong>মোবাইল নং:</strong> <span class="form-field" style="min-width: 180px;">.....................................</span> | <strong>ইমেইল:</strong> <span class="form-field" style="min-width: 180px;">.....................................</span></p>
+        </div>
+
+        <!-- Section 2 -->
+        <div class="section-title"><span>০২</span> প্ল্যাটফর্মের সংজ্ঞা ও মালিকানা (Platform Definition & Equity Split)</div>
+        <p>
+          উভয় পক্ষ একমত যে, <strong>XPIG.me</strong> হলো একটি বিশেষায়িত ডিজিটাল ভিডিও স্ট্রিমিং ও কনটেন্ট শেয়ারিং ওয়েব প্ল্যাটফর্ম। প্ল্যাটফর্মটির সার্বিক মূলধন, নেট প্রফিট ও শেয়ার বণ্টন নিম্নরূপ ধার্য করা হলো:
+        </p>
+
+        <table class="legal-table">
+          <thead>
+            <tr>
+              <th>পক্ষ (Party)</th>
+              <th>পদবি (Designation)</th>
+              <th>মালিকানা / লভ্যাংশ শেয়ার (%)</th>
+              <th>সিদ্ধান্ত গ্রহণ ক্ষমতা</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>প্রথম পক্ষ</strong></td>
+              <td>প্রতিষ্ঠাতা ও সুপার অ্যাডমিন</td>
+              <td><span class="form-field" style="min-width: 60px; text-align: center;">...... %</span></td>
+              <td>চূড়ান্ত ক্ষমতা (Veto Power)</td>
+            </tr>
+            <tr>
+              <td><strong>দ্বিতীয় পক্ষ</strong></td>
+              <td>সহ-প্রতিষ্ঠাতা (Co-Founder)</td>
+              <td><span class="form-field" style="min-width: 60px; text-align: center;">...... %</span></td>
+              <td>কার্যকরী অপারেশনাল ক্ষমতা</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- Section 3 -->
+        <div class="section-title"><span>০৩</span> দায়িত্ব ও কর্মপরিধি (Roles and Responsibilities)</div>
+        <p><strong>ক) প্রথম পক্ষের দায়িত্ব (Technical & Infrastructure Lead):</strong></p>
+        <ul>
+          <li>সার্ভার ইনফ্রাস্ট্রাকচার, ক্লাউডফ্লেয়ার R2 স্টোরেজ এবং ব্যাকএন্ড ডাটাবেজ সংরক্ষণ ও পরিচালনা।</li>
+          <li>সুপার অ্যাডমিন সিকিউরিটি ও সিস্টেমের কারিগরি আপগ্রেড নিশ্চিতকরণ।</li>
+          <li>আর্থিক হিসাব-নিকাশ, ডোমেইন নিয়ন্ত্রণ এবং টেকনিক্যাল সল্যুশন প্রদান।</li>
+        </ul>
+
+        <p><strong>খ) দ্বিতীয় পক্ষের দায়িত্ব (Marketing & Operations Lead):</strong></p>
+        <ul>
+          <li>প্ল্যাটফর্মের নিয়মিত অর্গানিক ট্রাফিক আনয়ন, সোশ্যাল মিডিয়া মার্কেটিং ও অডিয়েন্স গ্রোথ।</li>
+          <li>ভিডিও কনটেন্ট মডারেশন, কোয়ালিটি নিয়ন্ত্রণ এবং ব্যবহারকারীদের ইউজার এক্সপেরিয়েন্স পর্যবেক্ষণ।</li>
+          <li>বিজ্ঞাপনদাতা (Sponsors) আকর্ষণ করা এবং কমিউনিটি ম্যানেজমেন্ট নিশ্চিতকরণ।</li>
+        </ul>
+
+        <!-- Section 4 -->
+        <div class="section-title"><span>০৪</span> আর্থিক লেনদেন ও লাভ-ক্ষতি বণ্টন (Revenue Distribution)</div>
+        <ul>
+          <li>প্ল্যাটফর্ম থেকে অর্জিত সকল রাজস্ব (Ad Revenue, Sponsors, Subscriptions) প্রতি মাসের <span class="form-field">......</span> তারিখে প্ল্যাটফর্মের সার্ভার ও ডোমেইন খরচ বাদ দিয়ে অবশিষ্ট <strong>নিট লাভ (Net Profit)</strong> উপরিউক্ত শেয়ার অনুপাতে বণ্টন করা হবে।</li>
+          <li>প্ল্যাটফর্মের যেকোনো লোকসান বা অপারেশনের ঘাটতি উভয় পক্ষ নিজ নিজ শেয়ারের অনুপাতে বহন করবেন।</li>
+          <li>সকল আয়-ব্যয়ের হিসাব একটি স্বচ্ছ গুগল শিট বা অ্যাডমিন প্যানেলের মাধ্যমে উভয় পক্ষের কাছে উন্মুক্ত থাকবে।</li>
+        </ul>
+
+        <!-- Section 5 -->
+        <div class="section-title"><span>০৫</span> গোপনীয়তা ও তথ্য সুরক্ষা (Confidentiality & Non-Disclosure / NDA)</div>
+        <div class="highlight-box">
+          <strong>কঠোর গোপনীয়তা বিধান:</strong> প্ল্যাটফর্মের ডাটাবেজ, অ্যাডমিন ক্রেডেনশিয়াল, সোর্স কোড, সার্ভার কী, এবং অভ্যন্তরীণ আর্থিক তথ্য অত্যন্ত স্পর্শকাতর। কোনো পক্ষই তৃতীয় কোনো ব্যক্তি বা সংস্থার কাছে এ সংক্রান্ত তথ্য প্রকাশ করতে পারবেন না।
+        </div>
+        <p>
+          চুক্তি সমাপ্ত হওয়ার পরেও পরবর্তী <strong>২ (দুই) বছর</strong> উভয় পক্ষ এই গোপনীয়তা বজায় রাখতে আইনত বাধ্য থাকবেন। এই শর্ত ভঙ্গ করলে ক্ষতিগ্রস্ত পক্ষ ২০,০০,০০০ (বিশ লক্ষ) টাকা পর্যন্ত ক্ষতিপূরণ দাবি করার অধিকারী হবেন।
+        </p>
+
+        <!-- Section 6 -->
+        <div class="section-title"><span>০৬</span> প্রতিযোগিতা বর্জন (Non-Compete Clause)</div>
+        <p>
+          দ্বিতীয় পক্ষ এই চুক্তিতে থাকাকালীন অবস্থায় অথবা চুক্তি ত্যাগের পরবর্তী ১ (এক) বছরের মধ্যে <strong>XPIG.me</strong>-এর সমগোত্রীয় কোনো প্রতিযোগী ওয়েবসাইট বা ব্যবসা একা বা অন্যের সাথে শুরু করতে পারবেন না।
+        </p>
+
+        <!-- Section 7 -->
+        <div class="section-title"><span>০৭</span> মেধা স্বত্বাধিকার (Intellectual Property - IP)</div>
+        <p>
+          প্ল্যাটফর্মের কোডবেস, ট্রেডমার্ক, ব্র্যান্ড লোগো, ডোমেইন নাম এবং টেকনিক্যাল আর্কিটেকচার প্রথম পক্ষের মেধা সম্পদ হিসেবে গণ্য হবে। কোনো অবস্থাতেই দ্বিতীয় পক্ষ সোর্স কোড দাবি করতে পারবেন না।
+        </p>
+
+        <!-- Section 8 -->
+        <div class="section-title"><span>০৮</span> অংশীদারিত্ব অবসান ও প্রস্থান নীতি (Exit & Termination)</div>
+        <ul>
+          <li>যেকোনো পক্ষ স্বেচ্ছায় অংশীদারিত্ব ত্যাগ করতে চাইলে কমপক্ষে <strong>৩০ (ত্রিশ) দিন</strong> পূর্বে অপর পক্ষকে লিখিত নোটিশ প্রদান করতে হবে।</li>
+          <li>কোনো পক্ষ জালিয়াতি, তথ্য চুরি বা গুরুতর নৈতিক স্খলনে লিপ্ত হলে নোটিশ ছাড়াই তার পার্টনারশিপ তাৎক্ষণিকভাবে বাতিল বলে গণ্য হবে।</li>
+        </ul>
+
+        <!-- Section 9 -->
+        <div class="section-title"><span>০৯</span> বিরোধ নিষ্পত্তি ও আইন প্রয়োগ (Governing Law & Jurisdiction)</div>
+        <p>
+          এই চুক্তিপত্রটি বাংলাদেশের প্রচলিত আইন দ্বারা পরিচালিত হবে। কোনো বিরোধ দেখা দিলে তা প্রথমে আলাপ-আলোচনার মাধ্যমে সমাধান করা হবে, অন্যথায় উপযুক্ত স্থানীয় আদালতে মীমাংসা করা হবে।
+        </p>
+
+        <!-- Signatures Block -->
+        <div class="signature-grid">
+          <div class="signature-card">
+            <div class="sign-line"></div>
+            <h5>প্রথম পক্ষের স্বাক্ষর</h5>
+            <p>(মূল প্রতিষ্ঠাতা / Founder)</p>
+            <p>তারিখ: .......................................</p>
+          </div>
+
+          <div class="signature-card">
+            <div class="sign-line"></div>
+            <h5>দ্বিতীয় পক্ষের স্বাক্ষর</h5>
+            <p>(সহ-প্রতিষ্ঠাতা / Co-Founder)</p>
+            <p>তারিখ: .......................................</p>
+          </div>
+        </div>
+
+        <!-- Witnesses -->
+        <div class="witness-section">
+          <div class="section-title" style="margin-top:0;"><span>১০</span> সাক্ষীদের স্বাক্ষর (Witness Signatures)</div>
+          <div class="witness-grid">
+            <div class="party-card">
+              <p><strong>১ম সাক্ষীর স্বাক্ষর:</strong> .................................................</p>
+              <p>নাম: ............................................................................</p>
+              <p>পিতার নাম: ...................................................................</p>
+              <p>এনআইডি নং: .................................................................</p>
+            </div>
+            <div class="party-card">
+              <p><strong>২য় সাক্ষীর স্বাক্ষর:</strong> .................................................</p>
+              <p>নাম: ............................................................................</p>
+              <p>পিতার নাম: ...................................................................</p>
+              <p>এনআইডি নং: .................................................................</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer Note -->
+        <div class="footer-note">
+          এই চুক্তিপত্রটি মোট ২টি মূল কপিতে প্রস্তুত করা হলো এবং উভয় পক্ষের স্বাক্ষরের পর এক কপি করে উভয়ের কাছে সংরক্ষিত থাকবে।
+          <br>
+          © 2026 XPIG.me • সর্বস্বত্ব সংরক্ষিত
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

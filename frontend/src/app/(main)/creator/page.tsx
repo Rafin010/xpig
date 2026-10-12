@@ -1,6 +1,7 @@
 'use client';
 import { BarChart3, Users, Play, DollarSign, ArrowUpRight, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
 import { useGoogleLogin } from '@react-oauth/google';
 import { useState, useEffect } from 'react';
@@ -90,7 +91,17 @@ export default function CreatorDashboard() {
         <div className="flex flex-wrap items-center justify-between mb-8 gap-4">
           <div>
             <h1 className="text-3xl font-bold">Creator Dashboard</h1>
-            <p className="text-zinc-400 mt-1">Welcome back, {user?.name}. Here's how your content is performing.</p>
+            <p className="text-zinc-400 mt-1 flex items-center gap-1.5 flex-wrap">
+              <span>Welcome back, <strong className="text-white font-semibold">{user?.name}</strong></span>
+              <Image 
+                src="/verified-badge.png" 
+                alt="Verified" 
+                width={18} 
+                height={18} 
+                className="w-4 h-4 object-contain inline-block shrink-0" 
+              />
+              <span>. Here's how your content is performing.</span>
+            </p>
           </div>
           <Link 
             href="/upload"
