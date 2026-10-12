@@ -32,22 +32,50 @@ export function Player({ src, fallbackSrc, poster, title, autoPlay = true }: Pla
 
   const handleMetadata = (e: any) => {
     try {
-      const target = (e?.target || e?.detail?.target) as HTMLVideoElement;
-      if (target) {
-        if (target.videoWidth && target.videoHeight && target.videoWidth > 0 && target.videoHeight > 0) {
-          setAspectRatio(`${target.videoWidth} / ${target.videoHeight}`);
+      const videoEl = playerRef.current?.el?.querySelector('video') as HTMLVideoElement | null;
+      const width = 
+        e?.detail?.width || 
+        e?.detail?.videoWidth || 
+        (e?.target as HTMLVideoElement)?.videoWidth || 
+        videoEl?.videoWidth || 
+        playerRef.current?.state?.videoWidth || 
+        0;
+      const height = 
+        e?.detail?.height || 
+        e?.detail?.videoHeight || 
+        (e?.target as HTMLVideoElement)?.videoHeight || 
+        videoEl?.videoHeight || 
+        playerRef.current?.state?.videoHeight || 
+        0;
+
+      if (width > 0 && height > 0) {
+        setAspectRatio(`${width} / ${height}`);
+        setIsAudioOnly(false);
+      } else {
+        // No video frames detected in current stream
+        if (fallbackSrc && currentSrc !== fallbackSrc) {
+          console.log('[Player] No video track on primary stream, switching to visual preview:', fallbackSrc);
+          setCurrentSrc(fallbackSrc);
           setIsAudioOnly(false);
         } else {
-          // No video frames detected in current stream
-          if (fallbackSrc && currentSrc !== fallbackSrc) {
-            console.log('[Player] No video track on primary stream, switching to visual preview:', fallbackSrc);
-            setCurrentSrc(fallbackSrc);
-            setIsAudioOnly(false);
-          } else {
-            setIsAudioOnly(true);
-            setAspectRatio('16 / 9');
-          }
+          setIsAudioOnly(true);
+          setAspectRatio('16 / 9');
         }
+      }
+    } catch (err) {}
+  };
+
+  const handleCanPlay = (e: any) => {
+    try {
+      const videoEl = playerRef.current?.el?.querySelector('video') as HTMLVideoElement | null;
+      const width = e?.detail?.width || videoEl?.videoWidth || playerRef.current?.state?.videoWidth || 0;
+      const height = e?.detail?.height || videoEl?.videoHeight || playerRef.current?.state?.videoHeight || 0;
+      if (width > 0 && height > 0) {
+        setAspectRatio(`${width} / ${height}`);
+        setIsAudioOnly(false);
+      }
+      if (autoPlay && playerRef.current) {
+        playerRef.current.play().catch(() => {});
       }
     } catch (err) {}
   };
@@ -188,16 +216,18 @@ export function Player({ src, fallbackSrc, poster, title, autoPlay = true }: Pla
           loop={isLooping}
           playsInline
           onLoadedMetadata={handleMetadata}
+          onCanPlay={handleCanPlay}
           onPlay={() => handlePlayState(true)}
           onPause={() => handlePlayState(false)}
-          className="w-full h-full max-h-[78vh] object-contain"
+          className="max-h-[78vh] object-contain mx-auto"
+          style={{ aspectRatio, maxWidth: '100%' }}
         />
       </div>
     );
   }
 
   return (
-    <div className="relative w-full overflow-hidden rounded-none md:rounded-xl bg-black">
+    <div className="relative w-full max-h-[80vh] flex items-center justify-center overflow-hidden rounded-none md:rounded-xl bg-black">
       {isAudioOnly && <AudioWaveVisualizer />}
       {fallbackSrc && (
         <button
@@ -229,11 +259,12 @@ export function Player({ src, fallbackSrc, poster, title, autoPlay = true }: Pla
         muted={true}
         loop={isLooping}
         onError={() => setUseFallback(true)}
+        onCanPlay={handleCanPlay}
         onPlay={() => handlePlayState(true)}
         onPause={() => handlePlayState(false)}
         onFullscreenChange={handleFullscreenChange}
-        className="w-full bg-black rounded-none md:rounded-xl overflow-hidden ring-0 outline-none mx-auto"
-        style={{ '--video-brand': '#ffffff', aspectRatio, maxHeight: '78vh' } as any}
+        className="max-h-[78vh] bg-black rounded-none md:rounded-xl overflow-hidden ring-0 outline-none mx-auto"
+        style={{ '--video-brand': '#ffffff', aspectRatio, maxHeight: '78vh', maxWidth: '100%' } as any}
       >
         <MediaProvider onLoadedMetadata={handleMetadata}>
           {poster && !isAudioOnly && (

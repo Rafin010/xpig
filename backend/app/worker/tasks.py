@@ -133,22 +133,33 @@ async def process_video_task(ctx, video_id: int, input_path: str, output_dir: st
             if preview_url:
                 video.preview_url = preview_url
         
-        source = VideoSource(
-            video_id=video_id,
-            source_type="DIRECT_URL",
-            source_provider="CLOUDFLARE_R2",
-            source_url=public_url,
-            resolution="Original",
-            mime_type="video/mp4"
-        )
-        db.add(source)
+        from sqlalchemy import select
+        stmt = select(VideoSource).where(VideoSource.video_id == video_id)
+        result = await db.execute(stmt)
+        source = result.scalars().first()
+        if source:
+            source.source_url = public_url
+            source.resolution = "Original"
+            source.mime_type = "video/mp4"
+        else:
+            source = VideoSource(
+                video_id=video_id,
+                source_type="DIRECT_URL",
+                source_provider="CLOUDFLARE_R2",
+                source_url=public_url,
+                resolution="Original",
+                mime_type="video/mp4"
+            )
+            db.add(source)
         await db.commit()
         logger.info(f"Video {video_id} successfully published at {public_url}")
         
-    # --- Clean up local temp files ---
+    # --- Clean up local temp files safely ---
     try:
-        os.remove(input_path)
-        os.remove(watermarked_path)
+        if "tmp" in input_path.lower():
+            os.remove(input_path)
+        if os.path.exists(watermarked_path):
+            os.remove(watermarked_path)
         if os.path.exists(thumbnail_path):
             os.remove(thumbnail_path)
         if os.path.exists(preview_path):

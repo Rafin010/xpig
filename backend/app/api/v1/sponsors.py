@@ -160,7 +160,7 @@ async def update_card_playlist(
 async def delete_sponsor(
     sponsor_id: int,
     db: AsyncSession = Depends(get_db)
-) -> Any:
+) -> None:
     result = await db.execute(select(Sponsor).where(Sponsor.id == sponsor_id))
     sponsor = result.scalars().first()
     if not sponsor:
