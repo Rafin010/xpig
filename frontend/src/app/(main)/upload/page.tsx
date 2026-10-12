@@ -1,19 +1,39 @@
 'use client';
 import { useState, useRef } from 'react';
-import { UploadCloud, Image as ImageIcon, CheckCircle2, AlertCircle } from 'lucide-react';
+import { 
+  UploadCloud, 
+  Image as ImageIcon, 
+  CheckCircle2, 
+  AlertCircle, 
+  Video as VideoIcon, 
+  Sparkles, 
+  X, 
+  Film,
+  Camera,
+  ArrowRight,
+  ShieldCheck
+} from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
 import { useGoogleLogin } from '@react-oauth/google';
+
+const POPULAR_TAGS = ['#deshi', '#viral', '#exclusive', '#trending', '#bengali', '#hd'];
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://xpig.onrender.com';
 
 export default function UploadPage() {
   const { user, isAuthenticated, isInitializing, login } = useAuth();
   const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  const [thumbnailPreviewUrl, setThumbnailPreviewUrl] = useState<string | null>(null);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [errorMessage, setErrorMessage] = useState('');
   
   const videoInputRef = useRef<HTMLInputElement>(null);
   const thumbnailInputRef = useRef<HTMLInputElement>(null);
@@ -26,7 +46,7 @@ export default function UploadPage() {
         });
         const userInfo = await res.json();
         
-        const backendRes = await fetch('https://xpig.onrender.com/api/v1/auth/google', {
+        const backendRes = await fetch(`${API_BASE}/api/v1/auth/google`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: userInfo.email, name: userInfo.name, google_id: userInfo.sub, picture: userInfo.picture })
@@ -39,7 +59,8 @@ export default function UploadPage() {
           email: userInfo.email,
           picture: userInfo.picture,
           sub: userInfo.sub,
-          is_superuser: backendUser.is_superuser
+          is_superuser: backendUser.is_superuser,
+          is_cofounder: backendUser.is_cofounder
         });
       } catch (err) {
         console.error("Login failed", err);
@@ -47,31 +68,77 @@ export default function UploadPage() {
     },
   });
 
+  const handleVideoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setVideoFile(file);
+      setVideoPreviewUrl(URL.createObjectURL(file));
+      if (!title) {
+        // Auto-fill title from clean filename
+        const cleanName = file.name.replace(/\.[^/.]+$/, '').replace(/[_-]/g, ' ');
+        setTitle(cleanName);
+      }
+    }
+  };
+
+  const handleThumbnailSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setThumbnailFile(file);
+      setThumbnailPreviewUrl(URL.createObjectURL(file));
+    }
+  };
+
+  const addTag = (tag: string) => {
+    if (!description.includes(tag)) {
+      setDescription(prev => (prev ? `${prev} ${tag}` : tag));
+    }
+  };
+
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!videoFile || !title) return;
+    if (!videoFile || !title.trim()) return;
     
     setIsUploading(true);
+    setUploadProgress(10);
     setUploadStatus('idle');
+    setErrorMessage('');
 
     try {
       const formData = new FormData();
-      formData.append("title", title);
-      formData.append("description", description);
+      formData.append("title", title.trim());
+      formData.append("description", description.trim());
       formData.append("file", videoFile);
+      if (thumbnailFile) {
+        formData.append("thumbnail", thumbnailFile);
+      }
+      if (user?.id) {
+        formData.append("creator_id", String(user.id));
+      }
 
-      const res = await fetch("http://localhost:8000/api/v1/videos/upload", {
+      // Progress animation
+      const interval = setInterval(() => {
+        setUploadProgress(prev => (prev < 90 ? prev + 15 : prev));
+      }, 500);
+
+      const res = await fetch(`${API_BASE}/api/v1/videos/upload`, {
         method: "POST",
         body: formData,
       });
 
+      clearInterval(interval);
+      setUploadProgress(100);
+
       if (res.ok) {
         setUploadStatus('success');
       } else {
+        const errData = await res.json().catch(() => null);
+        setErrorMessage(errData?.detail || 'Server rejected upload request.');
         setUploadStatus('error');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      setErrorMessage(err.message || 'Network error occurred. Please check connection.');
       setUploadStatus('error');
     } finally {
       setIsUploading(false);
@@ -82,18 +149,18 @@ export default function UploadPage() {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-black pt-20 flex flex-col items-center justify-center text-center px-4">
-        <div className="bg-zinc-950 border border-zinc-800 p-8 md:p-12 rounded-3xl shadow-2xl max-w-lg w-full">
-          <div className="w-20 h-20 bg-rose-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-            <UploadCloud className="w-10 h-10 text-rose-500" />
+      <div className="min-h-[85vh] bg-[#0a0a0a] flex flex-col items-center justify-center text-center px-4 py-8">
+        <div className="bg-[#111] border border-zinc-800 p-6 sm:p-10 rounded-3xl shadow-2xl max-w-md w-full">
+          <div className="w-16 h-16 sm:w-20 sm:h-20 bg-rose-500/15 border border-rose-500/20 rounded-full flex items-center justify-center mx-auto mb-5 text-rose-500">
+            <UploadCloud className="w-8 h-8 sm:w-10 sm:h-10" />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-4">Upload Videos</h1>
-          <p className="text-zinc-400 mb-8">
-            You need to be logged in to upload videos. Sign up to start sharing your content with the world.
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-white mb-2 tracking-tight">Creator Video Upload</h1>
+          <p className="text-zinc-400 mb-6 text-sm leading-relaxed">
+            Sign in with your verified XPIG account to publish high-bitrate videos directly to our global streaming network.
           </p>
           <button 
             onClick={() => googleLogin()}
-            className="w-full bg-white text-black font-bold py-3 px-6 rounded-full hover:bg-zinc-200 transition-colors flex items-center justify-center gap-3"
+            className="w-full bg-white text-black font-bold py-3.5 px-6 rounded-2xl hover:bg-zinc-200 transition-all flex items-center justify-center gap-3 shadow-lg active:scale-95"
           >
             <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-5 h-5" alt="Google" />
             Continue with Google
@@ -104,144 +171,279 @@ export default function UploadPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] p-4 md:p-8 flex justify-center">
-      <div className="max-w-3xl w-full">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">Upload Video</h1>
-          <p className="text-zinc-400">Share your premium content with the world.</p>
+    <div className="min-h-screen bg-[#0a0a0a] text-white px-3 sm:px-6 py-4 sm:py-8 flex justify-center pb-28 md:pb-16">
+      <div className="max-w-2xl w-full">
+        
+        {/* Mobile Header */}
+        <div className="mb-5 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-2">
+              <span>Publish Video</span>
+              <span className="text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded-full bg-rose-500/10 border border-rose-500/30 text-rose-400">
+                Mobile Studio
+              </span>
+            </h1>
+            <p className="text-xs sm:text-sm text-zinc-400 mt-0.5">Share content with XPIG audience</p>
+          </div>
+
+          <Link href="/creator" className="text-xs text-zinc-400 hover:text-white flex items-center gap-1 font-semibold">
+            Dashboard <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
         </div>
 
         {uploadStatus === 'success' ? (
-          <div className="bg-[#111] border border-green-500/30 rounded-2xl p-10 flex flex-col items-center text-center shadow-xl shadow-green-900/10">
-            <CheckCircle2 className="w-20 h-20 text-green-500 mb-6" />
-            <h2 className="text-2xl font-bold text-white mb-3">Upload Successful!</h2>
-            <p className="text-zinc-400 mb-8 max-w-md">Your video has been uploaded and is currently processing. It will appear on your profile once it's ready.</p>
-            <div className="flex gap-4">
-              <Link href="/profile" className="px-6 py-3 bg-zinc-800 hover:bg-zinc-700 text-white rounded-full font-medium transition-colors">
+          <div className="bg-[#111] border border-emerald-500/30 rounded-3xl p-6 sm:p-10 flex flex-col items-center text-center shadow-2xl">
+            <div className="w-16 h-16 rounded-full bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 mb-4 animate-bounce">
+              <CheckCircle2 className="w-9 h-9" />
+            </div>
+            <h2 className="text-2xl font-bold text-white mb-2">Upload Completed!</h2>
+            <p className="text-zinc-400 mb-6 max-w-sm text-sm">
+              Your video has been securely uploaded to our Cloudflare storage node. It is processing and will appear in your profile shortly.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 w-full max-w-xs">
+              <Link 
+                href="/profile" 
+                className="w-full py-3 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl font-bold text-sm text-center transition-colors"
+              >
                 Go to Profile
               </Link>
               <button 
                 onClick={() => {
                   setUploadStatus('idle');
                   setVideoFile(null);
+                  setVideoPreviewUrl(null);
                   setThumbnailFile(null);
+                  setThumbnailPreviewUrl(null);
                   setTitle('');
                   setDescription('');
                 }}
-                className="px-6 py-3 bg-pink-500 hover:bg-pink-400 text-white rounded-full font-bold transition-colors"
+                className="w-full py-3 bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white rounded-xl font-bold text-sm transition-all"
               >
                 Upload Another
               </button>
             </div>
           </div>
         ) : (
-          <form onSubmit={handleUpload} className="bg-[#111] border border-zinc-800 rounded-2xl p-6 md:p-10 shadow-xl">
+          <form onSubmit={handleUpload} className="space-y-5">
             {uploadStatus === 'error' && (
-              <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-3 text-red-500">
-                <AlertCircle className="w-5 h-5 shrink-0" />
-                <p className="text-sm">Something went wrong while uploading. Please try again.</p>
+              <div className="p-4 bg-red-950/30 border border-red-500/30 rounded-2xl flex items-center gap-3 text-red-400">
+                <AlertCircle className="w-5 h-5 shrink-0 text-red-400" />
+                <p className="text-xs sm:text-sm font-medium">{errorMessage || 'Upload failed. Please verify storage nodes and retry.'}</p>
               </div>
             )}
 
-            <div 
-              className={`border-2 border-dashed rounded-xl p-10 flex flex-col items-center justify-center text-center cursor-pointer transition-colors mb-8 ${
-                videoFile ? 'border-pink-500 bg-pink-500/5' : 'border-zinc-700 hover:border-zinc-500 bg-zinc-900/50'
-              }`}
-              onClick={() => videoInputRef.current?.click()}
-            >
+            {/* 1. Mobile-Optimized Video Picker Zone */}
+            <div className="bg-[#111] border border-zinc-800 rounded-2xl p-4 sm:p-6 shadow-xl">
               <input 
                 type="file" 
                 ref={videoInputRef}
                 accept="video/*" 
                 className="hidden" 
-                onChange={(e) => e.target.files && setVideoFile(e.target.files[0])}
+                onChange={handleVideoSelect}
               />
-              <UploadCloud className={`w-16 h-16 mb-4 ${videoFile ? 'text-pink-500' : 'text-zinc-600'}`} />
-              <h3 className="text-lg font-bold text-white mb-1">
-                {videoFile ? videoFile.name : 'Select Video File'}
-              </h3>
-              <p className="text-sm text-zinc-500">
-                {videoFile ? `${(videoFile.size / (1024 * 1024)).toFixed(2)} MB` : 'MP4, MKV, or WebM up to 2GB'}
-              </p>
+
+              {!videoFile ? (
+                <div 
+                  onClick={() => videoInputRef.current?.click()}
+                  className="border-2 border-dashed border-zinc-700 hover:border-pink-500 bg-zinc-900/40 rounded-xl p-6 sm:p-10 flex flex-col items-center justify-center text-center cursor-pointer transition-all active:scale-[0.99] group"
+                >
+                  <div className="w-14 h-14 rounded-full bg-pink-500/10 border border-pink-500/20 flex items-center justify-center text-pink-400 mb-3 group-hover:scale-110 transition-transform">
+                    <UploadCloud className="w-7 h-7" />
+                  </div>
+                  <h3 className="text-base sm:text-lg font-bold text-white mb-1">
+                    Tap to Choose Video File
+                  </h3>
+                  <p className="text-xs text-zinc-400 max-w-xs mb-3">
+                    Select from phone Gallery, Files or Camera. MP4, MKV, MOV up to 2GB.
+                  </p>
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-zinc-800 text-[11px] font-semibold text-zinc-300">
+                    <Camera className="w-3.5 h-3.5 text-pink-400" />
+                    <span>Camera / Gallery Picker</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
+                    <div className="flex items-center gap-2.5 overflow-hidden">
+                      <div className="p-2 bg-pink-500/10 rounded-xl text-pink-400 shrink-0">
+                        <Film className="w-5 h-5" />
+                      </div>
+                      <div className="min-w-0">
+                        <h4 className="text-sm font-bold text-white truncate max-w-[200px] sm:max-w-xs">{videoFile.name}</h4>
+                        <p className="text-[11px] text-zinc-400">{(videoFile.size / (1024 * 1024)).toFixed(2)} MB • Ready to stream</p>
+                      </div>
+                    </div>
+                    <button 
+                      type="button" 
+                      onClick={() => {
+                        setVideoFile(null);
+                        setVideoPreviewUrl(null);
+                      }}
+                      className="p-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white"
+                      title="Remove video"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {/* Video Instant Preview on Mobile */}
+                  {videoPreviewUrl && (
+                    <div className="relative rounded-xl overflow-hidden bg-black aspect-video max-h-56 w-full border border-zinc-800">
+                      <video 
+                        src={videoPreviewUrl} 
+                        controls 
+                        className="w-full h-full object-contain"
+                        preload="metadata"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
-            <div className="space-y-6">
+            {/* 2. Metadata Inputs */}
+            <div className="bg-[#111] border border-zinc-800 rounded-2xl p-4 sm:p-6 space-y-4 shadow-xl">
               <div>
-                <label className="block text-sm font-medium text-zinc-300 mb-2">Video Title <span className="text-pink-500">*</span></label>
+                <label className="block text-xs sm:text-sm font-bold text-zinc-200 mb-1.5">
+                  Video Title <span className="text-pink-500">*</span>
+                </label>
                 <input 
                   type="text" 
                   required
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Enter an exciting title..."
-                  className="w-full bg-zinc-900 border border-zinc-800 focus:border-pink-500 rounded-lg px-4 py-3 text-white outline-none transition-colors"
+                  placeholder="e.g. Deshi Viral Video Episode 1"
+                  className="w-full bg-[#18181b] border border-zinc-700/80 focus:border-pink-500 rounded-xl px-3.5 py-3 text-sm text-white outline-none transition-colors placeholder:text-zinc-500"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-zinc-300 mb-2">Description</label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs sm:text-sm font-bold text-zinc-200">
+                    Description & Tags
+                  </label>
+                  <span className="text-[11px] text-zinc-500">Tap tag to insert</span>
+                </div>
                 <textarea 
-                  rows={4}
+                  rows={3}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Tell your audience about this video..."
-                  className="w-full bg-zinc-900 border border-zinc-800 focus:border-pink-500 rounded-lg px-4 py-3 text-white outline-none transition-colors resize-none"
+                  placeholder="Write a description or add trending tags..."
+                  className="w-full bg-[#18181b] border border-zinc-700/80 focus:border-pink-500 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none transition-colors resize-none placeholder:text-zinc-500"
                 />
+
+                {/* Quick 1-Tap Tag Pills */}
+                <div className="flex items-center gap-1.5 flex-wrap mt-2">
+                  <Sparkles className="w-3.5 h-3.5 text-pink-400 shrink-0" />
+                  {POPULAR_TAGS.map(tag => (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => addTag(tag)}
+                      className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-zinc-800/80 hover:bg-pink-600 hover:text-white text-zinc-300 border border-zinc-700/60 transition-all active:scale-95"
+                    >
+                      {tag}
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-zinc-300 mb-2">Custom Thumbnail (Optional)</label>
-                <div className="flex items-center gap-4">
+              {/* 3. Mobile Thumbnail Picker */}
+              <div className="pt-2 border-t border-zinc-800/80">
+                <label className="block text-xs sm:text-sm font-bold text-zinc-200 mb-2">
+                  Thumbnail (Recommended)
+                </label>
+                <input 
+                  type="file" 
+                  ref={thumbnailInputRef}
+                  accept="image/*" 
+                  className="hidden" 
+                  onChange={handleThumbnailSelect}
+                />
+                
+                <div className="flex items-center gap-3">
                   <div 
                     onClick={() => thumbnailInputRef.current?.click()}
-                    className="w-40 h-24 bg-zinc-900 border border-zinc-800 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-zinc-600 transition-colors shrink-0 overflow-hidden relative"
+                    className="w-28 h-18 sm:w-36 sm:h-22 bg-zinc-900 border border-zinc-700 hover:border-pink-500 rounded-xl flex flex-col items-center justify-center cursor-pointer transition-all shrink-0 overflow-hidden relative active:scale-95 group"
                   >
-                    <input 
-                      type="file" 
-                      ref={thumbnailInputRef}
-                      accept="image/*" 
-                      className="hidden" 
-                      onChange={(e) => e.target.files && setThumbnailFile(e.target.files[0])}
-                    />
-                    {thumbnailFile ? (
-                      <img src={URL.createObjectURL(thumbnailFile)} alt="Thumb" className="w-full h-full object-cover" />
+                    {thumbnailPreviewUrl ? (
+                      <img src={thumbnailPreviewUrl} alt="Thumbnail Preview" className="w-full h-full object-cover" />
                     ) : (
-                      <>
-                        <ImageIcon className="w-6 h-6 text-zinc-600 mb-1" />
-                        <span className="text-xs text-zinc-500">Upload Image</span>
-                      </>
+                      <div className="flex flex-col items-center justify-center text-center p-2">
+                        <ImageIcon className="w-5 h-5 text-zinc-500 mb-1 group-hover:text-pink-400" />
+                        <span className="text-[10px] font-semibold text-zinc-400">Pick Photo</span>
+                      </div>
                     )}
                   </div>
-                  <div className="text-xs text-zinc-500">
-                    <p>A good thumbnail stands out and draws viewers' attention.</p>
-                    <p className="mt-1">Recommended size: 1280x720 (16:9)</p>
+                  <div className="text-xs text-zinc-400 leading-snug">
+                    <p className="font-medium text-zinc-300">Custom 16:9 Cover</p>
+                    <p className="text-[11px] text-zinc-500 mt-0.5">High-res thumbnails improve click-through rate by over 60%.</p>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="mt-10 flex justify-end gap-4 border-t border-zinc-800 pt-6">
-              <button 
-                type="button" 
-                className="px-6 py-3 text-zinc-400 hover:text-white font-medium transition-colors"
-              >
-                Cancel
-              </button>
+            {/* 4. Upload Progress Bar (When Active) */}
+            {isUploading && (
+              <div className="bg-[#111] border border-pink-500/30 rounded-2xl p-4 space-y-2">
+                <div className="flex items-center justify-between text-xs font-bold">
+                  <span className="text-zinc-300 flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-pink-500 animate-ping" />
+                    Uploading to XPIG Storage Node...
+                  </span>
+                  <span className="text-pink-400 font-mono">{uploadProgress}%</span>
+                </div>
+                <div className="w-full h-2 bg-zinc-800 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-rose-500 to-pink-500 transition-all duration-300 rounded-full"
+                    style={{ width: `${uploadProgress}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* 5. Desktop Publish Button */}
+            <div className="hidden md:flex justify-end gap-3 pt-2">
               <button 
                 type="submit" 
-                disabled={!videoFile || !title || isUploading}
-                className="px-8 py-3 bg-pink-500 hover:bg-pink-400 disabled:bg-zinc-800 disabled:text-zinc-500 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-colors flex items-center gap-2"
+                disabled={!videoFile || !title.trim() || isUploading}
+                className="px-8 py-3.5 bg-gradient-to-r from-rose-600 via-pink-600 to-amber-500 hover:from-rose-500 hover:to-pink-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-extrabold rounded-xl transition-all shadow-lg shadow-pink-900/30 flex items-center gap-2"
               >
                 {isUploading ? (
                   <>
-                    <span className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
-                    Uploading...
+                    <span className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                    <span>Publishing ({uploadProgress}%)...</span>
                   </>
                 ) : (
-                  'Publish Video'
+                  <>
+                    <UploadCloud className="w-5 h-5" />
+                    <span>Publish Video Now</span>
+                  </>
                 )}
               </button>
             </div>
+
+            {/* 6. Mobile Sticky Bottom Action Bar (Thumb-friendly) */}
+            <div className="md:hidden fixed bottom-16 left-0 right-0 p-3 bg-black/90 backdrop-blur-xl border-t border-zinc-800/80 z-40 flex items-center gap-3">
+              <button 
+                type="submit" 
+                disabled={!videoFile || !title.trim() || isUploading}
+                className="w-full py-3.5 bg-gradient-to-r from-rose-600 via-pink-600 to-amber-500 hover:from-rose-500 hover:to-pink-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-black text-sm rounded-xl transition-all shadow-xl active:scale-95 flex items-center justify-center gap-2"
+              >
+                {isUploading ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                    <span>Publishing ({uploadProgress}%)...</span>
+                  </>
+                ) : (
+                  <>
+                    <UploadCloud className="w-5 h-5" />
+                    <span>Publish Video</span>
+                  </>
+                )}
+              </button>
+            </div>
+
           </form>
         )}
       </div>

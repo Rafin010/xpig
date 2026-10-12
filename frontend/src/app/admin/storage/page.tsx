@@ -215,21 +215,21 @@ export default function StorageSettingsPage() {
       )}
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b border-zinc-800/60 pb-6">
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b border-zinc-800/60 pb-4 sm:pb-6">
         <div>
-          <h1 className="text-3xl font-black text-white tracking-tight flex items-center gap-3">
-            <HardDrive className="w-8 h-8 text-pink-500" />
-            Storage Accounts & Nodes
+          <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-2.5 sm:gap-3">
+            <HardDrive className="w-6 h-6 sm:w-8 sm:h-8 text-pink-500" />
+            <span>Storage Accounts & Nodes</span>
           </h1>
-          <p className="text-zinc-400 mt-1">
+          <p className="text-xs sm:text-sm text-zinc-400 mt-1">
             Real-time multi-bucket Cloudflare R2 cluster health, capacities, and exact video distribution.
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
           <button
             onClick={fetchNodes}
             disabled={loading}
-            className="p-3 bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-xl transition-all shadow-sm flex items-center gap-2 text-sm font-medium"
+            className="p-2.5 sm:p-3 bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-xl transition-all shadow-sm flex items-center gap-2 text-xs sm:text-sm font-medium"
             title="Refresh Nodes"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin text-pink-500" : ""}`} />
@@ -240,58 +240,58 @@ export default function StorageSettingsPage() {
               setFormError(null);
               setIsModalOpen(true);
             }}
-            className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-500 hover:to-rose-500 text-white rounded-xl font-bold transition-all shadow-lg shadow-pink-900/25 active:scale-[0.98]"
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-500 hover:to-rose-500 text-white rounded-xl font-bold text-xs sm:text-sm transition-all shadow-lg shadow-pink-900/25 active:scale-[0.98]"
           >
-            <Plus className="w-5 h-5" />
+            <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
             Add Storage Node
           </button>
         </div>
       </div>
 
       {/* Aggregate Storage Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <div className="bg-[#111113] border border-zinc-800/80 p-5 rounded-2xl shadow-xl flex flex-col justify-between">
-          <div className="flex items-center justify-between text-zinc-400 mb-2">
-            <span className="font-semibold text-xs tracking-wider uppercase text-zinc-400">Total Nodes</span>
-            <Server className="w-4 h-4 text-blue-400" />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
+        <div className="bg-[#111113] border border-zinc-800/80 p-4 sm:p-5 rounded-2xl shadow-xl flex flex-col justify-between">
+          <div className="flex items-center justify-between text-zinc-400 mb-1.5 sm:mb-2">
+            <span className="font-semibold text-[10px] sm:text-xs tracking-wider uppercase text-zinc-400 truncate">Total Nodes</span>
+            <Server className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-400 shrink-0" />
           </div>
-          <div className="text-3xl font-black text-white">{nodes.length}</div>
-          <div className="text-xs text-zinc-500 mt-2 flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            {activeNodesCount} Active & Routing Uploads
-          </div>
-        </div>
-
-        <div className="bg-[#111113] border border-zinc-800/80 p-5 rounded-2xl shadow-xl flex flex-col justify-between">
-          <div className="flex items-center justify-between text-zinc-400 mb-2">
-            <span className="font-semibold text-xs tracking-wider uppercase text-zinc-400">Storage Used</span>
-            <Database className="w-4 h-4 text-pink-500" />
-          </div>
-          <div className="text-3xl font-black text-white">{formatBytes(totalUsedBytes)}</div>
-          <div className="text-xs text-zinc-500 mt-2">
-            Across {nodes.length} registered R2 bucket{nodes.length !== 1 ? 's' : ''}
+          <div className="text-2xl sm:text-3xl font-black text-white">{nodes.length}</div>
+          <div className="text-[10px] sm:text-xs text-zinc-500 mt-1.5 sm:mt-2 flex items-center gap-1.5 truncate">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0"></span>
+            <span className="truncate">{activeNodesCount} Active & Routing</span>
           </div>
         </div>
 
-        <div className="bg-[#111113] border border-zinc-800/80 p-5 rounded-2xl shadow-xl flex flex-col justify-between">
-          <div className="flex items-center justify-between text-zinc-400 mb-2">
-            <span className="font-semibold text-xs tracking-wider uppercase text-zinc-400">Total Allocated</span>
-            <HardDrive className="w-4 h-4 text-purple-400" />
+        <div className="bg-[#111113] border border-zinc-800/80 p-4 sm:p-5 rounded-2xl shadow-xl flex flex-col justify-between">
+          <div className="flex items-center justify-between text-zinc-400 mb-1.5 sm:mb-2">
+            <span className="font-semibold text-[10px] sm:text-xs tracking-wider uppercase text-zinc-400 truncate">Storage Used</span>
+            <Database className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-pink-500 shrink-0" />
           </div>
-          <div className="text-3xl font-black text-white">{formatBytes(totalAllocatedBytes)}</div>
-          <div className="text-xs text-zinc-500 mt-2">
-            Remaining: {formatBytes(Math.max(0, totalAllocatedBytes - totalUsedBytes))}
+          <div className="text-2xl sm:text-3xl font-black text-white">{formatBytes(totalUsedBytes)}</div>
+          <div className="text-[10px] sm:text-xs text-zinc-500 mt-1.5 sm:mt-2 truncate">
+            Across {nodes.length} bucket{nodes.length !== 1 ? 's' : ''}
           </div>
         </div>
 
-        <div className="bg-[#111113] border border-zinc-800/80 p-5 rounded-2xl shadow-xl flex flex-col justify-between">
-          <div className="flex items-center justify-between text-zinc-400 mb-2">
-            <span className="font-semibold text-xs tracking-wider uppercase text-zinc-400">Total Videos Stored</span>
-            <Film className="w-4 h-4 text-emerald-400" />
+        <div className="bg-[#111113] border border-zinc-800/80 p-4 sm:p-5 rounded-2xl shadow-xl flex flex-col justify-between">
+          <div className="flex items-center justify-between text-zinc-400 mb-1.5 sm:mb-2">
+            <span className="font-semibold text-[10px] sm:text-xs tracking-wider uppercase text-zinc-400 truncate">Total Allocated</span>
+            <HardDrive className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-400 shrink-0" />
           </div>
-          <div className="text-3xl font-black text-white">{totalVideosStored}</div>
-          <div className="text-xs text-emerald-400 mt-2 flex items-center gap-1">
-            <CheckCircle2 className="w-3.5 h-3.5" /> Real videos hosted on R2
+          <div className="text-2xl sm:text-3xl font-black text-white">{formatBytes(totalAllocatedBytes)}</div>
+          <div className="text-[10px] sm:text-xs text-zinc-500 mt-1.5 sm:mt-2 truncate">
+            Free: {formatBytes(Math.max(0, totalAllocatedBytes - totalUsedBytes))}
+          </div>
+        </div>
+
+        <div className="bg-[#111113] border border-zinc-800/80 p-4 sm:p-5 rounded-2xl shadow-xl flex flex-col justify-between">
+          <div className="flex items-center justify-between text-zinc-400 mb-1.5 sm:mb-2">
+            <span className="font-semibold text-[10px] sm:text-xs tracking-wider uppercase text-zinc-400 truncate">Videos Stored</span>
+            <Film className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400 shrink-0" />
+          </div>
+          <div className="text-2xl sm:text-3xl font-black text-white">{totalVideosStored}</div>
+          <div className="text-[10px] sm:text-xs text-emerald-400 mt-1.5 sm:mt-2 flex items-center gap-1 truncate">
+            <CheckCircle2 className="w-3 h-3 shrink-0" /> Hosted on R2
           </div>
         </div>
       </div>
@@ -581,8 +581,8 @@ export default function StorageSettingsPage() {
 
       {/* Add Storage Node Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
-          <div className="bg-[#141417] border border-zinc-800 text-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-[#141417] border border-zinc-800 text-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[92vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
             <div className="p-6 border-b border-zinc-800 flex justify-between items-center bg-zinc-900/60">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-pink-500/10 border border-pink-500/30 flex items-center justify-center text-pink-400">

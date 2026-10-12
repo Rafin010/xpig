@@ -177,17 +177,17 @@ export default function TeamManagementPage() {
     <div className="space-y-8 animate-in fade-in duration-500 max-w-6xl mx-auto pb-24">
       
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-zinc-800/80">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 sm:pb-6 border-b border-zinc-800/80">
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-zinc-900 border border-zinc-800 rounded-full text-xs font-semibold text-zinc-300 mb-2">
             <Shield className="w-3.5 h-3.5 text-emerald-400" />
             <span>Role-Based Access Control (RBAC) & Team Management</span>
           </div>
-          <h1 className="text-3xl font-black text-white tracking-tight flex items-center gap-3">
-            <ShieldCheck className="w-8 h-8 text-emerald-400" />
-            Team & Co-Founder Roles
+          <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-2.5 sm:gap-3">
+            <ShieldCheck className="w-6 h-6 sm:w-8 sm:h-8 text-emerald-400" />
+            <span>Team & Co-Founder Roles</span>
           </h1>
-          <p className="text-zinc-400 text-sm mt-1">
+          <p className="text-zinc-400 text-xs sm:text-sm mt-1">
             Authorize Google Accounts for team members, track invitation acceptance, and manage role privileges.
           </p>
         </div>
@@ -202,7 +202,7 @@ export default function TeamManagementPage() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-8">
         
         {/* Left Column: Invite Form & Security Overview */}
         <div className="lg:col-span-5 space-y-6">

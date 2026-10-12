@@ -34,17 +34,17 @@ export default function AdminDashboard() {
   }, []);
 
   const StatCard = ({ title, value, change, icon: Icon, color }: any) => (
-    <div className="bg-[#111111] border border-zinc-800/50 p-6 rounded-2xl flex items-start justify-between shadow-xl">
+    <div className="bg-[#111111] border border-zinc-800/50 p-4 sm:p-6 rounded-2xl flex items-start justify-between shadow-xl">
       <div>
-        <p className="text-sm font-medium text-zinc-400 mb-1">{title}</p>
-        <h3 className="text-3xl font-black text-white">{value}</h3>
-        <div className="flex items-center gap-1 mt-2 text-sm text-green-400 font-medium">
-          <TrendingUp className="w-4 h-4" />
+        <p className="text-xs sm:text-sm font-medium text-zinc-400 mb-1">{title}</p>
+        <h3 className="text-2xl sm:text-3xl font-black text-white">{value}</h3>
+        <div className="flex items-center gap-1 mt-1.5 text-xs sm:text-sm text-green-400 font-medium">
+          <TrendingUp className="w-3.5 h-3.5" />
           <span>{change} this {timeFilter.toLowerCase()}</span>
         </div>
       </div>
-      <div className={`p-4 rounded-xl bg-${color}-500/10`}>
-        <Icon className={`w-6 h-6 text-${color}-500`} />
+      <div className={`p-3 sm:p-4 rounded-xl bg-${color}-500/10 shrink-0`}>
+        <Icon className={`w-5 h-5 sm:w-6 sm:h-6 text-${color}-500`} />
       </div>
     </div>
   );
@@ -52,17 +52,17 @@ export default function AdminDashboard() {
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-3xl font-black text-white tracking-tight">Platform Overview</h1>
-          <p className="text-zinc-400 mt-1">Real-time metrics and analytics for XPIG.</p>
+          <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">Platform Overview</h1>
+          <p className="text-xs sm:text-sm text-zinc-400 mt-0.5 sm:mt-1">Real-time metrics and analytics for XPIG.</p>
         </div>
-        <div className="flex items-center gap-2 bg-[#1a1a1a] p-1.5 rounded-xl border border-zinc-800">
+        <div className="flex items-center gap-1.5 bg-[#1a1a1a] p-1 rounded-xl border border-zinc-800 self-start sm:self-auto overflow-x-auto max-w-full">
           {['Day', 'Week', 'Month', 'Year'].map(f => (
             <button 
               key={f}
               onClick={() => setTimeFilter(f)}
-              className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${timeFilter === f ? 'bg-pink-600 text-white shadow-lg' : 'text-zinc-400 hover:text-white'}`}
+              className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-bold transition-all shrink-0 ${timeFilter === f ? 'bg-pink-600 text-white shadow-lg' : 'text-zinc-400 hover:text-white'}`}
             >
               {f}
             </button>
@@ -71,97 +71,97 @@ export default function AdminDashboard() {
       </div>
       
       {/* Traffic Analytics (Real-Time Mission-Control Console) */}
-      <div className="bg-[#111113] border border-zinc-800/80 p-6 rounded-2xl shadow-2xl relative overflow-hidden">
+      <div className="bg-[#111113] border border-zinc-800/80 p-4 sm:p-6 rounded-2xl shadow-2xl relative overflow-hidden">
         {/* Header with Live Pulsing Radar Beacon */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-zinc-800/60">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 sm:mb-6 pb-4 border-b border-zinc-800/60">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-500">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-500 shrink-0">
               <Activity className="w-5 h-5 animate-pulse" />
             </div>
             <div>
-              <h3 className="text-lg font-black text-white tracking-tight flex items-center gap-2">
+              <h3 className="text-base sm:text-lg font-black text-white tracking-tight flex items-center gap-2">
                 Live Traffic & Audience Telemetry
               </h3>
-              <p className="text-xs text-zinc-400">Real-time concurrent sessions and active visitor flow</p>
+              <p className="text-[11px] sm:text-xs text-zinc-400">Real-time concurrent sessions and active visitor flow</p>
             </div>
           </div>
 
-          <div className="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-zinc-900 border border-zinc-800 text-xs font-mono">
-            <span className="relative flex h-2.5 w-2.5">
+          <div className="inline-flex items-center gap-2 px-3 py-1 sm:px-3.5 sm:py-1.5 rounded-full bg-zinc-900 border border-zinc-800 text-[11px] sm:text-xs font-mono self-start sm:self-auto">
+            <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
             </span>
             <span className="text-emerald-400 font-bold tracking-wider">LIVE TELEMETRY</span>
             <span className="text-zinc-600">•</span>
-            <span className="text-zinc-400 text-[11px]">10s Polling</span>
+            <span className="text-zinc-400 text-[10px]">10s Polling</span>
           </div>
         </div>
 
         {/* 4 Mission-Control Stat Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
           
           {/* Card 1: Live Concurrent Users */}
-          <div className="bg-zinc-900/60 border border-zinc-800/80 hover:border-emerald-500/40 p-4.5 rounded-xl transition-all shadow-md group">
-            <div className="flex items-center justify-between text-zinc-400 mb-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <div className="bg-zinc-900/60 border border-zinc-800/80 hover:border-emerald-500/40 p-3 sm:p-4.5 rounded-xl transition-all shadow-md group">
+            <div className="flex items-center justify-between text-zinc-400 mb-1.5">
+              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1 sm:gap-1.5 truncate">
+                <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-400 animate-pulse shrink-0"></span>
                 Active Right Now
               </span>
-              <Activity className="w-4 h-4 text-emerald-400" />
+              <Activity className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400 shrink-0" />
             </div>
-            <div className="text-4xl font-black text-white tracking-tight group-hover:scale-105 transition-transform duration-200">
+            <div className="text-2xl sm:text-4xl font-black text-white tracking-tight group-hover:scale-105 transition-transform duration-200">
               {traffic.live_users}
             </div>
-            <p className="text-xs text-zinc-400 mt-2 font-medium">
-              Concurrent live users on platform
+            <p className="text-[10px] sm:text-xs text-zinc-400 mt-1 sm:mt-2 font-medium truncate">
+              Concurrent live users
             </p>
           </div>
 
           {/* Card 2: Today's Unique Visitors */}
-          <div className="bg-zinc-900/60 border border-zinc-800/80 hover:border-blue-500/40 p-4.5 rounded-xl transition-all shadow-md group">
-            <div className="flex items-center justify-between text-zinc-400 mb-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-blue-400">
+          <div className="bg-zinc-900/60 border border-zinc-800/80 hover:border-blue-500/40 p-3 sm:p-4.5 rounded-xl transition-all shadow-md group">
+            <div className="flex items-center justify-between text-zinc-400 mb-1.5">
+              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-blue-400 truncate">
                 Today&apos;s Visitors
               </span>
-              <Users className="w-4 h-4 text-blue-400" />
+              <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-400 shrink-0" />
             </div>
-            <div className="text-4xl font-black text-white tracking-tight group-hover:scale-105 transition-transform duration-200">
+            <div className="text-2xl sm:text-4xl font-black text-white tracking-tight group-hover:scale-105 transition-transform duration-200">
               {traffic.today_visitors.toLocaleString()}
             </div>
-            <p className="text-xs text-zinc-400 mt-2 font-medium">
-              24-hour unique IP visitor reach
+            <p className="text-[10px] sm:text-xs text-zinc-400 mt-1 sm:mt-2 font-medium truncate">
+              24-hour unique reach
             </p>
           </div>
 
           {/* Card 3: 7-Day Active Reach */}
-          <div className="bg-zinc-900/60 border border-zinc-800/80 hover:border-purple-500/40 p-4.5 rounded-xl transition-all shadow-md group">
-            <div className="flex items-center justify-between text-zinc-400 mb-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-purple-400">
+          <div className="bg-zinc-900/60 border border-zinc-800/80 hover:border-purple-500/40 p-3 sm:p-4.5 rounded-xl transition-all shadow-md group">
+            <div className="flex items-center justify-between text-zinc-400 mb-1.5">
+              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-purple-400 truncate">
                 7-Day Active Reach
               </span>
-              <TrendingUp className="w-4 h-4 text-purple-400" />
+              <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-400 shrink-0" />
             </div>
-            <div className="text-4xl font-black text-white tracking-tight group-hover:scale-105 transition-transform duration-200">
+            <div className="text-2xl sm:text-4xl font-black text-white tracking-tight group-hover:scale-105 transition-transform duration-200">
               {traffic.week_visitors.toLocaleString()}
             </div>
-            <p className="text-xs text-zinc-400 mt-2 font-medium">
-              Trailing 7-day visitor volume
+            <p className="text-[10px] sm:text-xs text-zinc-400 mt-1 sm:mt-2 font-medium truncate">
+              Weekly visitor volume
             </p>
           </div>
 
           {/* Card 4: 30-Day Monthly Reach */}
-          <div className="bg-zinc-900/60 border border-zinc-800/80 hover:border-pink-500/40 p-4.5 rounded-xl transition-all shadow-md group">
-            <div className="flex items-center justify-between text-zinc-400 mb-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-pink-400">
-                30-Day Total Traffic
+          <div className="bg-zinc-900/60 border border-zinc-800/80 hover:border-pink-500/40 p-3 sm:p-4.5 rounded-xl transition-all shadow-md group">
+            <div className="flex items-center justify-between text-zinc-400 mb-1.5">
+              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-pink-400 truncate">
+                30-Day Traffic
               </span>
-              <Eye className="w-4 h-4 text-pink-400" />
+              <Eye className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-pink-400 shrink-0" />
             </div>
-            <div className="text-4xl font-black text-white tracking-tight group-hover:scale-105 transition-transform duration-200">
+            <div className="text-2xl sm:text-4xl font-black text-white tracking-tight group-hover:scale-105 transition-transform duration-200">
               {traffic.month_visitors.toLocaleString()}
             </div>
-            <p className="text-xs text-zinc-400 mt-2 font-medium">
-              Total monthly unique impressions
+            <p className="text-[10px] sm:text-xs text-zinc-400 mt-1 sm:mt-2 font-medium truncate">
+              Monthly impressions
             </p>
           </div>
 
@@ -169,7 +169,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
         <StatCard title="Total Videos" value={stats.total_videos} change="+0%" icon={PlayCircle} color="orange" />
         <StatCard title="Total Users" value={stats.total_users} change="+0%" icon={Users} color="blue" />
         <StatCard title="Total Views" value={stats.total_views} change="+0%" icon={Eye} color="pink" />
@@ -178,13 +178,13 @@ export default function AdminDashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Watch Time Chart */}
-        <div className="lg:col-span-2 bg-[#111111] border border-zinc-800/50 p-6 rounded-2xl shadow-xl">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+        <div className="lg:col-span-2 bg-[#111111] border border-zinc-800/50 p-4 sm:p-6 rounded-2xl shadow-xl">
+          <div className="flex items-center justify-between mb-4 sm:mb-6">
+            <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
               <Clock className="w-5 h-5 text-orange-500" /> Watch Time & Views Overview
             </h3>
           </div>
-          <div className="h-[300px] w-full">
+          <div className="h-[220px] sm:h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={viewData}>
                 <defs>
@@ -262,13 +262,13 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
         {/* Peak Activity Chart */}
-        <div className="bg-[#111111] border border-zinc-800/50 p-6 rounded-2xl shadow-xl">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+        <div className="bg-[#111111] border border-zinc-800/50 p-4 sm:p-6 rounded-2xl shadow-xl">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 sm:mb-6">
+            <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
               <Activity className="w-5 h-5 text-purple-500" /> Peak User Activity
             </h3>
             <select 
-              className="bg-[#1a1a1a] border border-zinc-800 text-sm rounded-lg px-3 py-1.5 text-zinc-300 outline-none focus:border-pink-500"
+              className="bg-[#1a1a1a] border border-zinc-800 text-xs sm:text-sm rounded-lg px-3 py-1.5 text-zinc-300 outline-none focus:border-pink-500 self-start sm:self-auto"
               value={durationFilter}
               onChange={(e) => setDurationFilter(e.target.value)}
             >
@@ -278,9 +278,9 @@ export default function AdminDashboard() {
               <option value="Long">Active &gt; 20 mins</option>
             </select>
           </div>
-          <p className="text-sm text-zinc-400 mb-6">Shows what time of day users are most active.</p>
+          <p className="text-xs sm:text-sm text-zinc-400 mb-4 sm:mb-6">Shows what time of day users are most active.</p>
           
-          <div className="h-[250px] w-full">
+          <div className="h-[200px] sm:h-[250px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={peakHoursData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
@@ -298,8 +298,8 @@ export default function AdminDashboard() {
 
         {/* Top Videos Table */}
         <div className="bg-[#111111] border border-zinc-800/50 rounded-2xl shadow-xl overflow-hidden flex flex-col">
-          <div className="p-6 border-b border-zinc-800/50 flex justify-between items-center">
-            <h3 className="text-lg font-bold text-white">Top Performing Videos</h3>
+          <div className="p-4 sm:p-6 border-b border-zinc-800/50 flex justify-between items-center">
+            <h3 className="text-base sm:text-lg font-bold text-white">Top Performing Videos</h3>
             <button className="text-sm text-pink-500 font-semibold hover:text-pink-400 flex items-center gap-1">
               View All <ArrowUpRight className="w-4 h-4" />
             </button>

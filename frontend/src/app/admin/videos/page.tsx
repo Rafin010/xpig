@@ -388,21 +388,21 @@ export default function VideoManagementPage() {
       )}
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b border-zinc-800/60 pb-6">
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b border-zinc-800/60 pb-4 sm:pb-6">
         <div>
-          <h1 className="text-3xl font-black text-white tracking-tight flex items-center gap-3">
-            <Film className="w-8 h-8 text-pink-500" />
-            Video Moderation Queue
+          <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-2.5">
+            <Film className="w-6 h-6 sm:w-8 sm:h-8 text-pink-500" />
+            <span>Video Moderation Queue</span>
           </h1>
-          <p className="text-zinc-400 mt-1">
+          <p className="text-xs sm:text-sm text-zinc-400 mt-1">
             Real-time management, metadata editing, custom delete confirmation, and device uploads.
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
           <button 
             onClick={fetchVideos}
             disabled={loading}
-            className="p-3 bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-xl transition-all shadow-sm flex items-center gap-2 text-sm font-medium"
+            className="p-2.5 sm:p-3 bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-xl transition-all shadow-sm flex items-center gap-2 text-xs sm:text-sm font-medium"
             title="Refresh Videos"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin text-pink-500" : ""}`} />
@@ -418,16 +418,16 @@ export default function VideoManagementPage() {
               setUploadSuccess(false);
               setIsUploadModalOpen(true);
             }}
-            className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-500 hover:to-rose-500 text-white rounded-xl font-bold transition-all shadow-lg shadow-pink-900/25 active:scale-[0.98]"
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-500 hover:to-rose-500 text-white rounded-xl font-bold text-xs sm:text-sm transition-all shadow-lg shadow-pink-900/25 active:scale-[0.98]"
           >
-            <UploadCloud className="w-5 h-5" />
+            <UploadCloud className="w-4 h-4 sm:w-5 sm:h-5" />
             Upload from Device
           </button>
         </div>
       </div>
 
       {/* KPI Stats Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-5">
         <div className="bg-[#111113] border border-zinc-800/80 p-5 rounded-2xl shadow-xl flex flex-col justify-between">
           <div className="flex items-center justify-between text-zinc-400 mb-2">
             <span className="font-semibold text-xs tracking-wider uppercase text-zinc-400">Total Uploads (#1 Newest)</span>
@@ -872,8 +872,8 @@ export default function VideoManagementPage() {
 
       {/* EDIT VIDEO MODAL */}
       {editingVideo && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
-          <div className="bg-[#141417] border border-zinc-800 text-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-[#141417] border border-zinc-800 text-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[92vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
             <div className="p-6 border-b border-zinc-800 flex justify-between items-center bg-zinc-900/60">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-pink-500/10 border border-pink-500/30 flex items-center justify-center text-pink-400">
@@ -1071,8 +1071,8 @@ export default function VideoManagementPage() {
 
       {/* ULTRA-PROFESSIONAL DEVICE VIDEO UPLOADER MODAL */}
       {isUploadModalOpen && (
-        <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
-          <div className="bg-[#141417] border border-zinc-800 text-white rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-[#141417] border border-zinc-800 text-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[92vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
             
             {/* Modal Header */}
             <div className="p-6 border-b border-zinc-800 flex justify-between items-center bg-zinc-900/60">
