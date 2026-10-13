@@ -11,7 +11,6 @@ import {
   AlertCircle, 
   FileVideo, 
   X, 
-  Eye, 
   HardDrive,
   RefreshCw,
   Check,
@@ -21,12 +20,13 @@ import {
   Image as ImageIcon,
   Link as LinkIcon,
   Trash2,
-  FolderOpen
+  FolderOpen,
+  Sparkles
 } from 'lucide-react';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://xpig.onrender.com';
 
-// 'All' is placed first and mandatory per user requirement
+// 'All' is placed first and mandatory per platform architecture
 const AVAILABLE_CATEGORIES = [
   'All',
   'Hot',
@@ -55,7 +55,12 @@ export default function MobileVideoUploadPage() {
   const [visibility, setVisibility] = useState('PUBLIC');
   const [status, setStatus] = useState('PUBLISHED');
 
-  // Thumbnail Form State (Dual-Mode: Device File vs Direct URL)
+  // Auto 5-Second Thumbnail State
+  const [autoThumbnailFile, setAutoThumbnailFile] = useState<File | null>(null);
+  const [autoThumbnailPreviewUrl, setAutoThumbnailPreviewUrl] = useState<string | null>(null);
+  const [isExtractingAutoThumbnail, setIsExtractingAutoThumbnail] = useState(false);
+
+  // Custom Thumbnail Form State (Dual-Mode: Device File vs Direct URL)
   const [thumbnailMode, setThumbnailMode] = useState<'file' | 'url'>('file');
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [thumbnailPreviewUrl, setThumbnailPreviewUrl] = useState<string | null>(null);
@@ -73,8 +78,80 @@ export default function MobileVideoUploadPage() {
     return () => {
       if (previewUrl) URL.revokeObjectURL(previewUrl);
       if (thumbnailPreviewUrl) URL.revokeObjectURL(thumbnailPreviewUrl);
+      if (autoThumbnailPreviewUrl) URL.revokeObjectURL(autoThumbnailPreviewUrl);
     };
-  }, [previewUrl, thumbnailPreviewUrl]);
+  }, [previewUrl, thumbnailPreviewUrl, autoThumbnailPreviewUrl]);
+
+  // Client-Side Canvas 5-Second Frame Auto Extractor
+  const extractAutoThumbnail = (videoFile: File): Promise<{ file: File; previewUrl: string } | null> => {
+    return new Promise((resolve) => {
+      try {
+        const video = document.createElement('video');
+        video.preload = 'auto';
+        video.muted = true;
+        video.playsInline = true;
+        const objectUrl = URL.createObjectURL(videoFile);
+        video.src = objectUrl;
+
+        let resolved = false;
+        const cleanup = () => {
+          URL.revokeObjectURL(objectUrl);
+          video.remove();
+        };
+
+        const doResolve = (res: { file: File; previewUrl: string } | null) => {
+          if (resolved) return;
+          resolved = true;
+          cleanup();
+          resolve(res);
+        };
+
+        const timer = setTimeout(() => doResolve(null), 8500);
+
+        video.onloadedmetadata = () => {
+          const duration = video.duration || 0;
+          // Capture at 5.0 seconds (or 30% duration if video is under 5 seconds)
+          const targetSec = duration > 5 ? 5 : Math.max(0.5, duration * 0.3);
+          video.currentTime = targetSec;
+        };
+
+        video.onseeked = () => {
+          clearTimeout(timer);
+          try {
+            const canvas = document.createElement('canvas');
+            const w = video.videoWidth || 1280;
+            const h = video.videoHeight || 720;
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+              doResolve(null);
+              return;
+            }
+            ctx.drawImage(video, 0, 0, w, h);
+            canvas.toBlob((blob) => {
+              if (!blob) {
+                doResolve(null);
+                return;
+              }
+              const thumbFile = new File([blob], `thumb_5s_${Date.now()}.jpg`, { type: 'image/jpeg' });
+              const preview = URL.createObjectURL(blob);
+              doResolve({ file: thumbFile, previewUrl: preview });
+            }, 'image/jpeg', 0.88);
+          } catch {
+            doResolve(null);
+          }
+        };
+
+        video.onerror = () => {
+          clearTimeout(timer);
+          doResolve(null);
+        };
+      } catch {
+        resolve(null);
+      }
+    });
+  };
 
   // Handle Multi-Select Category Toggle ('All' is mandatory and permanently selected)
   const toggleCategory = (cat: string) => {
@@ -92,7 +169,7 @@ export default function MobileVideoUploadPage() {
     if (!selectedFile) return;
 
     if (!selectedFile.type.startsWith('video/') && !selectedFile.name.match(/\.(mp4|mov|webm|mkv)$/i)) {
-      setErrorMessage('অনুগ্রহ করে একটি ভ্যালিড ভিডিও ফাইল (.mp4, .mov, .webm) সিলেক্ট করুন।');
+      setErrorMessage('Please select a valid video file (.mp4, .mov, .webm, .mkv)');
       return;
     }
 
@@ -109,6 +186,20 @@ export default function MobileVideoUploadPage() {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     const url = URL.createObjectURL(selectedFile);
     setPreviewUrl(url);
+
+    // Automatically trigger 5-second frame thumbnail extraction
+    setIsExtractingAutoThumbnail(true);
+    if (autoThumbnailPreviewUrl) URL.revokeObjectURL(autoThumbnailPreviewUrl);
+    setAutoThumbnailPreviewUrl(null);
+    setAutoThumbnailFile(null);
+
+    extractAutoThumbnail(selectedFile).then((result) => {
+      setIsExtractingAutoThumbnail(false);
+      if (result) {
+        setAutoThumbnailFile(result.file);
+        setAutoThumbnailPreviewUrl(result.previewUrl);
+      }
+    });
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -122,15 +213,18 @@ export default function MobileVideoUploadPage() {
     setFile(null);
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setPreviewUrl(null);
+    if (autoThumbnailPreviewUrl) URL.revokeObjectURL(autoThumbnailPreviewUrl);
+    setAutoThumbnailPreviewUrl(null);
+    setAutoThumbnailFile(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  // Handle Thumbnail File Selection
+  // Handle Custom Thumbnail File Selection
   const handleThumbnailSelect = (selectedThumb: File) => {
     if (!selectedThumb) return;
 
     if (!selectedThumb.type.startsWith('image/') && !selectedThumb.name.match(/\.(jpg|jpeg|png|webp|gif)$/i)) {
-      setErrorMessage('অনুগ্রহ করে থাম্বনেইল হিসেবে একটি ইমেজ ফাইল (.jpg, .png, .webp) নির্বাচন করুন।');
+      setErrorMessage('Please select a valid image file (.jpg, .jpeg, .png, .webp) for thumbnail');
       return;
     }
 
@@ -169,12 +263,12 @@ export default function MobileVideoUploadPage() {
     e.preventDefault();
 
     if (!file) {
-      setErrorMessage('দয়া করে প্রথমে ডিভাইস থেকে একটি ভিডিও নির্বাচন করুন');
+      setErrorMessage('Please select a video file from your device first');
       return;
     }
 
     if (!title.trim()) {
-      setErrorMessage('ভিডিওর টাইটেল দেওয়া বাধ্যতামূলক');
+      setErrorMessage('Video title is required');
       return;
     }
 
@@ -192,11 +286,14 @@ export default function MobileVideoUploadPage() {
     formData.append('visibility', visibility);
     formData.append('status', status);
 
-    // Attach Thumbnail based on mode
+    // Attach Thumbnail: Custom File > Custom URL > Auto 5s Frame Capture
     if (thumbnailMode === 'file' && thumbnailFile) {
       formData.append('thumbnail_file', thumbnailFile);
     } else if (thumbnailMode === 'url' && thumbnailUrlInput.trim()) {
       formData.append('thumbnail_url', thumbnailUrlInput.trim());
+    } else if (autoThumbnailFile) {
+      // Auto-captured 5-second frame fallback
+      formData.append('thumbnail_file', autoThumbnailFile);
     }
 
     try {
@@ -230,16 +327,16 @@ export default function MobileVideoUploadPage() {
         setUploading(false);
         try {
           const errRes = JSON.parse(xhr.responseText);
-          setErrorMessage(errRes.detail || `আপলোড ব্যর্থ হয়েছে (Status: ${xhr.status})`);
+          setErrorMessage(errRes.detail || `Upload failed (Status: ${xhr.status})`);
         } catch {
-          setErrorMessage(`আপলোড ব্যর্থ হয়েছে (Status: ${xhr.status})। সার্ভার রেসপন্স চেক করুন।`);
+          setErrorMessage(`Upload failed (Status: ${xhr.status}). Please check backend response.`);
         }
       }
     };
 
     xhr.onerror = () => {
       setUploading(false);
-      setErrorMessage('সার্ভারের সাথে সংযোগ স্থাপন করা সম্ভব হয়নি। ব্যাকএন্ড সার্ভার ও নেটওয়ার্ক সংযোগ চেক করুন।');
+      setErrorMessage('Failed to connect to the server. Please check your network connection and backend status.');
     };
 
     xhr.send(formData);
@@ -248,8 +345,8 @@ export default function MobileVideoUploadPage() {
   return (
     <div className="min-h-full bg-[#09090b] text-white pb-36 md:pb-12 max-w-2xl mx-auto">
       
-      {/* 1. Header (Natural Page Flow - Scrolls with the page per user request) */}
-      <header className="w-full bg-[#111114] border-b border-zinc-800 px-4 py-3.5 flex items-center justify-between select-none">
+      {/* 1. Header (Natural Page Flow - Scrolls with the page) */}
+      <header className="w-full bg-[#111114] border-b border-zinc-800 px-4 py-3.5 flex items-center justify-between select-none shadow-sm">
         <div className="flex items-center gap-3">
           <Link
             href="/admin/videos"
@@ -263,7 +360,7 @@ export default function MobileVideoUploadPage() {
               <Film className="w-4 h-4 text-blue-500" />
               <span>Upload Video</span>
             </h1>
-            <p className="text-[11px] text-zinc-400">Direct Device Video & Thumbnail Publisher</p>
+            <p className="text-[11px] text-zinc-400">Direct Device Video & Auto 5s Thumbnail Publisher</p>
           </div>
         </div>
 
@@ -290,8 +387,8 @@ export default function MobileVideoUploadPage() {
           <div className="p-4 rounded-xl bg-emerald-950/40 border border-emerald-500/40 text-emerald-300 text-xs font-bold flex items-center gap-3 shadow-lg">
             <CheckCircle2 className="w-6 h-6 text-emerald-400 shrink-0" />
             <div>
-              <p className="text-sm font-bold text-white">ভিডিও ও থাম্বনেইল সফলভাবে আপলোড সম্পন্ন হয়েছে!</p>
-              <p className="text-[11px] text-emerald-300 font-medium mt-0.5">Cloudflare R2 স্টোরেজে সংরক্ষিত হয়েছে। রিডাইরেক্ট হচ্ছে...</p>
+              <p className="text-sm font-bold text-white">Video & Thumbnail Upload Completed!</p>
+              <p className="text-[11px] text-emerald-300 font-medium mt-0.5">Saved to Cloudflare R2 storage. Redirecting to catalog...</p>
             </div>
           </div>
         )}
@@ -316,21 +413,21 @@ export default function MobileVideoUploadPage() {
             </div>
             <div>
               <p className="text-sm font-bold text-white group-hover:text-blue-400 transition-colors">
-                ডিভাইস থেকে ভিডিও ফাইল সিলেক্ট করুন
+                Select Video File from Device
               </p>
               <p className="text-xs text-zinc-400 mt-1">
-                এখানে ট্যাপ করে মোবাইল স্টোরেজ বা গ্যালারি থেকে ভিডিও ফাইল নিন
+                Tap here to choose a video from your phone storage or gallery
               </p>
             </div>
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-zinc-900 border border-zinc-800 text-[11px] font-medium text-zinc-400">
               <span>MP4, MOV, WEBM</span>
               <span>•</span>
-              <span className="text-blue-400">Original Quality</span>
+              <span className="text-blue-400 font-semibold">Original Quality</span>
             </div>
           </div>
         ) : (
-          <div className="bg-[#121215] border border-zinc-800 rounded-2xl p-4 shadow-lg space-y-3.5">
-            <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
+          <div className="bg-[#121215] border border-zinc-800/80 rounded-2xl p-4 shadow-lg space-y-3.5">
+            <div className="flex items-center justify-between pb-3 border-b border-zinc-800/80">
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 shrink-0">
                   <FileVideo className="w-4 h-4" />
@@ -355,7 +452,7 @@ export default function MobileVideoUploadPage() {
 
             {/* Live Video Preview Player */}
             {previewUrl && (
-              <div className="relative aspect-video rounded-xl overflow-hidden bg-black border border-zinc-800 flex items-center justify-center shadow-inner group">
+              <div className="relative aspect-video rounded-xl overflow-hidden bg-black border border-zinc-800/90 flex items-center justify-center shadow-inner group">
                 <video
                   src={previewUrl}
                   controls
@@ -372,21 +469,21 @@ export default function MobileVideoUploadPage() {
                 className="w-full py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
-                <span>অন্য ভিডিও নির্বাচন করুন</span>
+                <span>Select Another Video</span>
               </button>
             )}
           </div>
         )}
 
-        {/* 3. Real-Time Upload Progress Bar (Solid Blue & Monospace Indicator) */}
+        {/* 3. Real-Time Upload Progress Bar (Clean Monospace Indicator - No Parentheses) */}
         {uploading && (
-          <div className="bg-[#121215] border border-blue-500/30 rounded-xl p-4 shadow-lg space-y-2.5">
+          <div className="bg-[#121215] border border-blue-500/40 rounded-xl p-4 shadow-lg space-y-2.5">
             <div className="flex items-center justify-between text-xs font-bold">
               <span className="text-blue-400 flex items-center gap-1.5">
                 <RefreshCw className="w-3.5 h-3.5 animate-spin text-blue-400" />
-                Cloudflare R2-তে ভিডিও ও থাম্বনেইল আপলোড হচ্ছে...
+                <span>Uploading to Cloudflare R2 • {progress}%</span>
               </span>
-              <span className="font-mono text-white text-sm">{progress}%</span>
+              <span className="font-mono text-white text-sm font-black">{progress}%</span>
             </div>
 
             <div className="h-2.5 w-full bg-zinc-900 rounded-full overflow-hidden p-0.5 border border-zinc-800">
@@ -396,48 +493,48 @@ export default function MobileVideoUploadPage() {
               />
             </div>
             <p className="text-[10px] text-zinc-400 text-center font-mono">
-              আপলোড ও প্রসেসিং চলাকালীন পেজটি পরিবর্তন করবেন না
+              Do not navigate away or close browser while upload is in progress
             </p>
           </div>
         )}
 
-        {/* 4. COMPACT PROFESSIONAL THUMBNAIL SELECTOR */}
-        <div className="bg-[#121215] border border-zinc-800 rounded-2xl p-3 sm:p-4 shadow-lg space-y-2.5">
-          {/* Compact Header Row - Never wraps on mobile */}
+        {/* 4. COMPACT PROFESSIONAL THUMBNAIL SELECTOR (Auto 5s Capture + Custom Overrides) */}
+        <div className="bg-[#121215] border border-zinc-800/80 rounded-2xl p-3.5 sm:p-4 shadow-lg space-y-3">
+          {/* Header Row */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
               <ImageIcon className="w-3.5 h-3.5 text-emerald-400" />
               <span className="text-xs font-bold text-white uppercase tracking-wider">Thumbnail</span>
-              <span className="text-[10px] text-zinc-400 font-normal">(ঐচ্ছিক • 16:9)</span>
+              <span className="text-[10px] text-zinc-400 font-normal">(Auto 5s or Custom)</span>
             </div>
 
-            {/* Ultra-compact Segmented Pill Tabs */}
+            {/* Segmented Pill Tabs */}
             <div className="flex items-center bg-zinc-900 border border-zinc-800 p-0.5 rounded-lg text-[11px] font-semibold">
               <button
                 type="button"
                 onClick={() => setThumbnailMode('file')}
                 disabled={uploading}
-                className={`px-2 py-0.5 rounded-md flex items-center gap-1 transition-all ${
+                className={`px-2.5 py-1 rounded-md flex items-center gap-1 transition-all ${
                   thumbnailMode === 'file'
                     ? 'bg-emerald-600 text-white shadow-sm'
                     : 'text-zinc-400 hover:text-white'
                 }`}
               >
                 <FolderOpen className="w-3 h-3" />
-                <span>ফাইল</span>
+                <span>Device File</span>
               </button>
               <button
                 type="button"
                 onClick={() => setThumbnailMode('url')}
                 disabled={uploading}
-                className={`px-2 py-0.5 rounded-md flex items-center gap-1 transition-all ${
+                className={`px-2.5 py-1 rounded-md flex items-center gap-1 transition-all ${
                   thumbnailMode === 'url'
                     ? 'bg-emerald-600 text-white shadow-sm'
                     : 'text-zinc-400 hover:text-white'
                 }`}
               >
                 <LinkIcon className="w-3 h-3" />
-                <span>লিংক</span>
+                <span>Direct URL</span>
               </button>
             </div>
           </div>
@@ -457,7 +554,7 @@ export default function MobileVideoUploadPage() {
               {!thumbnailFile ? (
                 <div
                   onClick={() => thumbnailInputRef.current?.click()}
-                  className="flex items-center justify-between p-2.5 bg-zinc-900/40 hover:bg-zinc-900 border border-dashed border-zinc-700/80 hover:border-emerald-500/60 rounded-xl cursor-pointer transition-all active:scale-[0.99] group"
+                  className="flex items-center justify-between p-2.5 bg-zinc-900/50 hover:bg-zinc-900 border border-dashed border-zinc-700/80 hover:border-emerald-500/60 rounded-xl cursor-pointer transition-all active:scale-[0.99] group"
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
                     <div className="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0 group-hover:scale-105 transition-transform">
@@ -465,13 +562,13 @@ export default function MobileVideoUploadPage() {
                     </div>
                     <div className="min-w-0">
                       <p className="text-xs font-semibold text-zinc-200 group-hover:text-emerald-400 transition-colors truncate">
-                        ডিভাইস থেকে ছবি নির্বাচন করুন
+                        Select Custom Image from Device
                       </p>
-                      <p className="text-[10px] text-zinc-400">JPG, PNG, WEBP</p>
+                      <p className="text-[10px] text-zinc-400">JPG, PNG, WEBP (Overrides auto thumbnail)</p>
                     </div>
                   </div>
                   <span className="px-2.5 py-1 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-300 text-[11px] font-semibold rounded-lg shrink-0 transition-colors">
-                    বাছাই করুন
+                    Choose File
                   </span>
                 </div>
               ) : (
@@ -480,7 +577,7 @@ export default function MobileVideoUploadPage() {
                     <img
                       src={thumbnailPreviewUrl}
                       alt="Thumbnail preview"
-                      className="w-14 h-9 rounded-lg object-cover bg-black border border-zinc-700 shrink-0"
+                      className="w-14 h-9 rounded-lg object-cover bg-black border border-zinc-700 shrink-0 shadow-sm"
                     />
                   )}
                   <div className="min-w-0 flex-1">
@@ -488,7 +585,7 @@ export default function MobileVideoUploadPage() {
                     <p className="text-[10px] text-emerald-400 font-mono flex items-center gap-1.5 mt-0.5">
                       <span>{formatFileSize(thumbnailFile.size)}</span>
                       <span>•</span>
-                      <span>Cloudflare R2</span>
+                      <span>Custom Thumbnail</span>
                     </p>
                   </div>
                   {!uploading && (
@@ -496,7 +593,7 @@ export default function MobileVideoUploadPage() {
                       type="button"
                       onClick={handleRemoveThumbnail}
                       className="p-1.5 rounded-lg text-zinc-400 hover:text-rose-400 hover:bg-zinc-800 transition-colors shrink-0"
-                      title="Remove thumbnail"
+                      title="Remove custom thumbnail"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -517,7 +614,7 @@ export default function MobileVideoUploadPage() {
                     setThumbnailUrlInput(e.target.value);
                     setThumbnailUrlError(false);
                   }}
-                  placeholder="https://... ছবির সরাসরি লিংক দিন"
+                  placeholder="https://... Direct image link (JPG, PNG, WEBP)"
                   disabled={uploading}
                   className="w-full bg-zinc-900 border border-zinc-700 rounded-xl pl-3 pr-8 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 transition-colors font-mono"
                 />
@@ -543,24 +640,60 @@ export default function MobileVideoUploadPage() {
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <span className="text-[9px] text-rose-400 text-center">ত্রুটি</span>
+                      <span className="text-[9px] text-rose-400 text-center">Error</span>
                     )}
                   </div>
                   <p className="text-[11px] truncate flex-1 font-medium">
                     {thumbnailUrlError ? (
-                      <span className="text-rose-400">অবৈধ ছবি লিংক</span>
+                      <span className="text-rose-400">Invalid image URL</span>
                     ) : (
-                      <span className="text-emerald-400">✓ থাম্বনেইল ছবি লিংক সক্রিয়</span>
+                      <span className="text-emerald-400">✓ Thumbnail link verified</span>
                     )}
                   </p>
                 </div>
               )}
             </div>
           )}
+
+          {/* Auto 5-Second Thumbnail Preview Box (Active when no custom thumb chosen) */}
+          {!thumbnailFile && !thumbnailUrlInput.trim() && (
+            <div className="pt-1">
+              {autoThumbnailPreviewUrl ? (
+                <div className="flex items-center gap-3 p-2.5 bg-zinc-900/70 border border-blue-500/20 rounded-xl">
+                  <img
+                    src={autoThumbnailPreviewUrl}
+                    alt="Auto-captured 5s frame"
+                    className="w-16 h-10 rounded-lg object-cover bg-black border border-blue-500/30 shrink-0 shadow-sm"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-500/15 border border-blue-500/30 text-[10px] font-bold text-blue-400 font-mono">
+                        <Sparkles className="w-2.5 h-2.5" />
+                        Auto 00:05
+                      </span>
+                      <span className="text-xs font-bold text-zinc-200">Default Video Frame</span>
+                    </div>
+                    <p className="text-[10px] text-zinc-400 mt-0.5">
+                      Auto-captured at 5 seconds. Will upload automatically if no custom thumbnail is provided.
+                    </p>
+                  </div>
+                </div>
+              ) : isExtractingAutoThumbnail ? (
+                <div className="flex items-center gap-2.5 p-2.5 bg-zinc-900/50 border border-zinc-800 rounded-xl">
+                  <RefreshCw className="w-3.5 h-3.5 text-blue-400 animate-spin" />
+                  <span className="text-[11px] text-zinc-400">Extracting 5-second video frame thumbnail...</span>
+                </div>
+              ) : (
+                <p className="text-[10px] text-zinc-500 italic pl-1">
+                  * If no custom thumbnail is uploaded, the system automatically captures and uses the 5-second video frame.
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* 5. Metadata Inputs Card */}
-        <div className="space-y-4 bg-[#121215] border border-zinc-800 p-4 sm:p-5 rounded-2xl shadow-lg">
+        <div className="space-y-4 bg-[#121215] border border-zinc-800/80 p-4 sm:p-5 rounded-2xl shadow-lg">
           
           {/* Video Title */}
           <div className="space-y-1.5">
@@ -574,7 +707,7 @@ export default function MobileVideoUploadPage() {
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. Deshi Hot Viral Dance Clip"
               disabled={uploading}
-              className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+              className="w-full bg-zinc-900 border border-zinc-700/80 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
             />
           </div>
 
@@ -587,9 +720,9 @@ export default function MobileVideoUploadPage() {
               rows={3}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="ভিডিও সম্পর্কে সংক্ষিপ্ত বিবরণ বা কি-ওয়ার্ড..."
+              placeholder="Brief description or searchable keywords for this video..."
               disabled={uploading}
-              className="w-full bg-zinc-900 border border-zinc-700 rounded-xl px-3.5 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors resize-none"
+              className="w-full bg-zinc-900 border border-zinc-700/80 rounded-xl px-3.5 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors resize-none"
             />
           </div>
 
@@ -605,7 +738,7 @@ export default function MobileVideoUploadPage() {
             </div>
             
             <p className="text-[11px] text-zinc-400">
-              একাধিক ক্যাটাগরি সিলেক্ট করুন। হোম ফিডে ইউজাররা এই ক্যাটাগরি ফিল্টার করলে ভিডিওটি দেখতে পাবেন।
+              Select multiple categories. Users filtering by these categories in the home feed will discover this video.
             </p>
 
             <div className="flex flex-wrap gap-2 pt-1">
@@ -618,7 +751,7 @@ export default function MobileVideoUploadPage() {
                     key={cat}
                     onClick={() => toggleCategory(cat)}
                     disabled={uploading || isAll}
-                    title={isAll ? "প্রধান ফিডের জন্য 'All' ক্যাটাগরি বাধ্যতামূলক ও স্থায়ী" : undefined}
+                    title={isAll ? "'All' category is mandatory and default for main feed" : undefined}
                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
                       isSelected
                         ? isAll
@@ -667,8 +800,8 @@ export default function MobileVideoUploadPage() {
 
         </div>
 
-        {/* 6. Mobile Docked Action Bar (Zero Gap With Mobile Bottom Navigation) */}
-        <div className="fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] md:static md:bottom-auto left-0 right-0 p-3 sm:p-4 bg-[#111114]/98 border-t border-zinc-800 z-30 max-w-2xl mx-auto shadow-2xl">
+        {/* 6. Mobile Docked Action Bar (Clean Modern Styling - Zero Parentheses) */}
+        <div className="fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] md:static md:bottom-auto left-0 right-0 p-3.5 sm:p-4 bg-[#0e0e11]/95 backdrop-blur-xl border-t border-zinc-800/90 z-30 max-w-2xl mx-auto shadow-[0_-8px_30px_rgba(0,0,0,0.85)]">
           <button
             type="submit"
             disabled={uploading || !file || !title.trim()}
@@ -677,12 +810,12 @@ export default function MobileVideoUploadPage() {
             {uploading ? (
               <>
                 <RefreshCw className="w-4 h-4 animate-spin" />
-                <span>ভিডিও ও থাম্বনেইল আপলোড হচ্ছে ({progress}%)...</span>
+                <span>Uploading Video • {progress}%</span>
               </>
             ) : uploadSuccess ? (
               <>
                 <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                <span>আপলোড সম্পন্ন হয়েছে!</span>
+                <span>Upload Completed!</span>
               </>
             ) : (
               <>

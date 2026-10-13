@@ -23,9 +23,7 @@ export function MobileBottomNav() {
         const Icon = item.icon;
         const isActive = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href);
         const colorClass = isActive
-          ? 'text-pink-500'
-          : item.isUpload
-          ? 'text-pink-500 hover:text-pink-400'
+          ? 'text-pink-500 font-bold scale-105'
           : 'text-zinc-500 hover:text-zinc-300';
 
         return (

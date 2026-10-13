@@ -666,9 +666,10 @@ export default function VideoManagementPage() {
                       {/* Video Thumbnail & Title Column */}
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-4">
-                          <Link 
-                            href={`/watch/${vid.id}`} 
+                          <a 
+                            href={`https://xpig.me/watch/${vid.id}`} 
                             target="_blank"
+                            rel="noopener noreferrer"
                             className="relative w-24 h-14 bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden shrink-0 group/thumb block shadow-md"
                           >
                             {vid.thumbnail_url ? (
@@ -686,7 +687,7 @@ export default function VideoManagementPage() {
                             <div className="absolute inset-0 bg-black/50 opacity-0 group-hover/thumb:opacity-100 flex items-center justify-center transition-opacity">
                               <ExternalLink className="w-4 h-4 text-white" />
                             </div>
-                          </Link>
+                          </a>
 
                           <div className="min-w-0 max-w-md">
                             <div className="flex items-center gap-2 mb-1">
@@ -697,14 +698,15 @@ export default function VideoManagementPage() {
                                 {vid.visibility?.toLowerCase() || 'public'}
                               </span>
                             </div>
-                            <Link 
-                              href={`/watch/${vid.id}`} 
+                            <a 
+                              href={`https://xpig.me/watch/${vid.id}`} 
                               target="_blank"
+                              rel="noopener noreferrer"
                               className="font-bold text-white hover:text-pink-400 transition-colors line-clamp-1 block text-sm"
                               title={vid.title}
                             >
                               {vid.title}
-                            </Link>
+                            </a>
                             {vid.description && (
                               <p className="text-xs text-zinc-500 line-clamp-1 mt-0.5">
                                 {vid.description}
@@ -771,14 +773,15 @@ export default function VideoManagementPage() {
                       {/* Action Buttons */}
                       <td className="px-5 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
-                          <Link
-                            href={`/watch/${vid.id}`}
+                          <a
+                            href={`https://xpig.me/watch/${vid.id}`}
                             target="_blank"
+                            rel="noopener noreferrer"
                             className="p-2 text-zinc-400 hover:text-white bg-zinc-900/80 hover:bg-zinc-800 rounded-lg border border-zinc-800 hover:border-zinc-700 transition-all shadow-sm"
-                            title="Watch / Preview Video"
+                            title="Watch Video on User Site (xpig.me)"
                           >
                             <ExternalLink className="w-4 h-4" />
-                          </Link>
+                          </a>
                           <button 
                             onClick={() => handleOpenEdit(vid)}
                             className="p-2 text-zinc-400 hover:text-pink-400 bg-zinc-900/80 hover:bg-pink-950/30 rounded-lg border border-zinc-800 hover:border-pink-800/50 transition-all shadow-sm" 

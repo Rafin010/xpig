@@ -375,58 +375,70 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* 6. Admin Mobile App-Style Bottom Navigation Bar (md:hidden) */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-[#111114] border-t border-zinc-800/80 z-40 select-none pb-[env(safe-area-inset-bottom,0px)] shadow-[0_-4px_30px_rgba(0,0,0,0.95)]">
         <div className="h-14 flex items-center justify-around px-2">
-          {/* Dashboard */}
-          <Link
-            href="/admin"
-            className={`flex flex-col items-center justify-center flex-1 h-full space-y-1 transition-all ${
-              pathname === '/admin' ? 'text-blue-500 font-bold scale-105' : 'text-zinc-400 hover:text-zinc-200'
-            }`}
-          >
-            <LayoutDashboard className="w-5 h-5" />
-            <span className="text-[10px] font-medium tracking-tight">Overview</span>
-          </Link>
+          {/* Active route checks supporting both root (admin.xpig.me) and /admin paths */}
+          {(() => {
+            const isOverviewActive = pathname === '/admin' || pathname === '/';
+            const isVideosActive = (pathname === '/admin/videos' || pathname === '/videos') && !pathname.includes('upload');
+            const isUploadActive = pathname.includes('upload');
+            const isSponsorsActive = pathname.startsWith('/admin/ads') || pathname.startsWith('/ads');
 
-          {/* Videos */}
-          <Link
-            href="/admin/videos"
-            className={`flex flex-col items-center justify-center flex-1 h-full space-y-1 transition-all ${
-              pathname === '/admin/videos' && !pathname.includes('upload') ? 'text-blue-500 font-bold scale-105' : 'text-zinc-400 hover:text-zinc-200'
-            }`}
-          >
-            <Video className="w-5 h-5" />
-            <span className="text-[10px] font-medium tracking-tight">Videos</span>
-          </Link>
+            return (
+              <>
+                {/* Dashboard / Overview */}
+                <Link
+                  href="/admin"
+                  className={`flex flex-col items-center justify-center flex-1 h-full space-y-1 transition-all ${
+                    isOverviewActive ? 'text-blue-500 font-bold scale-105' : 'text-zinc-500 hover:text-zinc-300'
+                  }`}
+                >
+                  <LayoutDashboard className="w-5 h-5" />
+                  <span className="text-[10px] font-medium tracking-tight">Overview</span>
+                </Link>
 
-          {/* Quick Access Center '+' Upload Video Button */}
-          <Link
-            href="/admin/videos/upload"
-            aria-label="Upload Video to Platform"
-            className="flex flex-col items-center justify-center flex-1 h-full space-y-1 transition-all group"
-          >
-            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shadow-md transition-transform ${
-              pathname === '/admin/videos/upload'
-                ? 'bg-blue-600 shadow-blue-900/50 scale-105 border-2 border-white'
-                : 'bg-blue-600 hover:bg-blue-500 shadow-blue-900/40 border border-blue-400/40 group-active:scale-95'
-            }`}>
-              <Plus className="w-5 h-5 text-white stroke-[2.8]" />
-            </div>
-            <span className={`text-[10px] font-bold tracking-tight ${
-              pathname === '/admin/videos/upload' ? 'text-blue-400' : 'text-zinc-400'
-            }`}>
-              Upload
-            </span>
-          </Link>
+                {/* Videos */}
+                <Link
+                  href="/admin/videos"
+                  className={`flex flex-col items-center justify-center flex-1 h-full space-y-1 transition-all ${
+                    isVideosActive ? 'text-blue-500 font-bold scale-105' : 'text-zinc-500 hover:text-zinc-300'
+                  }`}
+                >
+                  <Video className="w-5 h-5" />
+                  <span className="text-[10px] font-medium tracking-tight">Videos</span>
+                </Link>
 
-          {/* Sponsors */}
-          <Link
-            href="/admin/ads"
-            className={`flex flex-col items-center justify-center flex-1 h-full space-y-1 transition-all ${
-              pathname.startsWith('/admin/ads') ? 'text-blue-500 font-bold scale-105' : 'text-zinc-400 hover:text-zinc-200'
-            }`}
-          >
-            <Megaphone className="w-5 h-5" />
-            <span className="text-[10px] font-medium tracking-tight">Sponsors</span>
-          </Link>
+                {/* Quick Access Center '+' Upload Video Button */}
+                <Link
+                  href="/admin/videos/upload"
+                  aria-label="Upload Video to Platform"
+                  className="flex flex-col items-center justify-center flex-1 h-full space-y-1 transition-all group"
+                >
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center shadow-md transition-transform ${
+                    isUploadActive
+                      ? 'bg-blue-600 shadow-blue-900/50 scale-105 border-2 border-white'
+                      : 'bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-400 group-active:scale-95'
+                  }`}>
+                    <Plus className={`w-5 h-5 stroke-[2.8] ${isUploadActive ? 'text-white' : 'text-zinc-400'}`} />
+                  </div>
+                  <span className={`text-[10px] tracking-tight ${
+                    isUploadActive ? 'text-blue-400 font-bold' : 'text-zinc-500 font-medium'
+                  }`}>
+                    Upload
+                  </span>
+                </Link>
+
+                {/* Sponsors */}
+                <Link
+                  href="/admin/ads"
+                  className={`flex flex-col items-center justify-center flex-1 h-full space-y-1 transition-all ${
+                    isSponsorsActive ? 'text-blue-500 font-bold scale-105' : 'text-zinc-500 hover:text-zinc-300'
+                  }`}
+                >
+                  <Megaphone className="w-5 h-5" />
+                  <span className="text-[10px] font-medium tracking-tight">Sponsors</span>
+                </Link>
+              </>
+            );
+          })()}
 
           {/* Menu Drawer Toggle */}
           <button
