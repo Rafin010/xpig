@@ -401,53 +401,50 @@ export default function MobileVideoUploadPage() {
           </div>
         )}
 
-        {/* 4. DUAL-MODE THUMBNAIL SYSTEM (DEVICE FILE OR DIRECT URL) */}
-        <div className="bg-[#121215] border border-zinc-800 rounded-2xl p-4 sm:p-5 shadow-lg space-y-4">
-          <div className="flex items-center justify-between border-b border-zinc-800/80 pb-3">
-            <div>
-              <h2 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                <ImageIcon className="w-4 h-4 text-emerald-400" />
-                <span>Video Thumbnail / পোস্টার</span>
-              </h2>
-              <p className="text-[11px] text-zinc-400 mt-0.5">
-                ডিভাইস থেকে ছবি আপলোড করুন অথবা সরাসরি ইমেজ লিংক দিন
-              </p>
+        {/* 4. COMPACT PROFESSIONAL THUMBNAIL SELECTOR */}
+        <div className="bg-[#121215] border border-zinc-800 rounded-2xl p-3 sm:p-4 shadow-lg space-y-2.5">
+          {/* Compact Header Row - Never wraps on mobile */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <ImageIcon className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="text-xs font-bold text-white uppercase tracking-wider">Thumbnail</span>
+              <span className="text-[10px] text-zinc-400 font-normal">(ঐচ্ছিক • 16:9)</span>
             </div>
 
-            {/* Mode Switcher Tabs */}
-            <div className="flex items-center bg-zinc-900 border border-zinc-800 p-1 rounded-xl">
+            {/* Ultra-compact Segmented Pill Tabs */}
+            <div className="flex items-center bg-zinc-900 border border-zinc-800 p-0.5 rounded-lg text-[11px] font-semibold">
               <button
                 type="button"
                 onClick={() => setThumbnailMode('file')}
                 disabled={uploading}
-                className={`px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${
+                className={`px-2 py-0.5 rounded-md flex items-center gap-1 transition-all ${
                   thumbnailMode === 'file'
                     ? 'bg-emerald-600 text-white shadow-sm'
                     : 'text-zinc-400 hover:text-white'
                 }`}
               >
-                <FolderOpen className="w-3.5 h-3.5" />
-                <span>ডিভাইস ফাইল</span>
+                <FolderOpen className="w-3 h-3" />
+                <span>ফাইল</span>
               </button>
               <button
                 type="button"
                 onClick={() => setThumbnailMode('url')}
                 disabled={uploading}
-                className={`px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all ${
+                className={`px-2 py-0.5 rounded-md flex items-center gap-1 transition-all ${
                   thumbnailMode === 'url'
                     ? 'bg-emerald-600 text-white shadow-sm'
                     : 'text-zinc-400 hover:text-white'
                 }`}
               >
-                <LinkIcon className="w-3.5 h-3.5" />
-                <span>ইমেজ লিংক</span>
+                <LinkIcon className="w-3 h-3" />
+                <span>লিংক</span>
               </button>
             </div>
           </div>
 
           {/* Mode 1: Device Image Upload */}
           {thumbnailMode === 'file' && (
-            <div className="space-y-3">
+            <div>
               <input
                 ref={thumbnailInputRef}
                 type="file"
@@ -460,46 +457,48 @@ export default function MobileVideoUploadPage() {
               {!thumbnailFile ? (
                 <div
                   onClick={() => thumbnailInputRef.current?.click()}
-                  className="border border-dashed border-zinc-800 hover:border-emerald-500/70 bg-zinc-900/40 hover:bg-zinc-900/80 rounded-xl p-5 text-center cursor-pointer transition-all flex flex-col items-center justify-center space-y-2 group active:scale-[0.99]"
+                  className="flex items-center justify-between p-2.5 bg-zinc-900/40 hover:bg-zinc-900 border border-dashed border-zinc-700/80 hover:border-emerald-500/60 rounded-xl cursor-pointer transition-all active:scale-[0.99] group"
                 >
-                  <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 group-hover:scale-105 transition-transform">
-                    <ImageIcon className="w-5 h-5" />
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0 group-hover:scale-105 transition-transform">
+                      <ImageIcon className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-zinc-200 group-hover:text-emerald-400 transition-colors truncate">
+                        ডিভাইস থেকে ছবি নির্বাচন করুন
+                      </p>
+                      <p className="text-[10px] text-zinc-400">JPG, PNG, WEBP</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-xs font-bold text-white group-hover:text-emerald-400 transition-colors">
-                      ডিভাইস থেকে থাম্বনেইল ছবি সিলেক্ট করুন
-                    </p>
-                    <p className="text-[11px] text-zinc-400 mt-0.5">
-                      JPG, PNG, WEBP (16:9 রিকমেন্ডেড)
-                    </p>
-                  </div>
+                  <span className="px-2.5 py-1 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-300 text-[11px] font-semibold rounded-lg shrink-0 transition-colors">
+                    বাছাই করুন
+                  </span>
                 </div>
               ) : (
-                <div className="flex items-center gap-3 bg-zinc-900 border border-zinc-800 rounded-xl p-3">
+                <div className="flex items-center gap-2.5 p-2 bg-zinc-900 border border-zinc-700/80 rounded-xl">
                   {thumbnailPreviewUrl && (
-                    <div className="w-20 h-14 rounded-lg overflow-hidden bg-black border border-zinc-700 shrink-0">
-                      <img
-                        src={thumbnailPreviewUrl}
-                        alt="Thumbnail preview"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
+                    <img
+                      src={thumbnailPreviewUrl}
+                      alt="Thumbnail preview"
+                      className="w-14 h-9 rounded-lg object-cover bg-black border border-zinc-700 shrink-0"
+                    />
                   )}
                   <div className="min-w-0 flex-1">
                     <p className="text-xs font-bold text-white truncate">{thumbnailFile.name}</p>
-                    <p className="text-[11px] text-zinc-400 font-mono">{formatFileSize(thumbnailFile.size)}</p>
-                    <span className="inline-block mt-1 text-[10px] text-emerald-400 font-semibold bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded">
-                      Cloudflare R2-তে আপলোড হবে
-                    </span>
+                    <p className="text-[10px] text-emerald-400 font-mono flex items-center gap-1.5 mt-0.5">
+                      <span>{formatFileSize(thumbnailFile.size)}</span>
+                      <span>•</span>
+                      <span>Cloudflare R2</span>
+                    </p>
                   </div>
                   {!uploading && (
                     <button
                       type="button"
                       onClick={handleRemoveThumbnail}
-                      className="p-1.5 rounded-lg bg-zinc-800 hover:bg-rose-950 text-zinc-400 hover:text-rose-400 transition-colors"
+                      className="p-1.5 rounded-lg text-zinc-400 hover:text-rose-400 hover:bg-zinc-800 transition-colors shrink-0"
                       title="Remove thumbnail"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   )}
                 </div>
@@ -509,7 +508,7 @@ export default function MobileVideoUploadPage() {
 
           {/* Mode 2: Direct Image URL */}
           {thumbnailMode === 'url' && (
-            <div className="space-y-3">
+            <div className="space-y-2">
               <div className="relative">
                 <input
                   type="url"
@@ -518,43 +517,42 @@ export default function MobileVideoUploadPage() {
                     setThumbnailUrlInput(e.target.value);
                     setThumbnailUrlError(false);
                   }}
-                  placeholder="https://example.com/thumbnail.jpg"
+                  placeholder="https://... ছবির সরাসরি লিংক দিন"
                   disabled={uploading}
-                  className="w-full bg-zinc-900 border border-zinc-700 rounded-xl pl-3.5 pr-10 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-colors font-mono"
+                  className="w-full bg-zinc-900 border border-zinc-700 rounded-xl pl-3 pr-8 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 transition-colors font-mono"
                 />
                 {thumbnailUrlInput && !uploading && (
                   <button
                     type="button"
                     onClick={() => setThumbnailUrlInput('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white"
                   >
-                    <X className="w-4 h-4" />
+                    <X className="w-3.5 h-3.5" />
                   </button>
                 )}
               </div>
 
               {thumbnailUrlInput.trim() && (
-                <div className="flex items-center gap-3 bg-zinc-900 border border-zinc-800 rounded-xl p-3">
-                  <div className="w-20 h-14 rounded-lg overflow-hidden bg-black border border-zinc-700 shrink-0 flex items-center justify-center">
+                <div className="flex items-center gap-2.5 p-1.5 bg-zinc-900 border border-zinc-800 rounded-xl">
+                  <div className="w-12 h-8 rounded-lg overflow-hidden bg-black border border-zinc-700 shrink-0 flex items-center justify-center">
                     {!thumbnailUrlError ? (
                       <img
                         src={thumbnailUrlInput.trim()}
-                        alt="URL Thumbnail preview"
+                        alt="URL Thumbnail"
                         onError={() => setThumbnailUrlError(true)}
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <span className="text-[10px] text-rose-400 text-center px-1">ছবি লোড হয়নি</span>
+                      <span className="text-[9px] text-rose-400 text-center">ত্রুটি</span>
                     )}
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-bold text-white truncate">{thumbnailUrlInput.trim()}</p>
+                  <p className="text-[11px] truncate flex-1 font-medium">
                     {thumbnailUrlError ? (
-                      <p className="text-[11px] text-rose-400 mt-0.5">ভুল ইমেজ লিংক। লিংকটি সঠিক কিনা যাচাই করুন।</p>
+                      <span className="text-rose-400">অবৈধ ছবি লিংক</span>
                     ) : (
-                      <p className="text-[11px] text-emerald-400 font-semibold mt-0.5">✓ ইমেজ লিংক সফলভাবে পাওয়া গেছে</p>
+                      <span className="text-emerald-400">✓ থাম্বনেইল ছবি লিংক সক্রিয়</span>
                     )}
-                  </div>
+                  </p>
                 </div>
               )}
             </div>
