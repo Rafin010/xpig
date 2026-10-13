@@ -15,6 +15,14 @@ function SearchPageContent() {
   const [allVideos, setAllVideos] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // Synchronize query when URL search param changes
+  useEffect(() => {
+    const qParam = searchParams.get('q');
+    if (qParam !== null) {
+      setQuery(qParam);
+    }
+  }, [searchParams]);
+
   // Load catalog on mount for fast instant searching
   useEffect(() => {
     let isMounted = true;

@@ -95,6 +95,11 @@ export default function MobileVideoUploadPage() {
 
         let resolved = false;
         const cleanup = () => {
+          try {
+            video.pause();
+            video.src = '';
+            video.load();
+          } catch {}
           URL.revokeObjectURL(objectUrl);
           video.remove();
         };
@@ -108,12 +113,19 @@ export default function MobileVideoUploadPage() {
 
         const timer = setTimeout(() => doResolve(null), 8500);
 
-        video.onloadedmetadata = () => {
+        let seekTriggered = false;
+        const triggerSeek = () => {
+          if (seekTriggered) return;
+          seekTriggered = true;
           const duration = video.duration || 0;
           // Capture at 5.0 seconds (or 30% duration if video is under 5 seconds)
           const targetSec = duration > 5 ? 5 : Math.max(0.5, duration * 0.3);
           video.currentTime = targetSec;
         };
+
+        video.onloadedmetadata = triggerSeek;
+        video.onloadeddata = triggerSeek;
+        video.oncanplay = triggerSeek;
 
         video.onseeked = () => {
           clearTimeout(timer);
@@ -804,13 +816,18 @@ export default function MobileVideoUploadPage() {
         <div className="fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] md:static md:bottom-auto left-0 right-0 p-3.5 sm:p-4 bg-[#0e0e11]/95 backdrop-blur-xl border-t border-zinc-800/90 z-30 max-w-2xl mx-auto shadow-[0_-8px_30px_rgba(0,0,0,0.85)]">
           <button
             type="submit"
-            disabled={uploading || !file || !title.trim()}
+            disabled={uploading || !file || !title.trim() || isExtractingAutoThumbnail}
             className="w-full py-3.5 px-6 rounded-xl bg-blue-600 hover:bg-blue-500 active:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-sm tracking-wide shadow-md flex items-center justify-center gap-2.5 transition-all active:scale-[0.99]"
           >
             {uploading ? (
               <>
                 <RefreshCw className="w-4 h-4 animate-spin" />
                 <span>Uploading Video • {progress}%</span>
+              </>
+            ) : isExtractingAutoThumbnail ? (
+              <>
+                <RefreshCw className="w-4 h-4 animate-spin" />
+                <span>Capturing 5s Thumbnail...</span>
               </>
             ) : uploadSuccess ? (
               <>

@@ -94,9 +94,9 @@ export default function AdminDashboard() {
   const [isCategorySortOpen, setIsCategorySortOpen] = useState(false);
   const categorySortRef = useRef<HTMLDivElement>(null);
 
-  // Click Outside Listener for Popovers
+  // Click Outside Listener for Popovers (Mouse and Touch)
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
       if (timeFilterRef.current && !timeFilterRef.current.contains(e.target as Node)) {
         setIsTimeFilterOpen(false);
       }
@@ -105,7 +105,11 @@ export default function AdminDashboard() {
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside, { passive: true });
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
   }, []);
 
   // Load Admin Role from storage
@@ -220,7 +224,7 @@ export default function AdminDashboard() {
 
                 {/* Floating Custom Selection Pop-up Menu */}
                 {isTimeFilterOpen && (
-                  <div className="absolute right-0 mt-2 w-72 sm:w-80 bg-[#121216]/95 backdrop-blur-xl border border-zinc-700/80 rounded-2xl p-1.5 shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-150 space-y-1">
+                  <div className="absolute left-0 sm:left-auto sm:right-0 mt-2 w-72 sm:w-80 max-w-[calc(100vw-2rem)] bg-[#121216]/95 backdrop-blur-xl border border-zinc-700/80 rounded-2xl p-1.5 shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-150 space-y-1">
                     <div className="px-3 py-2 text-[11px] font-bold text-zinc-400 uppercase tracking-wider border-b border-zinc-800/80 flex items-center justify-between">
                       <span className="flex items-center gap-1.5">
                         <Calendar className="w-3 h-3 text-blue-400" />
@@ -494,7 +498,7 @@ export default function AdminDashboard() {
               </button>
 
               {isCategorySortOpen && (
-                <div className="absolute right-0 mt-2 w-52 bg-[#121216]/95 backdrop-blur-xl border border-zinc-700/80 rounded-xl p-1 shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-150 space-y-0.5">
+                <div className="absolute left-0 sm:left-auto sm:right-0 mt-2 w-52 max-w-[calc(100vw-2rem)] bg-[#121216]/95 backdrop-blur-xl border border-zinc-700/80 rounded-xl p-1 shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-150 space-y-0.5">
                   {[
                     { id: 'watch_time', label: 'Watch Time Share' },
                     { id: 'views', label: 'Total Views' },

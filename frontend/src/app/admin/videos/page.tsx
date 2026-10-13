@@ -91,9 +91,9 @@ export default function VideoManagementPage() {
   const [isRowsPerPageOpen, setIsRowsPerPageOpen] = useState(false);
   const rowsPerPageRef = useRef<HTMLDivElement>(null);
 
-  // Click Outside Listener for Popovers
+  // Click Outside Listener for Popovers (Mouse and Touch)
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
       if (statusFilterRef.current && !statusFilterRef.current.contains(e.target as Node)) {
         setIsStatusFilterOpen(false);
       }
@@ -102,7 +102,11 @@ export default function VideoManagementPage() {
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside, { passive: true });
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
   }, []);
 
   // Edit Video Modal State
