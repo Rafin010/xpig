@@ -1,5 +1,7 @@
 from typing import Any, List, Optional
 import os
+import uuid
+import asyncio
 import aiofiles
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, BackgroundTasks
 from sqlalchemy import select, delete, desc, update
@@ -338,45 +340,97 @@ async def admin_direct_upload(
     categories: Optional[str] = Form("All"),
     visibility: Optional[str] = Form("PUBLIC"),
     status: Optional[str] = Form("PUBLISHED"),
+    thumbnail_file: Optional[UploadFile] = File(None),
     thumbnail_url: Optional[str] = Form(None),
     creator_id: Optional[int] = Form(None),
     db: AsyncSession = Depends(get_db)
 ) -> Any:
     """
-    Ultra-fast direct upload from admin's device to Cloudflare R2 storage.
-    Supports multi-category tagging and instant database linking.
+    Ultra-fast direct upload from admin device to Cloudflare R2 storage.
+    Supports active StorageNode resolution, custom thumbnail uploads/URLs,
+    multi-category tagging, and instant database linking.
     """
+    from app.services.storage_service import StorageService
     from app.services.storage import storage_service
     from app.models.storage import StorageNode
     from app.models.taxonomy import Category
     
-    # 1. Save temp file
+    # 1. Save temp video file
     os.makedirs("temp", exist_ok=True)
     temp_ext = os.path.splitext(file.filename or ".mp4")[1] or ".mp4"
     temp_filename = f"temp/{uuid.uuid4()}{temp_ext}"
+    thumb_temp_filename = None
     
-    file_bytes = await file.read()
-    file_size = len(file_bytes)
-    
-    with open(temp_filename, "wb") as f:
-        f.write(file_bytes)
-        
     try:
-        # 2. Upload to Cloudflare R2
-        r2_object_name = f"videos/admin/{uuid.uuid4()}{temp_ext}"
-        r2_video_url = storage_service.upload_file(
-            temp_filename, 
-            object_name=r2_object_name, 
-            content_type=file.content_type or "video/mp4"
-        )
+        file_bytes = await file.read()
+        file_size = len(file_bytes)
         
-        # 3. Create Video Record
+        with open(temp_filename, "wb") as f:
+            f.write(file_bytes)
+            
+        # 2. Resolve Active Storage Node
+        active_node = await StorageService.get_active_node(db, file_size)
+        if not active_node:
+            node_res = await db.execute(select(StorageNode).where(StorageNode.is_full == False).order_by(StorageNode.id.asc()))
+            active_node = node_res.scalars().first()
+            if not active_node:
+                node_res_any = await db.execute(select(StorageNode).order_by(StorageNode.id.asc()))
+                active_node = node_res_any.scalars().first()
+
+        # 3. Upload Video to Cloudflare R2
+        r2_object_name = f"videos/admin/{uuid.uuid4()}{temp_ext}"
+        if active_node:
+            r2_video_url = await asyncio.to_thread(
+                StorageService.upload_file_to_r2,
+                temp_filename,
+                r2_object_name,
+                active_node,
+                file.content_type or "video/mp4"
+            )
+        else:
+            r2_video_url = await asyncio.to_thread(
+                storage_service.upload_file,
+                temp_filename,
+                r2_object_name,
+                file.content_type or "video/mp4"
+            )
+
+        # 4. Handle Custom Thumbnail (Device File or Provided URL)
+        final_thumbnail_url = (thumbnail_url or "").strip()
+        if thumbnail_file and thumbnail_file.filename:
+            thumb_ext = os.path.splitext(thumbnail_file.filename)[1] or ".jpg"
+            thumb_temp_filename = f"temp/thumb_{uuid.uuid4()}{thumb_ext}"
+            thumb_bytes = await thumbnail_file.read()
+            with open(thumb_temp_filename, "wb") as tf:
+                tf.write(thumb_bytes)
+                
+            thumb_object_name = f"thumbnails/admin/{uuid.uuid4()}{thumb_ext}"
+            if active_node:
+                final_thumbnail_url = await asyncio.to_thread(
+                    StorageService.upload_file_to_r2,
+                    thumb_temp_filename,
+                    thumb_object_name,
+                    active_node,
+                    thumbnail_file.content_type or "image/jpeg"
+                )
+            else:
+                final_thumbnail_url = await asyncio.to_thread(
+                    storage_service.upload_file,
+                    thumb_temp_filename,
+                    thumb_object_name,
+                    thumbnail_file.content_type or "image/jpeg"
+                )
+
+        if not final_thumbnail_url:
+            final_thumbnail_url = "https://pub-1080459c8c0a45b9a545f0b3b3fb21c1.r2.dev/videos/default_thumb.jpg"
+            
+        # 5. Create Video Record
         new_video = Video(
             title=title.strip(),
             description=(description or "").strip(),
             visibility=visibility or "PUBLIC",
             status=status or "PUBLISHED",
-            thumbnail_url=thumbnail_url or "https://pub-1080459c8c0a45b9a545f0b3b3fb21c1.r2.dev/videos/default_thumb.jpg",
+            thumbnail_url=final_thumbnail_url,
             preview_url=r2_video_url,
             creator_id=creator_id if (creator_id and creator_id > 0) else 1,
             views=0,
@@ -387,7 +441,7 @@ async def admin_direct_upload(
         await db.commit()
         await db.refresh(new_video)
 
-        # 3.1 Attach Categories in video_categories
+        # 5.1 Attach Categories
         if categories:
             cat_names = [c.strip() for c in categories.split(",") if c.strip()]
             for cat_name in cat_names:
@@ -416,7 +470,7 @@ async def admin_direct_upload(
                     )
             await db.commit()
         
-        # 4. Attach VideoSource
+        # 6. Attach VideoSource
         new_source = VideoSource(
             video_id=new_video.id,
             source_type="DIRECT_URL",
@@ -427,9 +481,7 @@ async def admin_direct_upload(
         )
         db.add(new_source)
         
-        # 5. Update active storage node bytes
-        active_node_res = await db.execute(select(StorageNode).where(StorageNode.is_active == True))
-        active_node = active_node_res.scalars().first()
+        # 7. Update storage node bytes
         if active_node:
             active_node.total_used_bytes = (active_node.total_used_bytes or 0) + file_size
             
@@ -452,10 +504,21 @@ async def admin_direct_upload(
                 "likes": new_video.likes
             }
         }
+    except Exception as err:
+        await db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"স্টোরেজ আপলোড সমস্যা হয়েছে: {str(err)}"
+        )
     finally:
         if os.path.exists(temp_filename):
             try:
                 os.remove(temp_filename)
+            except Exception:
+                pass
+        if thumb_temp_filename and os.path.exists(thumb_temp_filename):
+            try:
+                os.remove(thumb_temp_filename)
             except Exception:
                 pass
 

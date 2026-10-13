@@ -41,7 +41,7 @@ class StorageService:
         return active_node
 
     @staticmethod
-    def upload_file_to_r2(file_path: str, destination_name: str, node: StorageNode) -> str:
+    def upload_file_to_r2(file_path: str, destination_name: str, node: StorageNode, content_type: str = "video/mp4") -> str:
         s3 = boto3.client(
             "s3",
             endpoint_url=f"https://{node.account_id}.r2.cloudflarestorage.com",
@@ -50,5 +50,11 @@ class StorageService:
             region_name="auto"
         )
         
-        s3.upload_file(file_path, node.bucket_name, destination_name)
-        return f"{node.public_url}/{destination_name}"
+        extra_args = {}
+        if content_type:
+            extra_args["ContentType"] = content_type
+            
+        s3.upload_file(file_path, node.bucket_name, destination_name, ExtraArgs=extra_args)
+        base_url = (node.public_url or f"https://{node.bucket_name}.r2.dev").rstrip('/')
+        clean_dest = destination_name.lstrip('/')
+        return f"{base_url}/{clean_dest}"
