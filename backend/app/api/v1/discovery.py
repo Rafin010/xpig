@@ -36,18 +36,21 @@ async def search_videos(
     category_id: Optional[int] = None,
     tag_id: Optional[int] = None,
     category: Optional[str] = None,
+    seed: Optional[int] = Query(None, description="Session seed for deterministic random shuffle across pagination"),
+    sort: Optional[str] = Query("recommended", description="Sorting strategy: recommended, newest, popular"),
     page: int = 1,
     size: int = 24,
     db: AsyncSession = Depends(get_db)
 ) -> Any:
     """
     Search videos by keyword, filter by category or tag.
+    Supports fresh-first prioritized recommendations and dynamic seed-based catalog shuffling.
     Returns paginated results with accurate database total count.
     """
-    from sqlalchemy import func
+    from sqlalchemy import func, case, desc
     from sqlalchemy.orm import selectinload
 
-    base_conditions = []
+    base_conditions = [Video.status == "PUBLISHED", Video.sources.any()]
     
     if q:
         base_conditions.append(or_(
@@ -64,7 +67,8 @@ async def search_videos(
     if category and category != "All":
         base_conditions.append(or_(
             Video.title.ilike(f"%{category}%"),
-            Video.description.ilike(f"%{category}%")
+            Video.description.ilike(f"%{category}%"),
+            Video.categories.any(Category.name.ilike(f"%{category}%"))
         ))
 
     # 1. Real total count from database
@@ -74,12 +78,32 @@ async def search_videos(
     total_res = await db.execute(count_stmt)
     total = total_res.scalar() or 0
 
-    # 2. Query paginated videos (ordered by ID descending so newest videos appear first)
+    # 2. Query paginated videos with intelligent discovery ordering
     stmt = select(Video)
     if base_conditions:
         stmt = stmt.where(and_(*base_conditions))
 
-    stmt = stmt.order_by(desc(Video.id))
+    if sort == "newest" or not seed:
+        stmt = stmt.order_by(desc(Video.id))
+    else:
+        # Hybrid Discovery: Top 8 newest uploads pinned at top, all other catalog videos
+        # dynamically pseudo-randomly shuffled by session seed for fair distributed exposure.
+        newest_subquery = (
+            select(Video.id)
+            .where(and_(*base_conditions))
+            .order_by(desc(Video.id))
+            .limit(8)
+        )
+        newest_ids_res = await db.execute(newest_subquery)
+        newest_ids = newest_ids_res.scalars().all()
+        min_newest_id = min(newest_ids) if newest_ids else 0
+
+        is_pinned = case((Video.id >= min_newest_id, 0), else_=1)
+        pinned_order = case((Video.id >= min_newest_id, Video.id), else_=None).desc()
+        
+        # Pure cryptographic pseudo-random hash across whole catalog: overflow-safe and uniform
+        random_hash = func.md5(func.concat(Video.id, ':', seed)).desc()
+        stmt = stmt.order_by(is_pinned, pinned_order, random_hash)
     
     # Eagerly load relationships to prevent MissingGreenlet errors
     stmt = stmt.options(

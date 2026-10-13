@@ -4,6 +4,8 @@ from sqlalchemy import select, func
 from app.db.session import get_db
 from app.models.video import Video, VideoSource
 from app.models.user import User
+from app.models.sponsor import Sponsor
+from typing import Optional
 import os
 import uuid
 try:
@@ -15,7 +17,10 @@ except ImportError:
 router = APIRouter()
 
 @router.get("/stats")
-async def get_platform_stats(db: AsyncSession = Depends(get_db)):
+async def get_platform_stats(
+    role: Optional[str] = None,
+    db: AsyncSession = Depends(get_db)
+):
     """Return real counts from the database."""
     total_videos = await db.scalar(select(func.count(Video.id)))
     total_users = await db.scalar(select(func.count(User.id)))
@@ -23,12 +28,26 @@ async def get_platform_stats(db: AsyncSession = Depends(get_db)):
     total_views = await db.scalar(select(func.sum(Video.views)))
     total_watch_seconds = await db.scalar(select(func.sum(Video.total_watch_seconds)))
     
-    return {
+    total_revenue_val = await db.scalar(select(func.sum(Sponsor.spent)))
+    sponsor_amount_val = await db.scalar(select(func.sum(Sponsor.budget)))
+    
+    result = {
         "total_videos": total_videos or 0,
         "total_users": total_users or 0,
         "total_views": total_views or 0,
-        "total_watch_seconds": total_watch_seconds or 0
+        "total_watch_seconds": total_watch_seconds or 0,
+        "total_revenue": round(float(total_revenue_val or 0.0), 2),
+        "sponsor_amount": round(float(sponsor_amount_val or 0.0), 2),
     }
+    
+    # If co-founder, reduce revenue/sponsor amounts by 60%
+    if role and role.strip().lower() in ["cofounder", "co-founder"]:
+        if "total_revenue" in result:
+            result["total_revenue"] = round(result["total_revenue"] * 0.4)
+        if "sponsor_amount" in result:
+            result["sponsor_amount"] = round(result["sponsor_amount"] * 0.4)
+            
+    return result
 
 import json
 from datetime import datetime, timezone
@@ -70,6 +89,9 @@ async def add_cofounder(payload: InvitePayload, db: AsyncSession = Depends(get_d
     
     if user:
         user.is_cofounder = True
+        user.is_active = True
+        if not user.hashed_password:
+            user.hashed_password = "PENDING_GOOGLE_LOGIN"
         await db.commit()
         return {"success": True, "message": "Updated existing user to co-founder"}
     
@@ -77,7 +99,8 @@ async def add_cofounder(payload: InvitePayload, db: AsyncSession = Depends(get_d
     user = User(
         email=clean_email,
         username=username,
-        hashed_password="invited_cofounder",
+        hashed_password="PENDING_GOOGLE_LOGIN",
+        is_active=True,
         is_cofounder=True
     )
     db.add(user)
@@ -88,6 +111,12 @@ async def add_cofounder(payload: InvitePayload, db: AsyncSession = Depends(get_d
 async def get_cofounders(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).where(User.is_cofounder == True))
     users = result.scalars().all()
+    
+    # Query video count per creator
+    counts_res = await db.execute(
+        select(Video.creator_id, func.count(Video.id)).group_by(Video.creator_id)
+    )
+    video_counts = {creator_id: count for creator_id, count in counts_res.all()}
     
     data = []
     now = datetime.now(timezone.utc)
@@ -103,7 +132,7 @@ async def get_cofounders(db: AsyncSession = Depends(get_db)):
             is_currently_online = diff_mins < 3
 
         # Check invite acceptance status
-        has_logged_in = bool(u.last_active is not None or (u.hashed_password and u.hashed_password != "invited_cofounder"))
+        has_logged_in = bool(u.last_active is not None or (u.hashed_password and u.hashed_password not in ["invited_cofounder", "PENDING_GOOGLE_LOGIN"]))
         invite_status = "ACCEPTED" if has_logged_in else "PENDING"
         role_title = t.get("role", "Co-Founder")
 
@@ -111,6 +140,7 @@ async def get_cofounders(db: AsyncSession = Depends(get_db)):
             "id": u.id,
             "email": u.email,
             "username": u.username,
+            "avatar_url": u.avatar_url,
             "last_active": u.last_active.isoformat() if u.last_active else None,
             "is_online": is_currently_online,
             "invite_status": invite_status,
@@ -119,7 +149,8 @@ async def get_cofounders(db: AsyncSession = Depends(get_db)):
             "longitude": t.get("lng"),
             "maps_url": t.get("maps_url"),
             "ip": t.get("ip"),
-            "duration_mins": t.get("duration_mins", 0)
+            "duration_mins": t.get("duration_mins", 0),
+            "uploaded_videos_count": video_counts.get(u.id, 0)
         })
     return data
 

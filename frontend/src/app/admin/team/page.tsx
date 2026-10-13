@@ -17,13 +17,16 @@ import {
   AlertTriangle,
   X,
   Shield,
-  UserCheck
+  UserCheck,
+  Video
 } from 'lucide-react';
 
 interface Cofounder {
   id: number;
   email: string;
   username: string;
+  avatar_url?: string;
+  uploaded_videos_count?: number;
   last_active?: string;
   is_online?: boolean;
   invite_status?: 'PENDING' | 'ACCEPTED';
@@ -338,13 +341,22 @@ export default function TeamManagementPage() {
                       {/* Top Row: User Avatar, Email, Status, & 3-Dots */}
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-700 flex items-center justify-center font-bold text-sm text-zinc-200 shrink-0">
-                            {cf.email[0]?.toUpperCase() || 'U'}
+                          <div className="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-700 flex items-center justify-center font-bold text-sm text-zinc-200 shrink-0 overflow-hidden shadow-sm">
+                            {cf.avatar_url ? (
+                              <img 
+                                src={cf.avatar_url} 
+                                alt={cf.username || cf.email} 
+                                className="w-full h-full object-cover" 
+                                referrerPolicy="no-referrer" 
+                              />
+                            ) : (
+                              cf.email[0]?.toUpperCase() || 'U'
+                            )}
                           </div>
                           <div className="min-w-0">
                             <div className="font-bold text-sm text-white flex items-center gap-2 flex-wrap">
                               <span className="truncate max-w-[200px]" title={cf.email}>{cf.email}</span>
-                              <span className="px-2 py-0.5 bg-pink-500/15 text-pink-300 border border-pink-500/30 rounded text-[10px] font-bold">
+                              <span className="px-2.5 py-0.5 bg-gradient-to-r from-amber-400 to-orange-500 text-black rounded-md text-[10px] font-black uppercase tracking-wider shadow-sm">
                                 {cf.role || 'Co-Founder'}
                               </span>
                             </div>
@@ -433,6 +445,22 @@ export default function TeamManagementPage() {
                           </span>
                         </div>
                       </div>
+
+                      {/* Super Admin Only: Co-Founder Video Upload Count Tracker */}
+                      {isSuperAdmin && (
+                        <div className="flex items-center justify-between px-3.5 py-2.5 bg-gradient-to-r from-blue-950/20 via-zinc-900/90 to-pink-950/20 border border-blue-500/20 rounded-xl text-xs">
+                          <div className="flex items-center gap-2">
+                            <Video className="w-4 h-4 text-pink-400 shrink-0" />
+                            <span className="text-zinc-300 font-medium">আপলোডকৃত ভিডিও:</span>
+                            <span className="px-2.5 py-0.5 bg-pink-500/15 border border-pink-500/30 text-pink-400 font-bold rounded-lg text-xs">
+                              {cf.uploaded_videos_count || 0} টি
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-zinc-400 font-mono tracking-wide px-2 py-0.5 bg-zinc-900/90 rounded border border-zinc-800">
+                            Super Admin Only
+                          </span>
+                        </div>
+                      )}
 
                       {/* Bottom Row: GPS Location (Super Admin Only) & Action */}
                       <div className="flex items-center justify-between pt-1">

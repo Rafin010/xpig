@@ -160,8 +160,13 @@ export default function AdminLoginPage() {
       setError(null);
 
       try {
-        // 1. Mandatory Geolocation verification
-        const location = await getDeviceLocation();
+        // 1. Geolocation verification (graceful fallback)
+        let location = { latitude: null as number | null, longitude: null as number | null };
+        try {
+          location = await getDeviceLocation();
+        } catch (locErr) {
+          console.warn('Geolocation detection skipped or denied:', locErr);
+        }
 
         // 2. Verify with backend admin auth endpoint
         const res = await fetch('https://xpig.onrender.com/api/v1/auth/admin/google-verify', {
@@ -299,7 +304,7 @@ export default function AdminLoginPage() {
                         d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
                       />
                     </svg>
-                    <span className="text-sm">Continue with Google (Team Member)</span>
+                    <span className="text-sm font-semibold tracking-wide">Continue with Google</span>
                   </>
                 )}
               </button>

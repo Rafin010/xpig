@@ -32,13 +32,14 @@ async def invite_team_member(
     user = User(
         email=payload.email,
         username=payload.username,
-        hashed_password="invited_password123",
+        hashed_password="PENDING_GOOGLE_LOGIN",
+        is_active=True,
         is_cofounder=True,
         is_superuser=False
     )
     db.add(user)
     await db.commit()
-    return {"message": "Co-founder invited successfully", "password": "invited_password123"}
+    return {"message": "Co-founder invited successfully", "password": "PENDING_GOOGLE_LOGIN"}
 
 @router.delete("/{user_id}")
 async def remove_team_member(

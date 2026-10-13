@@ -11,6 +11,7 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     is_superuser = Column(Boolean, default=False)
     is_cofounder = Column(Boolean, default=False)
+    avatar_url = Column(String, nullable=True)
     age_verification_status = Column(String, default="PENDING")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

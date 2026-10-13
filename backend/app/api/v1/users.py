@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy import delete, or_
+from sqlalchemy import delete, or_, func
 
 from app.db.session import get_db
 from app.models.user import User
@@ -43,6 +43,12 @@ async def get_all_users(
     result = await db.execute(select(User).order_by(User.id.desc()).offset(skip).limit(limit))
     users = result.scalars().all()
     
+    # Query video count per creator
+    counts_res = await db.execute(
+        select(Video.creator_id, func.count(Video.id)).group_by(Video.creator_id)
+    )
+    video_counts = {creator_id: count for creator_id, count in counts_res.all()}
+    
     items = []
     for u in users:
         telemetry = parse_user_telemetry(u)
@@ -61,6 +67,7 @@ async def get_all_users(
             "id": u.id,
             "username": u.username,
             "email": u.email,
+            "avatar_url": getattr(u, 'avatar_url', None),
             "is_active": u.is_active,
             "is_creator": getattr(u, 'is_creator', False),
             "is_cofounder": getattr(u, 'is_cofounder', False),
@@ -68,7 +75,8 @@ async def get_all_users(
             "role": role_title,
             "created_at": u.created_at.isoformat() if u.created_at else None,
             "last_active": u.last_active.isoformat() if u.last_active else None,
-            "ip_address": telemetry.get("ip") or None
+            "ip_address": telemetry.get("ip") or None,
+            "uploaded_videos_count": video_counts.get(u.id, 0)
         })
     return {"items": items}
 

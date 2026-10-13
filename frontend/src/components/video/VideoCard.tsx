@@ -5,10 +5,16 @@ import Link from 'next/link';
 import { useState, useRef, useEffect } from 'react';
 import { encodeVideoId } from '@/lib/obfuscate';
 
-function formatDuration(duration: any, id?: number): string {
+function formatDuration(duration: any): string {
   if (typeof duration === 'number' && duration > 0) {
-    const m = Math.floor(duration / 60);
-    const s = duration % 60;
+    const totalSec = Math.floor(duration);
+    const m = Math.floor(totalSec / 60);
+    const s = totalSec % 60;
+    const h = Math.floor(m / 60);
+    if (h > 0) {
+      const remM = m % 60;
+      return `${h}:${remM < 10 ? '0' : ''}${remM}:${s < 10 ? '0' : ''}${s}`;
+    }
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   }
   if (typeof duration === 'string' && duration && duration !== "0" && duration !== "0:00") {
@@ -20,16 +26,13 @@ function formatDuration(duration: any, id?: number): string {
       return `${m}:${s < 10 ? '0' : ''}${s}`;
     }
   }
-  // Deterministic realistic duration based on video ID seed (ranging from 3:45 to 19:35 mins)
-  const seed = (Number(id || 1) * 163 + 71) % 950 + 225;
-  const m = Math.floor(seed / 60);
-  const s = seed % 60;
-  return `${m}:${s < 10 ? '0' : ''}${s}`;
+  return '';
 }
 
 export default function VideoCard({ video }: { video: any }) {
   const [isHovered, setIsHovered] = useState(false);
   const [hasBeenWatched, setHasBeenWatched] = useState(false);
+  const [exactDuration, setExactDuration] = useState<number>(video?.duration || 0);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   // Check if current user has already watched this video
@@ -101,6 +104,12 @@ export default function VideoCard({ video }: { video: any }) {
             loop 
             playsInline
             preload="metadata"
+            onLoadedMetadata={(e) => {
+              const d = e.currentTarget.duration;
+              if (d && !isNaN(d) && isFinite(d) && d > 0) {
+                setExactDuration(d);
+              }
+            }}
             className={`absolute inset-0 w-full h-full object-cover scale-105 transition-opacity duration-300 pointer-events-none z-10 ${
               isHovered ? 'opacity-100' : 'opacity-0'
             }`}
@@ -132,7 +141,7 @@ export default function VideoCard({ video }: { video: any }) {
         {/* Duration Badge */}
         {!isHovered && (
           <div className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 bg-black/85 rounded text-[11px] font-bold text-white z-20 flex items-center gap-1 backdrop-blur-sm border border-white/10 shadow-sm">
-            {formatDuration(video.duration, video.id)}
+            {formatDuration(exactDuration || video.duration) || 'HD'}
           </div>
         )}
       </div>

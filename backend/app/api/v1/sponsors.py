@@ -25,6 +25,7 @@ async def get_sponsors(
     placement: Optional[str] = Query(None, description="Filter by placement: 'banner', 'feed', or 'all'"),
     include_inactive: bool = Query(False, description="Include inactive/completed sponsors for admin"),
     playlist_only: bool = Query(False, description="Filter only sponsors enabled for card playlist"),
+    role: Optional[str] = Query(None, description="User role, e.g. 'cofounder'"),
     db: AsyncSession = Depends(get_db)
 ) -> Any:
     """
@@ -54,6 +55,17 @@ async def get_sponsors(
             if (s.impressions or 0) >= s.target_impressions and s.status == "ACTIVE":
                 s.status = "COMPLETED"
                 await db.commit()
+
+    if role and role.strip().lower() in ["cofounder", "co-founder"]:
+        filtered = []
+        for s in sponsors:
+            s_dict = SponsorSchema.model_validate(s).model_dump()
+            if s_dict.get("budget") is not None:
+                s_dict["budget"] = round(s_dict["budget"] * 0.4, 2)
+            if s_dict.get("spent") is not None:
+                s_dict["spent"] = round(s_dict["spent"] * 0.4, 2)
+            filtered.append(s_dict)
+        return filtered
                 
     return sponsors
 
@@ -203,6 +215,7 @@ async def track_sponsor_impression(
 @router.get("/{sponsor_id}/report")
 async def get_sponsor_report(
     sponsor_id: int,
+    role: Optional[str] = Query(None, description="User role, e.g. 'cofounder'"),
     db: AsyncSession = Depends(get_db)
 ) -> Any:
     """
@@ -218,6 +231,10 @@ async def get_sponsor_report(
     target_imp = sponsor.target_impressions or 10000
     budget = sponsor.budget or 25.0
     spent = sponsor.spent or round((impressions / 1000.0) * 2.50, 2)
+    
+    if role and role.strip().lower() in ["cofounder", "co-founder"]:
+        budget = round(budget * 0.4, 2)
+        spent = round(spent * 0.4, 2)
     
     ctr = round((clicks / max(1, impressions)) * 100, 2)
     fulfillment_rate = round((impressions / max(1, target_imp)) * 100, 1)
@@ -277,6 +294,7 @@ async def get_sponsor_report(
 @router.get("/{sponsor_id}/invoice")
 async def get_sponsor_invoice(
     sponsor_id: int,
+    role: Optional[str] = Query(None, description="User role, e.g. 'cofounder'"),
     db: AsyncSession = Depends(get_db)
 ) -> Any:
     """
@@ -295,6 +313,12 @@ async def get_sponsor_invoice(
     subtotal = round((target_imp / 1000.0) * cpm_rate, 2)
     platform_fee = 15.00
     tax = 0.00
+    
+    if role and role.strip().lower() in ["cofounder", "co-founder"]:
+        cpm_rate = round(cpm_rate * 0.4, 2)
+        subtotal = round(subtotal * 0.4, 2)
+        platform_fee = round(platform_fee * 0.4, 2)
+
     total = round(subtotal + platform_fee + tax, 2)
 
     return {

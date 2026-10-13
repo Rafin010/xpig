@@ -28,6 +28,8 @@ interface UserData {
   id: number | string;
   username: string;
   email: string;
+  avatar_url?: string;
+  uploaded_videos_count?: number;
   is_active: boolean;
   role?: string;
   created_at?: string;
@@ -363,8 +365,17 @@ export default function UserManagementPage() {
                     {/* User Details */}
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center font-bold text-sm text-zinc-200">
-                          {user.username[0]?.toUpperCase() || 'U'}
+                        <div className="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center font-bold text-sm text-zinc-200 shrink-0 overflow-hidden shadow-sm">
+                          {user.avatar_url ? (
+                            <img 
+                              src={user.avatar_url} 
+                              alt={user.username} 
+                              className="w-full h-full object-cover" 
+                              referrerPolicy="no-referrer" 
+                            />
+                          ) : (
+                            user.username[0]?.toUpperCase() || 'U'
+                          )}
                         </div>
                         <div>
                           <div className="font-bold text-white flex items-center gap-2">
@@ -375,8 +386,13 @@ export default function UserManagementPage() {
                               </span>
                             )}
                           </div>
-                          <div className="text-xs text-zinc-500 font-mono mt-0.5">
-                            {user.email} &bull; ID: #{user.id}
+                          <div className="text-xs text-zinc-500 font-mono mt-0.5 flex items-center gap-2 flex-wrap">
+                            <span>{user.email} &bull; ID: #{user.id}</span>
+                            {isSuperAdmin && typeof user.uploaded_videos_count === 'number' && user.uploaded_videos_count > 0 && (
+                              <span className="text-[10px] text-pink-400 bg-pink-500/10 border border-pink-500/20 px-1.5 py-0.5 rounded font-sans font-bold">
+                                {user.uploaded_videos_count} videos
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>

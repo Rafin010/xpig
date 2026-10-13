@@ -11,17 +11,28 @@ const topVideos: any[] = [];
 const COLORS = ['#3b82f6', '#ec4899', '#8b5cf6'];
 
 export default function AdminDashboard() {
+  const [role, setRole] = useState<string>('superuser');
   const [timeFilter, setTimeFilter] = useState('Week');
   const [durationFilter, setDurationFilter] = useState('All');
   const [stats, setStats] = useState({ total_videos: 0, total_users: 0, total_views: 0 });
   const [traffic, setTraffic] = useState({ live_users: 0, today_visitors: 0, week_visitors: 0, month_visitors: 0 });
 
   useEffect(() => {
-    fetch('https://xpig.onrender.com/api/v1/admin/stats')
+    try {
+      const storedRole = localStorage.getItem('xpig_admin_role');
+      if (storedRole) setRole(storedRole);
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    const roleParam = role === 'cofounder' ? '?role=cofounder' : '';
+    fetch(`https://xpig.onrender.com/api/v1/admin/stats${roleParam}`)
       .then(res => res.json())
       .then(data => setStats(data))
       .catch(err => console.error(err));
-      
+  }, [role]);
+
+  useEffect(() => {
     const fetchTraffic = () => {
       fetch('https://xpig.onrender.com/api/v1/analytics/stats')
         .then(res => res.json())

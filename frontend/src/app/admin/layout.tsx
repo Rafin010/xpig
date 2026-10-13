@@ -15,7 +15,8 @@ import {
   Megaphone,
   UserCheck,
   Menu,
-  X
+  X,
+  Plus
 } from 'lucide-react';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -24,6 +25,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const [role, setRole] = useState<'superuser' | 'cofounder' | 'loading'>('loading');
   const [userEmail, setUserEmail] = useState<string>('');
+  const [userPicture, setUserPicture] = useState<string | null>(null);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
 
   useEffect(() => {
@@ -32,6 +34,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       const storedUser = JSON.parse(localStorage.getItem('xpig_admin_user') || '{}');
       setRole(storedRole === 'cofounder' ? 'cofounder' : 'superuser');
       if (storedUser?.email) setUserEmail(storedUser.email);
+      if (storedUser?.picture || storedUser?.avatar_url) {
+        setUserPicture(storedUser.picture || storedUser.avatar_url);
+      }
     } catch {
       setRole('superuser');
     }
@@ -96,12 +101,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const cofounderLinks = [
     { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/admin/videos', label: 'Videos', icon: Video },
+    { href: '/admin/ads', label: 'Sponsors', icon: Megaphone },
   ];
 
   const navLinks = role === 'cofounder' ? cofounderLinks : superuserLinks;
 
   // Route Guard: Block Co-Founder from accessing restricted pages
-  const restrictedForCofounder = ['/admin/storage', '/admin/team', '/admin/settings', '/admin/ads', '/admin/users'];
+  const restrictedForCofounder = ['/admin/storage', '/admin/team', '/admin/settings', '/admin/users'];
   const isBlocked = role === 'cofounder' && restrictedForCofounder.some(r => pathname === r || pathname.startsWith(`${r}/`));
 
   const handleLogout = async () => {
@@ -138,24 +144,23 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          {role === 'cofounder' ? (
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30">
-              Co-Founder
-            </span>
-          ) : (
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-              Master
-            </span>
-          )}
-          <button 
-            onClick={handleLogout} 
-            className="p-2 text-zinc-400 hover:text-red-400 transition-colors"
-            title="Sign Out"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
-        </div>
+        {/* Right: Sleek Compact Role Avatar (Tapping opens menu drawer) */}
+        <button
+          onClick={() => setIsMobileDrawerOpen(true)}
+          className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-zinc-900/90 border border-zinc-800 text-left active:scale-95 transition-all shadow-sm"
+          aria-label="Open profile and menu"
+        >
+          <span className="text-[9px] font-bold uppercase tracking-wider text-blue-400 whitespace-nowrap">
+            {role === 'cofounder' ? 'Co-Founder' : 'Master'}
+          </span>
+          <div className="w-5 h-5 rounded-full bg-blue-600 text-white font-bold text-[9px] flex items-center justify-center shadow-sm shrink-0 overflow-hidden">
+            {userPicture ? (
+              <img src={userPicture} alt="Profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+            ) : (
+              userEmail ? userEmail[0]?.toUpperCase() : 'C'
+            )}
+          </div>
+        </button>
       </header>
 
       {/* 2. Mobile Slide-Over Drawer Overlay */}
@@ -211,11 +216,38 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           })}
         </nav>
 
-        {/* Mobile Drawer Footer */}
-        <div className="pt-3 border-t border-zinc-800">
+        {/* Mobile Drawer Footer with Role Badge above Logout */}
+        <div className="pt-3 border-t border-zinc-800 space-y-2.5">
+          {/* Professional Compact Role Card */}
+          <div className="p-2.5 rounded-xl bg-zinc-900/90 border border-zinc-800 flex items-center justify-between shadow-sm">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-7 h-7 rounded-lg bg-zinc-800 border border-zinc-700 flex items-center justify-center font-black text-xs text-zinc-200 shrink-0 overflow-hidden">
+                {userPicture ? (
+                  <img src={userPicture} alt="Profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                ) : (
+                  userEmail ? userEmail[0]?.toUpperCase() : 'C'
+                )}
+              </div>
+              <div className="min-w-0">
+                <p className="text-[11px] font-bold text-white truncate max-w-[110px]">{userEmail || 'Admin User'}</p>
+                <p className="text-[9px] text-zinc-500 font-medium">Logged in</p>
+              </div>
+            </div>
+
+            {role === 'cofounder' ? (
+              <span className="px-2 py-0.5 rounded-md bg-blue-600 text-white text-[10px] font-bold uppercase tracking-wider shadow-sm shrink-0 whitespace-nowrap">
+                Co-Founder
+              </span>
+            ) : (
+              <span className="px-2 py-0.5 rounded-md bg-emerald-600 text-white text-[10px] font-bold uppercase tracking-wider shadow-sm shrink-0 whitespace-nowrap">
+                Master
+              </span>
+            )}
+          </div>
+
           <button
             onClick={handleLogout}
-            className="flex items-center justify-center gap-2 px-3.5 py-3 rounded-xl font-bold text-xs text-red-400 hover:bg-red-950/20 bg-zinc-900 w-full transition-colors"
+            className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl font-bold text-xs text-red-400 hover:bg-red-950/20 bg-zinc-900/80 border border-zinc-800/80 w-full transition-colors active:scale-95"
           >
             <LogOut className="w-4 h-4" />
             <span>Sign Out Control Panel</span>
@@ -241,9 +273,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           {/* Role Status Pill */}
           <div className="mt-3">
             {role === 'cofounder' ? (
-              <div className="px-2.5 py-1 bg-amber-500/10 border border-amber-500/30 rounded-lg text-[10px] font-bold text-amber-400 flex items-center gap-1.5">
-                <UserCheck className="w-3 h-3" />
-                <span>Co-Founder (Limited Access)</span>
+              <div className="px-2.5 py-1.5 bg-blue-600 rounded-lg text-[10px] font-bold text-white flex items-center gap-1.5 shadow-sm uppercase tracking-wide">
+                <UserCheck className="w-3.5 h-3.5 text-white stroke-[2.5]" />
+                <span>Co-Founder</span>
               </div>
             ) : (
               <div className="px-2.5 py-1 bg-zinc-800 border border-zinc-700/80 rounded-lg text-[10px] font-bold text-zinc-300 flex items-center gap-1.5">
@@ -277,10 +309,37 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </nav>
 
         {/* Sidebar Footer */}
-        <div className="p-3 border-t border-zinc-800/80">
+        <div className="p-3 border-t border-zinc-800/80 space-y-2">
+          {/* User Profile Card */}
+          <div className="p-2.5 rounded-xl bg-zinc-900/90 border border-zinc-800 flex items-center justify-between shadow-sm">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-lg bg-zinc-800 border border-zinc-700 flex items-center justify-center font-black text-xs text-zinc-200 shrink-0 overflow-hidden">
+                {userPicture ? (
+                  <img src={userPicture} alt="Profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                ) : (
+                  userEmail ? userEmail[0]?.toUpperCase() : 'C'
+                )}
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-white truncate max-w-[105px]">{userEmail || 'Admin User'}</p>
+                <p className="text-[10px] text-zinc-500 font-medium">Logged in</p>
+              </div>
+            </div>
+
+            {role === 'cofounder' ? (
+              <span className="px-2 py-0.5 rounded-md bg-blue-600 text-white text-[9px] font-bold uppercase tracking-wider shadow-sm shrink-0 whitespace-nowrap">
+                Co-Founder
+              </span>
+            ) : (
+              <span className="px-2 py-0.5 rounded-md bg-emerald-600 text-white text-[9px] font-bold uppercase tracking-wider shadow-sm shrink-0 whitespace-nowrap">
+                Master
+              </span>
+            )}
+          </div>
+
           <button
             onClick={handleLogout}
-            className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl transition-colors font-medium text-xs text-red-400 hover:text-red-300 hover:bg-red-950/20 w-full"
+            className="flex items-center gap-2.5 px-3 py-2 rounded-xl transition-colors font-medium text-xs text-red-400 hover:text-red-300 hover:bg-red-950/20 w-full"
           >
             <LogOut className="w-4 h-4" />
             <span>Sign Out</span>
@@ -307,11 +366,78 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </Link>
           </div>
         ) : (
-          <div className="p-4 sm:p-6 md:p-8 max-w-7xl mx-auto pb-24 md:pb-16 w-full">
+          <div className="p-4 sm:p-6 md:p-8 max-w-7xl mx-auto pb-28 md:pb-16 w-full">
             {children}
           </div>
         )}
       </main>
+
+      {/* 6. Admin Mobile App-Style Bottom Navigation Bar (md:hidden) */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-[#111114] border-t border-zinc-800/80 z-40 select-none pb-[env(safe-area-inset-bottom,0px)] shadow-[0_-4px_30px_rgba(0,0,0,0.95)]">
+        <div className="h-14 flex items-center justify-around px-2">
+          {/* Dashboard */}
+          <Link
+            href="/admin"
+            className={`flex flex-col items-center justify-center flex-1 h-full space-y-1 transition-all ${
+              pathname === '/admin' ? 'text-blue-500 font-bold scale-105' : 'text-zinc-400 hover:text-zinc-200'
+            }`}
+          >
+            <LayoutDashboard className="w-5 h-5" />
+            <span className="text-[10px] font-medium tracking-tight">Overview</span>
+          </Link>
+
+          {/* Videos */}
+          <Link
+            href="/admin/videos"
+            className={`flex flex-col items-center justify-center flex-1 h-full space-y-1 transition-all ${
+              pathname === '/admin/videos' && !pathname.includes('upload') ? 'text-blue-500 font-bold scale-105' : 'text-zinc-400 hover:text-zinc-200'
+            }`}
+          >
+            <Video className="w-5 h-5" />
+            <span className="text-[10px] font-medium tracking-tight">Videos</span>
+          </Link>
+
+          {/* Quick Access Center '+' Upload Video Button */}
+          <Link
+            href="/admin/videos/upload"
+            aria-label="Upload Video to Platform"
+            className="flex flex-col items-center justify-center flex-1 h-full space-y-1 transition-all group"
+          >
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shadow-md transition-transform ${
+              pathname === '/admin/videos/upload'
+                ? 'bg-blue-600 shadow-blue-900/50 scale-105 border-2 border-white'
+                : 'bg-blue-600 hover:bg-blue-500 shadow-blue-900/40 border border-blue-400/40 group-active:scale-95'
+            }`}>
+              <Plus className="w-5 h-5 text-white stroke-[2.8]" />
+            </div>
+            <span className={`text-[10px] font-bold tracking-tight ${
+              pathname === '/admin/videos/upload' ? 'text-blue-400' : 'text-zinc-400'
+            }`}>
+              Upload
+            </span>
+          </Link>
+
+          {/* Sponsors */}
+          <Link
+            href="/admin/ads"
+            className={`flex flex-col items-center justify-center flex-1 h-full space-y-1 transition-all ${
+              pathname.startsWith('/admin/ads') ? 'text-blue-500 font-bold scale-105' : 'text-zinc-400 hover:text-zinc-200'
+            }`}
+          >
+            <Megaphone className="w-5 h-5" />
+            <span className="text-[10px] font-medium tracking-tight">Sponsors</span>
+          </Link>
+
+          {/* Menu Drawer Toggle */}
+          <button
+            onClick={() => setIsMobileDrawerOpen(true)}
+            className="flex flex-col items-center justify-center flex-1 h-full space-y-1 text-zinc-400 hover:text-zinc-200 transition-all"
+          >
+            <Menu className="w-5 h-5" />
+            <span className="text-[10px] font-medium tracking-tight">More</span>
+          </button>
+        </div>
+      </nav>
     </div>
   );
 }

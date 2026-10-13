@@ -34,7 +34,7 @@ async def get_videos(
     if status and status.upper() != "ALL":
         stmt = stmt.where(Video.status == status.upper())
     elif not status:
-        stmt = stmt.where(Video.status == "PUBLISHED")
+        stmt = stmt.where(Video.status == "PUBLISHED", Video.sources.any())
         
     stmt = stmt.order_by(desc(Video.id)).offset(skip).limit(limit)
     result = await db.execute(stmt)
@@ -335,16 +335,20 @@ async def admin_direct_upload(
     file: UploadFile = File(...),
     title: str = Form(...),
     description: Optional[str] = Form(""),
+    categories: Optional[str] = Form("All"),
     visibility: Optional[str] = Form("PUBLIC"),
     status: Optional[str] = Form("PUBLISHED"),
     thumbnail_url: Optional[str] = Form(None),
+    creator_id: Optional[int] = Form(None),
     db: AsyncSession = Depends(get_db)
 ) -> Any:
     """
     Ultra-fast direct upload from admin's device to Cloudflare R2 storage.
+    Supports multi-category tagging and instant database linking.
     """
     from app.services.storage import storage_service
     from app.models.storage import StorageNode
+    from app.models.taxonomy import Category
     
     # 1. Save temp file
     os.makedirs("temp", exist_ok=True)
@@ -374,7 +378,7 @@ async def admin_direct_upload(
             status=status or "PUBLISHED",
             thumbnail_url=thumbnail_url or "https://pub-1080459c8c0a45b9a545f0b3b3fb21c1.r2.dev/videos/default_thumb.jpg",
             preview_url=r2_video_url,
-            creator_id=1,
+            creator_id=creator_id if (creator_id and creator_id > 0) else 1,
             views=0,
             likes=0,
             total_watch_seconds=0
@@ -382,6 +386,35 @@ async def admin_direct_upload(
         db.add(new_video)
         await db.commit()
         await db.refresh(new_video)
+
+        # 3.1 Attach Categories in video_categories
+        if categories:
+            cat_names = [c.strip() for c in categories.split(",") if c.strip()]
+            for cat_name in cat_names:
+                if not cat_name or cat_name.lower() == "all":
+                    continue
+                cat_res = await db.execute(select(Category).where(Category.name.ilike(cat_name)))
+                cat_obj = cat_res.scalars().first()
+                if not cat_obj:
+                    cat_obj = Category(name=cat_name)
+                    db.add(cat_obj)
+                    await db.commit()
+                    await db.refresh(cat_obj)
+                
+                assoc_res = await db.execute(
+                    select(video_category_table).where(
+                        video_category_table.c.video_id == new_video.id,
+                        video_category_table.c.category_id == cat_obj.id
+                    )
+                )
+                if not assoc_res.first():
+                    await db.execute(
+                        video_category_table.insert().values(
+                            video_id=new_video.id,
+                            category_id=cat_obj.id
+                        )
+                    )
+            await db.commit()
         
         # 4. Attach VideoSource
         new_source = VideoSource(

@@ -24,7 +24,7 @@ def _run_ffmpeg(input_path, output_path, watermark_path):
         "ffmpeg", "-y", "-i", input_path, "-i", watermark_path,
         "-filter_complex", "[1:v]scale=w=trunc(iw*0.07/2)*2:h=-2,format=rgba,colorchannelmixer=aa=0.40[wm];[0:v][wm]overlay=W-w-15:H-h-15:eof_action=repeat[outv]",
         "-map", "[outv]", "-map", "0:a?",
-        "-c:v", "libx264", "-preset", "veryfast", "-crf", "23",
+        "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-crf", "23",
         "-c:a", "copy",
         output_path
     ]

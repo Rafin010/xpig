@@ -1,6 +1,14 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
-import { Player } from '@/components/video/Player';
+import dynamic from 'next/dynamic';
+const Player = dynamic(() => import('@/components/video/Player').then((m) => m.Player), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full aspect-video bg-black flex items-center justify-center md:rounded-xl">
+      <div className="w-8 h-8 rounded-full border-2 border-pink-500 border-t-transparent animate-spin" />
+    </div>
+  ),
+});
 import { Heart, Share2, Check, CheckCircle2, Eye } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -13,10 +21,16 @@ import { decodeVideoId, encodeVideoId } from '@/lib/obfuscate';
 import { FloatingHearts, playDopamineChime } from '@/components/video/FloatingHearts';
 import { ShareModal } from '@/components/video/ShareModal';
 
-function formatDuration(duration: any, id?: number): string {
+function formatDuration(duration: any): string {
   if (typeof duration === 'number' && duration > 0) {
-    const m = Math.floor(duration / 60);
-    const s = duration % 60;
+    const totalSec = Math.floor(duration);
+    const m = Math.floor(totalSec / 60);
+    const s = totalSec % 60;
+    const h = Math.floor(m / 60);
+    if (h > 0) {
+      const remM = m % 60;
+      return `${h}:${remM < 10 ? '0' : ''}${remM}:${s < 10 ? '0' : ''}${s}`;
+    }
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   }
   if (typeof duration === 'string' && duration && duration !== "0" && duration !== "0:00") {
@@ -28,11 +42,7 @@ function formatDuration(duration: any, id?: number): string {
       return `${m}:${s < 10 ? '0' : ''}${s}`;
     }
   }
-  // Deterministic realistic duration based on video ID seed (ranging from 3:45 to 19:35 mins)
-  const seed = (Number(id || 1) * 163 + 71) % 950 + 225;
-  const m = Math.floor(seed / 60);
-  const s = seed % 60;
-  return `${m}:${s < 10 ? '0' : ''}${s}`;
+  return '';
 }
 
 export default function WatchClient({ videoId }: { videoId: string }) {
@@ -98,8 +108,10 @@ export default function WatchClient({ videoId }: { videoId: string }) {
           }
         }
 
-        // Fetch related videos
-        const relRes = await fetch(`https://xpig.onrender.com/api/v1/discover/search`);
+        // Fetch dynamically shuffled related recommendations
+        const randomSeed = Math.floor(Math.random() * 900000) + 100000;
+        const apiBase = process.env.NEXT_PUBLIC_API_URL || (typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://127.0.0.1:8000' : 'https://xpig.onrender.com');
+        const relRes = await fetch(`${apiBase}/api/v1/discover/search?size=24&seed=${randomSeed}`);
         if (relRes.ok) {
           const rData = await relRes.json();
           // Filter out current video
@@ -326,6 +338,7 @@ export default function WatchClient({ videoId }: { videoId: string }) {
               {realVideoUrl ? (
                 <Player 
                   src={realVideoUrl}
+                  fallbackSrc={videoData?.preview_url || undefined}
                   autoPlay={true} 
                   title={videoData?.title || `Video ${numericId}`} 
                   poster={videoData?.thumbnail_url || undefined}
@@ -458,7 +471,7 @@ export default function WatchClient({ videoId }: { videoId: string }) {
                     </div>
                   )}
                   <div className="absolute bottom-1 right-1 bg-black/80 px-1.5 py-0.5 rounded text-[10px] font-bold text-white tracking-wide">
-                    {formatDuration(video.duration, video.id)}
+                    {formatDuration(video.duration) || 'HD'}
                   </div>
                 </div>
                 

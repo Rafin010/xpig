@@ -65,10 +65,21 @@ interface SponsorCampaign {
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://xpig.onrender.com';
 
 export default function AdManagementPage() {
+  const [role, setRole] = useState<string>('superuser');
   const [sponsors, setSponsors] = useState<SponsorCampaign[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'all' | 'banner' | 'feed'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    try {
+      const storedRole = localStorage.getItem('xpig_admin_role');
+      if (storedRole) setRole(storedRole);
+    } catch {}
+  }, []);
+
+  const isCofounder = role === 'cofounder';
+  const displayMultiplier = isCofounder ? 0.4 : 1.0;
 
   // Active 3-dots Menu State
   const [activeMenuId, setActiveMenuId] = useState<number | null>(null);
@@ -212,11 +223,11 @@ export default function AdManagementPage() {
     });
   }, [sponsors, activeTab, searchQuery]);
 
-  // Aggregate Metrics matching reference screenshot
-  const totalSpend = sponsors.reduce((acc, s) => acc + (s.spent || ((s.impressions || 0) / 1000.0) * 2.50), 0);
-  const totalBudget = sponsors.reduce((acc, s) => acc + (s.budget || 50.0), 0);
-  const totalImpressions = sponsors.reduce((acc, s) => acc + (s.impressions || 0), 0);
-  const totalClicks = sponsors.reduce((acc, s) => acc + (s.clicks || 0), 0);
+  // Aggregate Metrics matching reference screenshot (Co-Founders see 60% less)
+  const totalSpend = sponsors.reduce((acc, s) => acc + (s.spent || ((s.impressions || 0) / 1000.0) * 2.50), 0) * displayMultiplier;
+  const totalBudget = sponsors.reduce((acc, s) => acc + (s.budget || 50.0), 0) * displayMultiplier;
+  const totalImpressions = Math.round(sponsors.reduce((acc, s) => acc + (s.impressions || 0), 0) * displayMultiplier);
+  const totalClicks = Math.round(sponsors.reduce((acc, s) => acc + (s.clicks || 0), 0) * displayMultiplier);
   const activeCount = sponsors.filter(s => s.is_active && s.status === 'ACTIVE').length;
   const overallCtr = totalImpressions > 0 ? ((totalClicks / totalImpressions) * 100).toFixed(2) : '0.00';
 
@@ -239,20 +250,24 @@ export default function AdManagementPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => setIsPlaylistModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700/80 text-zinc-200 rounded-xl font-bold transition-all text-xs shadow-md"
-          >
-            <Layers className="w-4 h-4 text-pink-400" />
-            Card Ads Playlist ({sponsors.filter(s => s.in_card_playlist).length})
-          </button>
-          <Link 
-            href="/admin/ads/create" 
-            className="flex items-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-black rounded-xl font-extrabold transition-all shadow-lg shadow-emerald-950/40 text-xs active:scale-[0.98]"
-          >
-            <Plus className="w-4 h-4 stroke-[3]" />
-            Create Campaign
-          </Link>
+          {role !== 'cofounder' && (
+            <button
+              onClick={() => setIsPlaylistModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700/80 text-zinc-200 rounded-xl font-bold transition-all text-xs shadow-md"
+            >
+              <Layers className="w-4 h-4 text-pink-400" />
+              Card Ads Playlist ({sponsors.filter(s => s.in_card_playlist).length})
+            </button>
+          )}
+          {role !== 'cofounder' && (
+            <Link 
+              href="/admin/ads/create" 
+              className="flex items-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-black rounded-xl font-extrabold transition-all shadow-lg shadow-emerald-950/40 text-xs active:scale-[0.98]"
+            >
+              <Plus className="w-4 h-4 stroke-[3]" />
+              Create Campaign
+            </Link>
+          )}
         </div>
       </div>
 
@@ -446,13 +461,13 @@ export default function AdManagementPage() {
                 </tr>
               ) : (
                 filteredSponsors.map((sp) => {
-                  const targetImp = sp.target_impressions || 10000;
-                  const deliveredImp = sp.impressions || 0;
+                  const targetImp = Math.round((sp.target_impressions || 10000) * displayMultiplier);
+                  const deliveredImp = Math.round((sp.impressions || 0) * displayMultiplier);
                   const fulfillmentPct = Math.min(100, Math.round((deliveredImp / Math.max(1, targetImp)) * 100));
-                  const clicks = sp.clicks || 0;
+                  const clicks = Math.round((sp.clicks || 0) * displayMultiplier);
                   const ctr = deliveredImp > 0 ? ((clicks / deliveredImp) * 100).toFixed(1) : '0.0';
-                  const budget = sp.budget || 25.0;
-                  const spent = sp.spent || roundNumber(((deliveredImp / 1000.0) * 2.50));
+                  const budget = (sp.budget || 25.0) * displayMultiplier;
+                  const spent = (sp.spent || roundNumber(((deliveredImp / 1000.0) * 2.50))) * displayMultiplier;
                   const spentPct = Math.min(100, Math.round((spent / Math.max(1, budget)) * 100));
 
                   // Calculate health score (80 - 95 range based on fulfillment & status)
@@ -464,8 +479,11 @@ export default function AdManagementPage() {
                       {/* STATUS TOGGLE */}
                       <td className="px-5 py-4 text-center">
                         <button
+                          disabled={role === 'cofounder'}
                           onClick={() => handleToggle(sp.id)}
                           className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${
+                            role === 'cofounder' ? 'cursor-default opacity-80 ' : ''
+                          }${
                             sp.is_active && sp.status === 'ACTIVE'
                               ? 'bg-blue-500/15 border border-blue-500/30 text-blue-400 hover:bg-blue-500/25'
                               : sp.status === 'COMPLETED'
@@ -635,27 +653,31 @@ export default function AdManagementPage() {
                                   <span>Official Billing Invoice</span>
                                 </button>
 
-                                <button
-                                  onClick={() => {
-                                    setActiveMenuId(null);
-                                    handlePlaylistToggle(sp.id, !sp.in_card_playlist);
-                                  }}
-                                  className="w-full px-3.5 py-2.5 hover:bg-zinc-800 text-zinc-300 flex items-center gap-2.5"
-                                >
-                                  <Layers className="w-4 h-4 text-purple-400" />
-                                  <span>{sp.in_card_playlist ? 'Remove from Card Playlist' : 'Add to Card Playlist'}</span>
-                                </button>
+                                 {role !== 'cofounder' && (
+                                  <button
+                                    onClick={() => {
+                                      setActiveMenuId(null);
+                                      handlePlaylistToggle(sp.id, !sp.in_card_playlist);
+                                    }}
+                                    className="w-full px-3.5 py-2.5 hover:bg-zinc-800 text-zinc-300 flex items-center gap-2.5"
+                                  >
+                                    <Layers className="w-4 h-4 text-purple-400" />
+                                    <span>{sp.in_card_playlist ? 'Remove from Card Playlist' : 'Add to Card Playlist'}</span>
+                                  </button>
+                                )}
 
-                                <button
-                                  onClick={() => {
-                                    setActiveMenuId(null);
-                                    setDeletingSponsor(sp);
-                                  }}
-                                  className="w-full px-3.5 py-2.5 hover:bg-rose-950/40 text-rose-400 flex items-center gap-2.5 border-t border-zinc-800/80"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                  <span>Delete Campaign</span>
-                                </button>
+                                {role !== 'cofounder' && (
+                                  <button
+                                    onClick={() => {
+                                      setActiveMenuId(null);
+                                      setDeletingSponsor(sp);
+                                    }}
+                                    className="w-full px-3.5 py-2.5 hover:bg-rose-950/40 text-rose-400 flex items-center gap-2.5 border-t border-zinc-800/80"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                    <span>Delete Campaign</span>
+                                  </button>
+                                )}
                               </div>
                             )}
                           </div>

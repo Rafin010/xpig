@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useGoogleLogin } from '@react-oauth/google';
 
@@ -43,6 +43,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = () => {
     setUser(null);
     localStorage.removeItem('xpig_user');
+    localStorage.removeItem('xpig_admin_session');
+    localStorage.removeItem('xpig_admin_role');
+    localStorage.removeItem('xpig_admin_user');
+    document.cookie = 'xpig_admin_session=; path=/; max-age=0';
   };
 
   const loginWithGoogle = useGoogleLogin({
@@ -58,22 +62,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            access_token: tokenResponse.access_token,
             email: userInfo.email,
             name: userInfo.name,
             picture: userInfo.picture,
           })
         });
-        const backendUser = await backendRes.json();
+        const backendData = await backendRes.json();
+        const bUser = backendData.user || backendData;
 
         login({
-          id: backendUser.id,
+          id: bUser.id,
           name: userInfo.name,
           email: userInfo.email,
           picture: userInfo.picture,
           sub: userInfo.sub || '',
-          is_superuser: backendUser.is_superuser,
-          is_cofounder: backendUser.is_cofounder
+          is_superuser: bUser.is_superuser,
+          is_cofounder: bUser.is_cofounder
         });
+
+        // Grant Co-Founder or Admin panel access seamlessly
+        if (bUser.is_cofounder || bUser.is_superuser) {
+          const adminRole = bUser.is_superuser ? 'superuser' : 'cofounder';
+          document.cookie = 'xpig_admin_session=authenticated_admin; path=/; max-age=2592000; SameSite=Lax';
+          localStorage.setItem('xpig_admin_session', 'authenticated_admin');
+          localStorage.setItem('xpig_admin_role', adminRole);
+          localStorage.setItem('xpig_admin_user', JSON.stringify({
+            id: bUser.id,
+            email: userInfo.email,
+            username: bUser.username || userInfo.name,
+            picture: userInfo.picture || bUser.avatar_url || null,
+            avatar_url: userInfo.picture || bUser.avatar_url || null,
+            role: adminRole,
+            is_cofounder: bUser.is_cofounder,
+            is_superuser: bUser.is_superuser,
+          }));
+        }
       } catch (err) {
         console.error('Google login failed', err);
       }

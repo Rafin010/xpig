@@ -9,7 +9,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   const { isCollapsed } = useSidebar();
 
   return (
-    <div className="flex flex-1 pt-16 md:pb-0 pb-16">
+    <div className="flex flex-1 pt-16 pb-16 sm:pb-0">
       <Suspense fallback={<aside className="hidden lg:block w-72 bg-[#181818] border-r border-zinc-800/80" />}>
         <Sidebar />
       </Suspense>

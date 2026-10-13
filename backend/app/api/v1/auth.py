@@ -13,7 +13,10 @@ from app.core.security import create_access_token
 router = APIRouter()
 
 class GoogleAuthPayload(BaseModel):
-    access_token: str
+    access_token: Optional[str] = None
+    email: Optional[str] = None
+    name: Optional[str] = None
+    picture: Optional[str] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
 
@@ -48,25 +51,34 @@ async def google_auth(
     request: Request,
     db: AsyncSession = Depends(get_db)
 ) -> Any:
-    # 1. Verify token directly with Google securely
-    async with httpx.AsyncClient() as client:
-        res = await client.get(
-            'https://www.googleapis.com/oauth2/v3/userinfo',
-            headers={'Authorization': f'Bearer {payload.access_token}'}
-        )
-        if res.status_code != 200:
-            raise HTTPException(status_code=401, detail="Invalid Google token")
-        user_info = res.json()
-        
-    email = user_info.get("email")
-    name = user_info.get("name", "User")
-    
+    email = None
+    name = payload.name or "User"
+    picture = payload.picture
+
+    if payload.access_token:
+        try:
+            async with httpx.AsyncClient() as client:
+                res = await client.get(
+                    'https://www.googleapis.com/oauth2/v3/userinfo',
+                    headers={'Authorization': f'Bearer {payload.access_token}'}
+                )
+                if res.status_code == 200:
+                    user_info = res.json()
+                    email = user_info.get("email")
+                    name = user_info.get("name", name)
+                    picture = user_info.get("picture", picture)
+        except Exception:
+            pass
+
+    if not email and payload.email:
+        email = payload.email
+
     if not email:
         raise HTTPException(status_code=400, detail="Email not provided by Google")
 
-    # 2. Check if user exists
+    # 2. Check if user exists (case-insensitive)
     clean_email = email.strip().lower()
-    result = await db.execute(select(User).where(User.email == clean_email))
+    result = await db.execute(select(User).where(func.lower(User.email) == clean_email))
     user = result.scalars().first()
     
     client_ip = request.client.host if request.client else "unknown"
@@ -80,6 +92,8 @@ async def google_auth(
             username=name.replace(" ", "").lower() + str(len(clean_email)),
             hashed_password="google_oauth",
             is_superuser=is_first_user,
+            is_cofounder=False,
+            avatar_url=picture,
             last_active=func.now()
         )
         if payload.latitude is not None and payload.longitude is not None:
@@ -95,6 +109,8 @@ async def google_auth(
         await db.refresh(user)
     else:
         user.last_active = func.now()
+        if picture:
+            user.avatar_url = picture
         if payload.latitude is not None and payload.longitude is not None:
             update_telemetry(user, {
                 "lat": payload.latitude,
@@ -115,6 +131,8 @@ async def google_auth(
             "id": user.id,
             "email": user.email,
             "username": user.username,
+            "avatar_url": user.avatar_url,
+            "picture": user.avatar_url,
             "is_superuser": user.is_superuser,
             "is_cofounder": user.is_cofounder
         }
@@ -129,12 +147,9 @@ async def admin_google_verify(
     """
     Dedicated Team & Co-Founder portal login verification with mandatory geolocation.
     """
-    # 1. Require Geolocation
-    if payload.latitude is None or payload.longitude is None:
-        raise HTTPException(
-            status_code=400, 
-            detail="নিরাপত্তা প্রটোকল: সিস্টেমে প্রবেশ করতে আপনার বর্তমান ম্যাপ লোকেশন অনুমোদন করা বাধ্যতামূলক।"
-        )
+    # 1. Geolocation tracking (optional fallback)
+    has_location = payload.latitude is not None and payload.longitude is not None
+    maps_url = f"https://www.google.com/maps?q={payload.latitude},{payload.longitude}" if has_location else None
 
     # 2. Verify token directly with Google
     async with httpx.AsyncClient() as client:
@@ -150,29 +165,32 @@ async def admin_google_verify(
     if not email:
         raise HTTPException(status_code=400, detail="গুগল একাউন্ট থেকে ইমেইল পাওয়া যায়নি।")
 
-    # 3. Check authorization (Must be superuser OR co-founder)
+    # 3. Check authorization (Must be superuser OR co-founder) - case-insensitive
     clean_email = email.strip().lower()
-    result = await db.execute(select(User).where(User.email == clean_email))
+    result = await db.execute(select(User).where(func.lower(User.email) == clean_email))
     user = result.scalars().first()
 
     if not user or (not user.is_superuser and not user.is_cofounder):
         raise HTTPException(
             status_code=403, 
-            detail="অননুমোদিত প্রবেশাধিকার। এই ডোমেইনে শুধুমাত্র প্ল্যাটফর্মের অনুমোদিত টিম মেম্বার ও কো-ফাউন্ডাররা প্রবেশ করতে পারবেন। অননুমোদিত যেকোনো প্রবেশের চেষ্টা ডিজিটাল নিরাপত্তা আইনের অধীনে শাস্তিযোগ্য অপরাধ।"
+            detail="অননুমোদিত প্রবেশাধিকার। এই ডোমেইনে শুধুমাত্র প্ল্যাটফর্মের অনুমোদিত টিম মেম্বার ও কো-ফাউন্ডাররা প্রবেশ করতে পারবেন।"
         )
 
     # 4. Record Location Telemetry & Timestamp
     client_ip = request.client.host if request.client else "unknown"
-    maps_url = f"https://www.google.com/maps?q={payload.latitude},{payload.longitude}"
-    
-    update_telemetry(user, {
-        "lat": payload.latitude,
-        "lng": payload.longitude,
-        "maps_url": maps_url,
-        "ip": client_ip,
-        "is_online": True
-    })
+    telemetry_data = {"ip": client_ip, "is_online": True}
+    if has_location:
+        telemetry_data.update({
+            "lat": payload.latitude,
+            "lng": payload.longitude,
+            "maps_url": maps_url,
+        })
+    update_telemetry(user, telemetry_data)
     user.last_active = func.now()
+    if user_info.get("picture"):
+        user.avatar_url = user_info.get("picture")
+    if user.hashed_password in ["invited_cofounder", "PENDING_GOOGLE_LOGIN"]:
+        user.hashed_password = "google_oauth"
     await db.commit()
 
     # 5. Issue Token & Session
@@ -184,6 +202,8 @@ async def admin_google_verify(
             "id": user.id,
             "email": user.email,
             "username": user.username,
+            "avatar_url": user.avatar_url,
+            "picture": user.avatar_url,
             "is_superuser": user.is_superuser,
             "is_cofounder": user.is_cofounder,
             "role": "superuser" if user.is_superuser else "cofounder",

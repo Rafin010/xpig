@@ -50,9 +50,32 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://xpig.onrender.com';
 
 export default function VideoManagementPage() {
   const { user } = useAuth();
+  const [role, setRole] = useState<string>('superuser');
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      const storedRole = localStorage.getItem('xpig_admin_role');
+      if (storedRole) setRole(storedRole);
+    } catch {}
+  }, []);
+
+  // Quick Access Auto-Open Upload Modal from Mobile Bottom Nav
+  useEffect(() => {
+    const checkUploadParam = () => {
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('upload') === 'true') {
+          window.location.href = '/admin/videos/upload';
+        }
+      }
+    };
+    checkUploadParam();
+    window.addEventListener('popstate', checkUploadParam);
+    return () => window.removeEventListener('popstate', checkUploadParam);
+  }, []);
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
@@ -405,24 +428,16 @@ export default function VideoManagementPage() {
             className="p-2.5 sm:p-3 bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-xl transition-all shadow-sm flex items-center gap-2 text-xs sm:text-sm font-medium"
             title="Refresh Videos"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin text-pink-500" : ""}`} />
+            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin text-blue-500" : ""}`} />
             Refresh
           </button>
-          <button 
-            onClick={() => {
-              setUploadFile(null);
-              setUploadTitle('');
-              setUploadDescription('');
-              setUploadError(null);
-              setUploadProgress(0);
-              setUploadSuccess(false);
-              setIsUploadModalOpen(true);
-            }}
-            className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 bg-gradient-to-r from-pink-600 to-rose-600 hover:from-pink-500 hover:to-rose-500 text-white rounded-xl font-bold text-xs sm:text-sm transition-all shadow-lg shadow-pink-900/25 active:scale-[0.98]"
+          <Link 
+            href="/admin/videos/upload"
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-xs sm:text-sm transition-all shadow-md active:scale-[0.98]"
           >
             <UploadCloud className="w-4 h-4 sm:w-5 sm:h-5" />
             Upload from Device
-          </button>
+          </Link>
         </div>
       </div>
 
@@ -771,13 +786,15 @@ export default function VideoManagementPage() {
                           >
                             <Edit3 className="w-4 h-4" />
                           </button>
-                          <button 
-                            onClick={() => setDeletingVideo(vid)}
-                            className="p-2 text-zinc-400 hover:text-rose-400 bg-zinc-900/80 hover:bg-rose-950/40 rounded-lg border border-zinc-800 hover:border-rose-900/60 transition-all shadow-sm" 
-                            title="Permanently Delete Video"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          {role !== 'cofounder' && (
+                            <button 
+                              onClick={() => setDeletingVideo(vid)}
+                              className="p-2 text-zinc-400 hover:text-rose-400 bg-zinc-900/80 hover:bg-rose-950/40 rounded-lg border border-zinc-800 hover:border-rose-900/60 transition-all shadow-sm" 
+                              title="Permanently Delete Video"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
                       </td>
 
