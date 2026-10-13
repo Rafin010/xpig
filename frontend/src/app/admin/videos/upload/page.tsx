@@ -271,7 +271,7 @@ export default function MobileVideoUploadPage() {
   };
 
   // Submit Upload with Real Progress Tracking
-  const handleUpload = (e: React.FormEvent) => {
+  const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!file) {
@@ -289,6 +289,26 @@ export default function MobileVideoUploadPage() {
     setErrorMessage(null);
     setUploadSuccess(false);
 
+    // Guaranteed Thumbnail Resolution: Custom File > Custom URL > Auto 5s Frame Capture
+    let effectiveThumbFile = thumbnailMode === 'file' ? thumbnailFile : null;
+    const effectiveThumbUrl = thumbnailMode === 'url' ? thumbnailUrlInput.trim() : '';
+
+    if (!effectiveThumbFile && !effectiveThumbUrl) {
+      if (autoThumbnailFile) {
+        effectiveThumbFile = autoThumbnailFile;
+      } else {
+        // Await 5-second thumbnail extraction if still in progress or not yet captured
+        setIsExtractingAutoThumbnail(true);
+        const result = await extractAutoThumbnail(file);
+        setIsExtractingAutoThumbnail(false);
+        if (result) {
+          setAutoThumbnailFile(result.file);
+          setAutoThumbnailPreviewUrl(result.previewUrl);
+          effectiveThumbFile = result.file;
+        }
+      }
+    }
+
     const formData = new FormData();
     formData.append('file', file);
     formData.append('title', title.trim());
@@ -298,14 +318,10 @@ export default function MobileVideoUploadPage() {
     formData.append('visibility', visibility);
     formData.append('status', status);
 
-    // Attach Thumbnail: Custom File > Custom URL > Auto 5s Frame Capture
-    if (thumbnailMode === 'file' && thumbnailFile) {
-      formData.append('thumbnail_file', thumbnailFile);
-    } else if (thumbnailMode === 'url' && thumbnailUrlInput.trim()) {
-      formData.append('thumbnail_url', thumbnailUrlInput.trim());
-    } else if (autoThumbnailFile) {
-      // Auto-captured 5-second frame fallback
-      formData.append('thumbnail_file', autoThumbnailFile);
+    if (effectiveThumbFile) {
+      formData.append('thumbnail_file', effectiveThumbFile);
+    } else if (effectiveThumbUrl) {
+      formData.append('thumbnail_url', effectiveThumbUrl);
     }
 
     try {

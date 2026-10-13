@@ -49,6 +49,21 @@ interface Video {
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://xpig.onrender.com';
 
+const formatWatchTime = (sec?: number) => {
+  if (!sec || sec <= 0) return '0s watch time';
+  if (sec >= 3600) {
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    return `${sec.toLocaleString()}s (${h}h ${m}m)`;
+  }
+  if (sec >= 60) {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${sec.toLocaleString()}s (${m}m ${s}s)`;
+  }
+  return `${sec}s watch time`;
+};
+
 export default function VideoManagementPage() {
   const { user } = useAuth();
   const [role, setRole] = useState<string>('superuser');
@@ -817,7 +832,7 @@ export default function VideoManagementPage() {
                           <span>{(vid.views || 0).toLocaleString()} views</span>
                         </div>
                         <div className="text-[11px] text-zinc-500 font-mono mt-1">
-                          {vid.total_watch_seconds ? `${vid.total_watch_seconds.toLocaleString()}s watch time` : '0s watch time'}
+                          {formatWatchTime(vid.total_watch_seconds)}
                         </div>
                       </td>
 

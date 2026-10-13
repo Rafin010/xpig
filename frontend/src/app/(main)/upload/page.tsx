@@ -27,6 +27,9 @@ export default function UploadPage() {
   const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [thumbnailPreviewUrl, setThumbnailPreviewUrl] = useState<string | null>(null);
+  const [autoThumbnailFile, setAutoThumbnailFile] = useState<File | null>(null);
+  const [autoThumbnailPreviewUrl, setAutoThumbnailPreviewUrl] = useState<string | null>(null);
+  const [isExtractingAutoThumbnail, setIsExtractingAutoThumbnail] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   
@@ -37,6 +40,88 @@ export default function UploadPage() {
   
   const videoInputRef = useRef<HTMLInputElement>(null);
   const thumbnailInputRef = useRef<HTMLInputElement>(null);
+
+  // Client-Side Canvas 5-Second Frame Auto Extractor
+  const extractAutoThumbnail = (videoFile: File): Promise<{ file: File; previewUrl: string } | null> => {
+    return new Promise((resolve) => {
+      try {
+        const video = document.createElement('video');
+        video.preload = 'auto';
+        video.muted = true;
+        video.playsInline = true;
+        const objectUrl = URL.createObjectURL(videoFile);
+        video.src = objectUrl;
+
+        let resolved = false;
+        const cleanup = () => {
+          try {
+            video.pause();
+            video.src = '';
+            video.load();
+          } catch {}
+          URL.revokeObjectURL(objectUrl);
+          video.remove();
+        };
+
+        const doResolve = (res: { file: File; previewUrl: string } | null) => {
+          if (resolved) return;
+          resolved = true;
+          cleanup();
+          resolve(res);
+        };
+
+        const timer = setTimeout(() => doResolve(null), 8500);
+
+        let seekTriggered = false;
+        const triggerSeek = () => {
+          if (seekTriggered) return;
+          seekTriggered = true;
+          const duration = video.duration || 0;
+          const targetSec = duration > 5 ? 5 : Math.max(0.5, duration * 0.3);
+          video.currentTime = targetSec;
+        };
+
+        video.onloadedmetadata = triggerSeek;
+        video.onloadeddata = triggerSeek;
+        video.oncanplay = triggerSeek;
+
+        video.onseeked = () => {
+          clearTimeout(timer);
+          try {
+            const canvas = document.createElement('canvas');
+            const w = video.videoWidth || 1280;
+            const h = video.videoHeight || 720;
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+              doResolve(null);
+              return;
+            }
+            ctx.drawImage(video, 0, 0, w, h);
+            canvas.toBlob((blob) => {
+              if (!blob) {
+                doResolve(null);
+                return;
+              }
+              const thumbFile = new File([blob], `thumb_5s_${Date.now()}.jpg`, { type: 'image/jpeg' });
+              const preview = URL.createObjectURL(blob);
+              doResolve({ file: thumbFile, previewUrl: preview });
+            }, 'image/jpeg', 0.88);
+          } catch {
+            doResolve(null);
+          }
+        };
+
+        video.onerror = () => {
+          clearTimeout(timer);
+          doResolve(null);
+        };
+      } catch {
+        resolve(null);
+      }
+    });
+  };
 
   const googleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
@@ -78,6 +163,20 @@ export default function UploadPage() {
         const cleanName = file.name.replace(/\.[^/.]+$/, '').replace(/[_-]/g, ' ');
         setTitle(cleanName);
       }
+
+      // Auto-extract 5-second video frame as default thumbnail
+      setIsExtractingAutoThumbnail(true);
+      if (autoThumbnailPreviewUrl) URL.revokeObjectURL(autoThumbnailPreviewUrl);
+      setAutoThumbnailPreviewUrl(null);
+      setAutoThumbnailFile(null);
+
+      extractAutoThumbnail(file).then((result) => {
+        setIsExtractingAutoThumbnail(false);
+        if (result) {
+          setAutoThumbnailFile(result.file);
+          setAutoThumbnailPreviewUrl(result.previewUrl);
+        }
+      });
     }
   };
 
@@ -105,12 +204,29 @@ export default function UploadPage() {
     setErrorMessage('');
 
     try {
+      // Guaranteed thumbnail resolution: Custom Thumbnail > Auto 5s Frame Capture
+      let effectiveThumb = thumbnailFile;
+      if (!effectiveThumb) {
+        if (autoThumbnailFile) {
+          effectiveThumb = autoThumbnailFile;
+        } else if (videoFile) {
+          setIsExtractingAutoThumbnail(true);
+          const result = await extractAutoThumbnail(videoFile);
+          setIsExtractingAutoThumbnail(false);
+          if (result) {
+            effectiveThumb = result.file;
+            setAutoThumbnailFile(result.file);
+            setAutoThumbnailPreviewUrl(result.previewUrl);
+          }
+        }
+      }
+
       const formData = new FormData();
       formData.append("title", title.trim());
       formData.append("description", description.trim());
       formData.append("file", videoFile);
-      if (thumbnailFile) {
-        formData.append("thumbnail", thumbnailFile);
+      if (effectiveThumb) {
+        formData.append("thumbnail_file", effectiveThumb);
       }
       if (user?.id) {
         formData.append("creator_id", String(user.id));
@@ -121,7 +237,7 @@ export default function UploadPage() {
         setUploadProgress(prev => (prev < 90 ? prev + 15 : prev));
       }, 500);
 
-      const res = await fetch(`${API_BASE}/api/v1/videos/upload`, {
+      const res = await fetch(`${API_BASE}/api/v1/videos/admin-upload`, {
         method: "POST",
         body: formData,
       });
@@ -368,6 +484,18 @@ export default function UploadPage() {
                   >
                     {thumbnailPreviewUrl ? (
                       <img src={thumbnailPreviewUrl} alt="Thumbnail Preview" className="w-full h-full object-cover" />
+                    ) : autoThumbnailPreviewUrl ? (
+                      <div className="relative w-full h-full">
+                        <img src={autoThumbnailPreviewUrl} alt="Auto 5s Frame" className="w-full h-full object-cover" />
+                        <div className="absolute bottom-1 right-1 bg-black/80 border border-pink-500/40 text-[9px] font-mono text-pink-400 px-1 py-0.2 rounded">
+                          5s Auto
+                        </div>
+                      </div>
+                    ) : isExtractingAutoThumbnail ? (
+                      <div className="flex flex-col items-center justify-center text-center p-2">
+                        <span className="w-4 h-4 border-2 border-pink-500 border-t-transparent rounded-full animate-spin mb-1" />
+                        <span className="text-[9px] font-semibold text-zinc-400">Capturing 5s...</span>
+                      </div>
                     ) : (
                       <div className="flex flex-col items-center justify-center text-center p-2">
                         <ImageIcon className="w-5 h-5 text-zinc-500 mb-1 group-hover:text-pink-400" />
@@ -376,8 +504,14 @@ export default function UploadPage() {
                     )}
                   </div>
                   <div className="text-xs text-zinc-400 leading-snug">
-                    <p className="font-medium text-zinc-300">Custom 16:9 Cover</p>
-                    <p className="text-[11px] text-zinc-500 mt-0.5">High-res thumbnails improve click-through rate by over 60%.</p>
+                    <p className="font-medium text-zinc-300">
+                      {thumbnailFile ? 'Custom Cover Image' : autoThumbnailPreviewUrl ? '5-Second Frame (Auto Selected)' : 'Custom 16:9 Cover'}
+                    </p>
+                    <p className="text-[11px] text-zinc-500 mt-0.5">
+                      {autoThumbnailPreviewUrl && !thumbnailFile 
+                        ? 'System auto-captured a frame at 5 seconds. Tap here to choose a custom cover if desired.'
+                        : 'High-res thumbnails improve click-through rate by over 60%.'}
+                    </p>
                   </div>
                 </div>
               </div>

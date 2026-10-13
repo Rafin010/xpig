@@ -418,7 +418,7 @@ export default function AdminDashboard() {
               {audience.avg_daily_users}
             </div>
             <p className="text-[10px] sm:text-xs text-zinc-400 mt-1.5 font-medium truncate">
-              দৈনিক গড় ইউজার ভলিউম
+              Daily average active visitors
             </p>
           </div>
 
@@ -434,7 +434,7 @@ export default function AdminDashboard() {
               {audience.week_visitors.toLocaleString()}
             </div>
             <p className="text-[10px] sm:text-xs text-zinc-400 mt-1.5 font-medium truncate">
-              সাপ্তাহিক ভিজিটর রিচ
+              Weekly audience reach
             </p>
           </div>
 
@@ -450,7 +450,7 @@ export default function AdminDashboard() {
               {audience.month_visitors.toLocaleString()}
             </div>
             <p className="text-[10px] sm:text-xs text-zinc-400 mt-1.5 font-medium truncate">
-              মাসিক ইউনিক ভিজিটর
+              Monthly unique visitors
             </p>
           </div>
         </div>
@@ -468,7 +468,7 @@ export default function AdminDashboard() {
                 Category Watch Time & Engagement Matrix
               </h2>
               <p className="text-xs text-zinc-400">
-                ক্যাটাগরি ভিত্তিক ওয়াচ টাইম শেয়ার, ভিউ ও ইউজার ধরে রাখার হার (Retention Rate)
+                Watch time distribution, impressions, and audience retention by category
               </p>
             </div>
           </div>

@@ -422,6 +422,33 @@ async def admin_direct_upload(
                 )
 
         if not final_thumbnail_url:
+            # Automatic 5-second video frame capture fallback
+            try:
+                from app.services.video_processor import extract_thumbnail
+                auto_thumb_temp = f"temp/thumb_5s_{uuid.uuid4()}.jpg"
+                success = await extract_thumbnail(temp_filename, auto_thumb_temp, time="00:00:05")
+                if success and os.path.exists(auto_thumb_temp):
+                    thumb_temp_filename = auto_thumb_temp
+                    thumb_object_name = f"thumbnails/auto_5s/{uuid.uuid4()}.jpg"
+                    if active_node:
+                        final_thumbnail_url = await asyncio.to_thread(
+                            StorageService.upload_file_to_r2,
+                            auto_thumb_temp,
+                            thumb_object_name,
+                            active_node,
+                            "image/jpeg"
+                        )
+                    else:
+                        final_thumbnail_url = await asyncio.to_thread(
+                            storage_service.upload_file,
+                            auto_thumb_temp,
+                            thumb_object_name,
+                            "image/jpeg"
+                        )
+            except Exception as e:
+                print(f"Server-side 5s thumbnail extraction notice: {e}")
+
+        if not final_thumbnail_url:
             final_thumbnail_url = "https://pub-1080459c8c0a45b9a545f0b3b3fb21c1.r2.dev/videos/default_thumb.jpg"
             
         # 5. Create Video Record
@@ -508,7 +535,7 @@ async def admin_direct_upload(
         await db.rollback()
         raise HTTPException(
             status_code=500,
-            detail=f"স্টোরেজ আপলোড সমস্যা হয়েছে: {str(err)}"
+            detail=f"Storage upload error: {str(err)}"
         )
     finally:
         if os.path.exists(temp_filename):
