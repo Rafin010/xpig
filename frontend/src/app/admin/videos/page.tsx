@@ -27,7 +27,8 @@ import {
   Check,
   Calendar,
   Clock,
-  Sparkles
+  Sparkles,
+  ChevronDown
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
@@ -82,6 +83,27 @@ export default function VideoManagementPage() {
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState<number>(50);
+
+  // Custom Popover Dropdown States
+  const [isStatusFilterOpen, setIsStatusFilterOpen] = useState(false);
+  const statusFilterRef = useRef<HTMLDivElement>(null);
+
+  const [isRowsPerPageOpen, setIsRowsPerPageOpen] = useState(false);
+  const rowsPerPageRef = useRef<HTMLDivElement>(null);
+
+  // Click Outside Listener for Popovers
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (statusFilterRef.current && !statusFilterRef.current.contains(e.target as Node)) {
+        setIsStatusFilterOpen(false);
+      }
+      if (rowsPerPageRef.current && !rowsPerPageRef.current.contains(e.target as Node)) {
+        setIsRowsPerPageOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Edit Video Modal State
   const [editingVideo, setEditingVideo] = useState<Video | null>(null);
@@ -479,67 +501,76 @@ export default function VideoManagementPage() {
         {/* Search, Filter & Quick Tabs Bar */}
         <div className="p-5 border-b border-zinc-800/80 flex flex-col lg:flex-row justify-between items-stretch lg:items-center gap-4 bg-zinc-900/40">
           
-          {/* Quick Filter Tabs */}
-          <div className="flex flex-wrap items-center gap-2">
+          {/* Custom Status Selection Popover */}
+          <div className="relative" ref={statusFilterRef}>
             <button
-              onClick={() => {
-                setStatusFilter('ALL');
-                setCurrentPage(1);
-              }}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-                statusFilter === 'ALL'
-                  ? 'bg-gradient-to-r from-pink-600 to-rose-600 text-white shadow-md shadow-pink-900/20'
-                  : 'bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800'
-              }`}
+              type="button"
+              onClick={() => setIsStatusFilterOpen(!isStatusFilterOpen)}
+              className="flex items-center gap-2.5 px-3.5 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700/80 hover:border-pink-500/60 text-xs font-bold text-white transition-all active:scale-95 shadow-sm group select-none"
             >
-              <span>All Videos</span>
-              <span className={`px-2 py-0.5 rounded-full text-[11px] font-mono font-bold ${
-                statusFilter === 'ALL' ? 'bg-black/30 text-white' : 'bg-zinc-800 text-zinc-400'
-              }`}>
-                {videos.length}
-              </span>
-            </button>
-
-            <button
-              onClick={() => {
-                setStatusFilter('PUBLISHED');
-                setCurrentPage(1);
-              }}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-                statusFilter === 'PUBLISHED'
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-900/20'
-                  : 'bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-emerald-400 hover:bg-zinc-800'
-              }`}
-            >
-              <span className="w-2 h-2 rounded-full bg-emerald-400" />
-              <span>Published</span>
-              <span className={`px-2 py-0.5 rounded-full text-[11px] font-mono font-bold ${
-                statusFilter === 'PUBLISHED' ? 'bg-black/30 text-white' : 'bg-zinc-800 text-zinc-400'
-              }`}>
-                {publishedCount}
-              </span>
-            </button>
-
-            {pendingCount > 0 && (
-              <button
-                onClick={() => {
-                  setStatusFilter('PENDING');
-                  setCurrentPage(1);
-                }}
-                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
-                  statusFilter === 'PENDING'
-                    ? 'bg-amber-600 text-white shadow-md shadow-amber-900/20'
-                    : 'bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-amber-400 hover:bg-zinc-800'
-                }`}
-              >
-                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-                <span>Pending Drafts</span>
-                <span className={`px-2 py-0.5 rounded-full text-[11px] font-mono font-bold ${
-                  statusFilter === 'PENDING' ? 'bg-black/30 text-white' : 'bg-zinc-800 text-zinc-400'
-                }`}>
-                  {pendingCount}
+              <div className="flex items-center gap-1.5">
+                <span className={`w-2 h-2 rounded-full ${
+                  statusFilter === 'PUBLISHED' ? 'bg-emerald-400' :
+                  statusFilter === 'PENDING' ? 'bg-amber-400 animate-pulse' :
+                  'bg-pink-500'
+                }`} />
+                <span className="text-zinc-400 font-medium">Filter:</span>
+                <span className="text-white font-bold">
+                  {statusFilter === 'PUBLISHED' ? 'Published' :
+                   statusFilter === 'PENDING' ? 'Pending Drafts' :
+                   'All Videos'}
                 </span>
-              </button>
+                <span className="px-1.5 py-0.5 rounded-md text-[10px] font-mono bg-black/40 text-pink-400 border border-pink-500/20">
+                  {statusFilter === 'PUBLISHED' ? publishedCount :
+                   statusFilter === 'PENDING' ? pendingCount :
+                   videos.length}
+                </span>
+              </div>
+              <ChevronDown className={`w-3.5 h-3.5 text-zinc-400 ml-1 transition-transform duration-200 ${isStatusFilterOpen ? 'rotate-180 text-pink-400' : 'group-hover:text-white'}`} />
+            </button>
+
+            {/* Custom Status Popover Menu */}
+            {isStatusFilterOpen && (
+              <div className="absolute left-0 mt-2 w-64 bg-[#121216]/95 backdrop-blur-xl border border-zinc-700/80 rounded-2xl p-1.5 shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-150 space-y-1">
+                <div className="px-3 py-1.5 text-[10px] font-bold text-zinc-400 uppercase tracking-wider border-b border-zinc-800/80">
+                  Filter by Status
+                </div>
+
+                {[
+                  { id: 'ALL', label: 'All Videos', count: videos.length, dot: 'bg-pink-500' },
+                  { id: 'PUBLISHED', label: 'Published Content', count: publishedCount, dot: 'bg-emerald-400' },
+                  { id: 'PENDING', label: 'Pending Drafts', count: pendingCount, dot: 'bg-amber-400' },
+                ].map((st) => {
+                  const isSelected = statusFilter === st.id;
+                  return (
+                    <button
+                      key={st.id}
+                      type="button"
+                      onClick={() => {
+                        setStatusFilter(st.id);
+                        setCurrentPage(1);
+                        setIsStatusFilterOpen(false);
+                      }}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-xl transition-all text-xs ${
+                        isSelected 
+                          ? 'bg-pink-600/15 border border-pink-500/40 text-white font-bold' 
+                          : 'hover:bg-zinc-800/60 text-zinc-300 hover:text-white border border-transparent'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className={`w-2 h-2 rounded-full ${st.dot}`} />
+                        <span>{st.label}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-mono text-zinc-400 bg-zinc-900 border border-zinc-800 px-1.5 py-0.5 rounded">
+                          {st.count}
+                        </span>
+                        {isSelected && <Check className="w-3.5 h-3.5 text-pink-400 stroke-[3]" />}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             )}
           </div>
 
@@ -567,23 +598,56 @@ export default function VideoManagementPage() {
               )}
             </div>
 
-            {/* Items Per Page Selector */}
-            <div className="flex items-center gap-1.5 bg-zinc-900 border border-zinc-700/80 rounded-xl px-2.5 py-1.5 text-xs text-zinc-400">
-              <span className="font-semibold text-zinc-500">Show:</span>
-              <select
-                value={itemsPerPage}
-                onChange={(e) => {
-                  setItemsPerPage(Number(e.target.value));
-                  setCurrentPage(1);
-                }}
-                className="bg-transparent text-white font-bold focus:outline-none cursor-pointer"
+            {/* Custom Rows Per Page Popover */}
+            <div className="relative" ref={rowsPerPageRef}>
+              <button
+                type="button"
+                onClick={() => setIsRowsPerPageOpen(!isRowsPerPageOpen)}
+                className="flex items-center gap-2 px-3 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700/80 hover:border-zinc-500 text-xs font-semibold text-zinc-300 hover:text-white transition-all active:scale-95 shadow-sm group select-none"
               >
-                <option value={25} className="bg-zinc-900 text-white">25</option>
-                <option value={50} className="bg-zinc-900 text-white">50</option>
-                <option value={100} className="bg-zinc-900 text-white">100</option>
-                <option value={200} className="bg-zinc-900 text-white">200</option>
-                <option value={1000} className="bg-zinc-900 text-white">All ({videos.length})</option>
-              </select>
+                <span className="text-zinc-500 font-medium">Rows:</span>
+                <span className="text-white font-bold">
+                  {itemsPerPage >= 1000 ? `All (${videos.length})` : itemsPerPage}
+                </span>
+                <ChevronDown className={`w-3.5 h-3.5 text-zinc-400 transition-transform duration-200 ${isRowsPerPageOpen ? 'rotate-180 text-pink-400' : 'group-hover:text-white'}`} />
+              </button>
+
+              {/* Custom Rows Menu */}
+              {isRowsPerPageOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-[#121216]/95 backdrop-blur-xl border border-zinc-700/80 rounded-xl p-1 shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-150 space-y-0.5">
+                  <div className="px-2.5 py-1.5 text-[10px] font-bold text-zinc-400 uppercase tracking-wider border-b border-zinc-800/80">
+                    Rows Per Page
+                  </div>
+                  {[
+                    { value: 25, label: '25 videos' },
+                    { value: 50, label: '50 videos' },
+                    { value: 100, label: '100 videos' },
+                    { value: 200, label: '200 videos' },
+                    { value: 1000, label: `All videos (${videos.length})` },
+                  ].map((opt) => {
+                    const isSelected = itemsPerPage === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => {
+                          setItemsPerPage(opt.value);
+                          setCurrentPage(1);
+                          setIsRowsPerPageOpen(false);
+                        }}
+                        className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                          isSelected
+                            ? 'bg-pink-600/20 text-pink-400 font-bold'
+                            : 'text-zinc-300 hover:text-white hover:bg-zinc-800/60'
+                        }`}
+                      >
+                        <span>{opt.label}</span>
+                        {isSelected && <Check className="w-3.5 h-3.5 text-pink-400 stroke-[3]" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
         </div>

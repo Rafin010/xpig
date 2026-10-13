@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   AreaChart, 
   Area, 
@@ -26,7 +26,12 @@ import {
   Flame,
   CheckCircle2,
   RefreshCw,
-  Video
+  Video,
+  ChevronDown,
+  Check,
+  Calendar,
+  ArrowUpDown,
+  Filter
 } from 'lucide-react';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://xpig.onrender.com';
@@ -44,11 +49,64 @@ const CATEGORY_COLORS: { [key: string]: string } = {
   'All': '#64748b'
 };
 
+const TIME_FILTER_OPTIONS = [
+  {
+    id: 'Day',
+    title: '24 Hours (Today)',
+    subtitle: 'Hourly stream traffic & watch time',
+    icon: Sparkles,
+    badge: 'Today'
+  },
+  {
+    id: 'Week',
+    title: '7 Days (Past Week)',
+    subtitle: 'Weekly stream reach & audience matrix',
+    icon: Calendar,
+    badge: '7 Days'
+  },
+  {
+    id: 'Month',
+    title: '30 Days (Past Month)',
+    subtitle: 'Monthly retention & engagement growth',
+    icon: BarChart3,
+    badge: '30 Days'
+  },
+  {
+    id: 'All',
+    title: 'All Time (Lifetime)',
+    subtitle: 'Platform-wide total historical consumption',
+    icon: Clock,
+    badge: 'All Time'
+  }
+] as const;
+
 export default function AdminDashboard() {
   const [role, setRole] = useState<string>('superuser');
   const [timeFilter, setTimeFilter] = useState<'Day' | 'Week' | 'Month' | 'All'>('Week');
   const [loading, setLoading] = useState<boolean>(true);
   const [analytics, setAnalytics] = useState<any>(null);
+
+  // Custom Popover Dropdown States
+  const [isTimeFilterOpen, setIsTimeFilterOpen] = useState(false);
+  const timeFilterRef = useRef<HTMLDivElement>(null);
+
+  const [categorySortBy, setCategorySortBy] = useState<'watch_time' | 'views' | 'videos' | 'retention'>('watch_time');
+  const [isCategorySortOpen, setIsCategorySortOpen] = useState(false);
+  const categorySortRef = useRef<HTMLDivElement>(null);
+
+  // Click Outside Listener for Popovers
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (timeFilterRef.current && !timeFilterRef.current.contains(e.target as Node)) {
+        setIsTimeFilterOpen(false);
+      }
+      if (categorySortRef.current && !categorySortRef.current.contains(e.target as Node)) {
+        setIsCategorySortOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Load Admin Role from storage
   useEffect(() => {
@@ -133,21 +191,97 @@ export default function AdminDashboard() {
           </p>
         </div>
 
-        {/* Time Filters: Day, Week, Month, All */}
-        <div className="flex items-center gap-1 bg-[#141416] p-1 rounded-xl border border-zinc-800 self-start sm:self-auto shadow-inner">
-          {(['Day', 'Week', 'Month', 'All'] as const).map((filter) => (
-            <button
-              key={filter}
-              onClick={() => setTimeFilter(filter)}
-              className={`px-3 sm:px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                timeFilter === filter
-                  ? 'bg-blue-600 text-white shadow-md'
-                  : 'text-zinc-400 hover:text-white hover:bg-zinc-800/60'
-              }`}
-            >
-              {filter === 'Day' ? '24h (Day)' : filter === 'Week' ? '7 Days (Week)' : filter === 'Month' ? '30 Days (Month)' : 'All Time'}
-            </button>
-          ))}
+        {/* Custom Selection Pop-up Filter: Day, Week, Month, All */}
+        <div className="relative self-start sm:self-auto" ref={timeFilterRef}>
+          {(() => {
+            const activeTimeOption = TIME_FILTER_OPTIONS.find(opt => opt.id === timeFilter) || TIME_FILTER_OPTIONS[1];
+            const ActiveIcon = activeTimeOption.icon;
+
+            return (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setIsTimeFilterOpen(!isTimeFilterOpen)}
+                  className="flex items-center gap-2.5 px-3.5 py-2 rounded-xl bg-[#141418] hover:bg-[#1b1b22] border border-zinc-700/80 hover:border-blue-500/60 text-white shadow-lg transition-all active:scale-95 group select-none"
+                >
+                  <div className="w-6 h-6 rounded-lg bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400 group-hover:scale-105 transition-transform">
+                    <ActiveIcon className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="text-left">
+                    <div className="text-[10px] text-zinc-400 font-semibold uppercase tracking-wider leading-none">
+                      Time Window
+                    </div>
+                    <div className="text-xs font-bold text-white leading-tight mt-0.5">
+                      {activeTimeOption.title}
+                    </div>
+                  </div>
+                  <ChevronDown className={`w-4 h-4 text-zinc-400 ml-1 transition-transform duration-200 ${isTimeFilterOpen ? 'rotate-180 text-blue-400' : 'group-hover:text-white'}`} />
+                </button>
+
+                {/* Floating Custom Selection Pop-up Menu */}
+                {isTimeFilterOpen && (
+                  <div className="absolute right-0 mt-2 w-72 sm:w-80 bg-[#121216]/95 backdrop-blur-xl border border-zinc-700/80 rounded-2xl p-1.5 shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-150 space-y-1">
+                    <div className="px-3 py-2 text-[11px] font-bold text-zinc-400 uppercase tracking-wider border-b border-zinc-800/80 flex items-center justify-between">
+                      <span className="flex items-center gap-1.5">
+                        <Calendar className="w-3 h-3 text-blue-400" />
+                        Select Window
+                      </span>
+                      <span className="text-[10px] text-blue-400 font-mono">Real-Time Refresh</span>
+                    </div>
+
+                    {TIME_FILTER_OPTIONS.map((opt) => {
+                      const Icon = opt.icon;
+                      const isSelected = timeFilter === opt.id;
+                      return (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() => {
+                            setTimeFilter(opt.id);
+                            setIsTimeFilterOpen(false);
+                          }}
+                          className={`w-full flex items-center justify-between p-2.5 rounded-xl transition-all text-left group ${
+                            isSelected 
+                              ? 'bg-blue-600/15 border border-blue-500/40 text-white' 
+                              : 'hover:bg-zinc-800/60 text-zinc-300 hover:text-white border border-transparent'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border ${
+                              isSelected 
+                                ? 'bg-blue-600 text-white border-blue-500 shadow-sm' 
+                                : 'bg-zinc-900 text-zinc-400 border-zinc-800 group-hover:text-white'
+                            }`}>
+                              <Icon className="w-4 h-4" />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <span className={`text-xs font-bold truncate ${isSelected ? 'text-blue-400 font-black' : 'text-white'}`}>
+                                  {opt.title}
+                                </span>
+                                <span className={`text-[9px] font-mono px-1.5 py-0.2 rounded border ${
+                                  isSelected ? 'bg-blue-500/20 text-blue-300 border-blue-500/30 font-bold' : 'bg-zinc-800 text-zinc-400 border-zinc-700'
+                                }`}>
+                                  {opt.badge}
+                                </span>
+                              </div>
+                              <p className="text-[10px] text-zinc-400 truncate mt-0.5">
+                                {opt.subtitle}
+                              </p>
+                            </div>
+                          </div>
+
+                          {isSelected && (
+                            <Check className="w-4 h-4 text-blue-400 shrink-0 stroke-[3] ml-2" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </div>
       </div>
 
@@ -335,8 +469,62 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          <div className="text-xs font-mono text-zinc-400 bg-zinc-900 border border-zinc-800 px-3 py-1 rounded-full self-start sm:self-auto">
-            {categoryList.length} Categories Tracked
+          <div className="flex items-center gap-2.5 self-start sm:self-auto">
+            {/* Custom Category Sort Popover */}
+            <div className="relative" ref={categorySortRef}>
+              <button
+                type="button"
+                onClick={() => setIsCategorySortOpen(!isCategorySortOpen)}
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 text-xs font-semibold text-zinc-300 hover:text-white transition-all active:scale-95 shadow-sm"
+              >
+                <ArrowUpDown className="w-3.5 h-3.5 text-blue-400" />
+                <span>
+                  Sort:{' '}
+                  <span className="text-white font-bold">
+                    {categorySortBy === 'views'
+                      ? 'Views'
+                      : categorySortBy === 'videos'
+                      ? 'Videos'
+                      : categorySortBy === 'retention'
+                      ? 'Retention'
+                      : 'Watch Time'}
+                  </span>
+                </span>
+                <ChevronDown className={`w-3.5 h-3.5 text-zinc-400 transition-transform ${isCategorySortOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {isCategorySortOpen && (
+                <div className="absolute right-0 mt-2 w-52 bg-[#121216]/95 backdrop-blur-xl border border-zinc-700/80 rounded-xl p-1 shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-150 space-y-0.5">
+                  {[
+                    { id: 'watch_time', label: 'Watch Time Share' },
+                    { id: 'views', label: 'Total Views' },
+                    { id: 'videos', label: 'Video Count' },
+                    { id: 'retention', label: 'Avg Retention Rate' },
+                  ].map((sOpt) => (
+                    <button
+                      key={sOpt.id}
+                      type="button"
+                      onClick={() => {
+                        setCategorySortBy(sOpt.id as any);
+                        setIsCategorySortOpen(false);
+                      }}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                        categorySortBy === sOpt.id
+                          ? 'bg-blue-600/20 text-blue-400 font-bold'
+                          : 'text-zinc-300 hover:text-white hover:bg-zinc-800/60'
+                      }`}
+                    >
+                      <span>{sOpt.label}</span>
+                      {categorySortBy === sOpt.id && <Check className="w-3.5 h-3.5 text-blue-400 stroke-[3]" />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="text-xs font-mono text-zinc-400 bg-zinc-900 border border-zinc-800 px-3 py-1.5 rounded-xl">
+              {categoryList.length} Categories
+            </div>
           </div>
         </div>
 
@@ -354,7 +542,12 @@ export default function AdminDashboard() {
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-800/50 text-zinc-300">
-              {categoryList.map((cat: any) => {
+              {[...categoryList].sort((a: any, b: any) => {
+                if (categorySortBy === 'views') return (b.views || 0) - (a.views || 0);
+                if (categorySortBy === 'videos') return (b.video_count || 0) - (a.video_count || 0);
+                if (categorySortBy === 'retention') return (b.avg_watch_seconds || 0) - (a.avg_watch_seconds || 0);
+                return (b.watch_time_percentage || 0) - (a.watch_time_percentage || 0);
+              }).map((cat: any) => {
                 const color = CATEGORY_COLORS[cat.name] || '#3b82f6';
                 return (
                   <tr key={cat.name} className="hover:bg-zinc-900/50 transition-colors">
