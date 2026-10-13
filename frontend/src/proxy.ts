@@ -4,6 +4,16 @@ import type { NextRequest } from 'next/server';
 export function proxy(request: NextRequest) {
   const hostname = request.headers.get('host') || '';
   const url = request.nextUrl.clone();
+
+  // 0. Always bypass static files, images, API routes, and Next.js internals
+  if (
+    url.pathname.startsWith('/_next') ||
+    url.pathname.startsWith('/api') ||
+    url.pathname.includes('.') // Any file with an extension (.png, .ico, .jpg, .svg, .webp, .txt, .xml)
+  ) {
+    return NextResponse.next();
+  }
+
   const session = request.cookies.get('xpig_admin_session')?.value;
   const isAuthenticated = session === 'authenticated_admin';
 
@@ -31,6 +41,11 @@ export function proxy(request: NextRequest) {
       return NextResponse.redirect(new URL('/login', request.url));
     }
 
+    // Authenticated: if path is /admin, redirect to / on admin subdomain
+    if (url.pathname === '/admin') {
+      return NextResponse.redirect(new URL('/', request.url));
+    }
+
     // Authenticated: rewrite root & subroutes to internal /admin structure
     if (!url.pathname.startsWith('/admin')) {
       url.pathname = `/admin${url.pathname === '/' ? '' : url.pathname}`;
@@ -40,7 +55,16 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // 2. Handle localhost or direct path /admin
+  // 2. Handle /login on main domain (xpig.me or localhost)
+  if (url.pathname === '/login') {
+    if (isAuthenticated) {
+      return NextResponse.redirect(new URL('/admin', request.url));
+    }
+    url.pathname = '/admin/login';
+    return NextResponse.rewrite(url);
+  }
+
+  // 3. Handle localhost or direct path /admin
   if (url.pathname.startsWith('/admin')) {
     if (url.pathname === '/admin/login') {
       if (isAuthenticated) {
@@ -65,6 +89,6 @@ export const middleware = proxy;
 
 export const config = {
   matcher: [
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico|.*\\..*).*)',
   ],
 };

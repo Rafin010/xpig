@@ -43,9 +43,17 @@ export default function AdminLoginPage() {
   const [isVerifyingGoogle, setIsVerifyingGoogle] = useState(false);
   const [locationStatus, setLocationStatus] = useState<string | null>(null);
 
-  // Initialize lockout from localStorage
+  // Initialize lockout from localStorage and set admin favicon
   useEffect(() => {
     try {
+      let link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
+      if (!link) {
+        link = document.createElement('link');
+        link.rel = 'icon';
+        document.head.appendChild(link);
+      }
+      link.href = '/admin-icon.png';
+
       const lockUntil = Number(localStorage.getItem('xpig_admin_lockout_until') || '0');
       const now = Date.now();
       if (lockUntil > now) {
@@ -116,7 +124,7 @@ export default function AdminLoginPage() {
         localStorage.setItem('xpig_admin_role', 'superuser');
       }
 
-      window.location.href = '/admin';
+      window.location.href = window.location.hostname.startsWith('admin.') ? '/' : '/admin';
     } catch (err: any) {
       setError(err.message || 'অথেন্টিকেশন ব্যর্থ হয়েছে।');
     } finally {
@@ -191,7 +199,7 @@ export default function AdminLoginPage() {
         localStorage.setItem('xpig_admin_role', data.user.role || 'cofounder');
         localStorage.setItem('xpig_admin_user', JSON.stringify(data.user));
 
-        window.location.href = '/admin';
+        window.location.href = window.location.hostname.startsWith('admin.') ? '/' : '/admin';
       } catch (err: any) {
         setError(err.message || 'গুগল অথেন্টিকেশন ব্যর্থ হয়েছে।');
       } finally {
@@ -199,7 +207,7 @@ export default function AdminLoginPage() {
       }
     },
     onError: () => {
-      setError('গুগল লগইন উইন্ডো বন্ধ করা হয়েছে বা ব্যর্থ হয়েছে।');
+      setError('গুগল লগইন উইন্ডো বন্ধ করা হয়েছে বা ব্যর্থ হয়েছে (Google Cloud Console এ Authorised JavaScript origins এ বর্তমান ডোমেইন যুক্ত আছে কিনা যাচাই করুন)।');
       setIsVerifyingGoogle(false);
     },
   });
@@ -218,13 +226,11 @@ export default function AdminLoginPage() {
           <div className="flex flex-col items-center text-center mb-6">
             <div className="relative mb-4 group">
               <div className="w-16 h-16 bg-[#18181b] border border-zinc-700/60 rounded-2xl flex items-center justify-center p-2.5 shadow-2xl">
-                <Image
+                <img
                   src="/pig-logo.png"
                   alt="XPIG Logo"
-                  width={48}
-                  height={48}
                   className="w-full h-full object-contain"
-                  priority
+                  onError={(e) => { e.currentTarget.src = '/admin-icon.png'; }}
                 />
               </div>
             </div>

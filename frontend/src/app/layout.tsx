@@ -31,6 +31,14 @@ export const metadata: Metadata = {
   keywords: ALL_SEO_KEYWORDS,
   category: "adult entertainment",
   classification: "adult video streaming",
+  icons: {
+    icon: [
+      { url: "/icon.png", type: "image/png" },
+      { url: "/favicon.ico", type: "image/x-icon" },
+    ],
+    shortcut: "/icon.png",
+    apple: "/admin-icon.png",
+  },
   alternates: {
     canonical: "https://xpig.me",
     languages: {
