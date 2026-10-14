@@ -25,15 +25,10 @@ def extract_urls(text: str) -> list[str]:
 async def create_gateway_link(
     original_url: str,
     telegram_id: int | None = None,
-    is_ad_mode: bool | None = None
+    is_ad_mode: bool = False
 ) -> str:
     # Ensure protocol
     dest_url = original_url if original_url.startswith("http") else f"https://{original_url}"
-    
-    # Check if ad mode is globally enabled if not explicitly passed
-    if is_ad_mode is None:
-        global_ad_mode = await get_config("is_ad_mode", "false")
-        is_ad_mode = global_ad_mode.lower() in ("true", "1", "yes")
 
     async with SessionLocal() as db:
         # Check if identical link was recently generated for this user

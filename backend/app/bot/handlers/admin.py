@@ -65,7 +65,7 @@ def get_master_admin_menu_content(user):
         f"• ১ ক্লিকেই তা আপনার কাস্টম গ্রুপে পাবলিশ করতে পারবেন।\n"
         f"• গ্রুপে সাধারণ ইউজারদের দৈনিক ২ মেসেজ লিমিট ও ওয়েবসাইট ভিজিট রুল সক্রিয়।\n\n"
         f"📌 **কমান্ড তালিকা:**\n"
-        f"/settings - গেটওয়ে মোড ও গ্রুপ সেটিংস\n"
+        f"/settings - গ্রুপ ও ফোর্স-জয়েন সেটিংস\n"
         f"/stats - লাইভ ট্রাফিক ও ক্লিকের পরিসংখ্যান\n"
         f"/help - বিস্তারিত নির্দেশিকা\n"
         f"/back - চলমান কাজ বাতিল ও ব্যাক"
@@ -174,9 +174,6 @@ async def settings_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("⛔ আপনি এই কমান্ড ব্যবহারের অনুমতিপ্রাপ্ত নন।")
         return
 
-    ad_mode_str = await get_config("is_ad_mode", "false")
-    is_ad = ad_mode_str.lower() in ("true", "1", "yes")
-
     force_sub_str = await get_config("force_sub_enabled", "false")
     is_force_sub = force_sub_str.lower() in ("true", "1", "yes")
 
@@ -184,25 +181,18 @@ async def settings_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     group_title = await get_config("target_group_title", "Custom Group")
     group_url = await get_config("target_group_url", "https://t.me/virallinksharexpig")
 
-    mode_label = "⏳ 5-Sec Ad Timer Gateway" if is_ad else "⚡ 2-Click XPIG Direct"
     force_sub_label = "✅ ON (গ্রুপে জয়েন বাধ্যতামূলক)" if is_force_sub else "❌ OFF (সবার জন্য উন্মুক্ত)"
 
     text = (
-        "⚙️ **XPIG সিস্টেম সেটিংস ও কন্ট্রোল প্যানেল**\n\n"
-        f"🔗 **বর্তমান গেটওয়ে লিংক মোড:** `{mode_label}`\n"
+        "⚙️ **XPIG সিস্টেম সেটিংস ও গ্রুপ কন্ট্রোল**\n\n"
+        f"👥 **সিলেক্টেড টার্গেট গ্রুপ:** `{group_title}`\n"
+        f"🆔 **গ্রুপ আইডি:** `{group_id}`\n"
         f"📢 **কাস্টম গ্রুপ ফোর্স-জয়েন:** `{force_sub_label}`\n"
-        f"👥 **সিলেক্টেড টার্গেট গ্রুপ:** `{group_title}` (`{group_id}`)\n"
         f"🔗 **গ্রুপ লিংক:** {group_url}\n\n"
-        "💡 *টিপস:* গ্রুপ পরিবর্তন করতে আপনার টার্গেট গ্রুপে বটকে অ্যাডমিন করে সেখানে `/setgroup` কমান্ড দিন।"
+        "💡 *গ্রুপ পরিবর্তনের নিয়ম:* আপনার যেকোনো গ্রুপে বটকে অ্যাডমিন বানিয়ে সেখানে `/setgroup` কমান্ড দিন।"
     )
 
     keyboard = [
-        [
-            InlineKeyboardButton(
-                f"মোড পরিবর্তন: { '⚡ ডাইরেক্ট' if is_ad else '⏳ টাইমার/অ্যাড' }",
-                callback_data="toggle_ad_mode"
-            )
-        ],
         [
             InlineKeyboardButton(
                 f"ফোর্স-জয়েন: { 'বন্ধ করুন' if is_force_sub else 'চালু করুন' }",
@@ -300,11 +290,6 @@ async def handle_admin_callback(update: Update, context: ContextTypes.DEFAULT_TY
         await settings_command(update, context)
     elif data == "show_stats":
         await stats_command(update, context)
-    elif data == "toggle_ad_mode":
-        current = await get_config("is_ad_mode", "false")
-        new_val = "false" if current.lower() in ("true", "1", "yes") else "true"
-        await set_config("is_ad_mode", new_val)
-        await settings_command(update, context)
     elif data == "toggle_force_sub":
         current = await get_config("force_sub_enabled", "false")
         new_val = "false" if current.lower() in ("true", "1", "yes") else "true"
