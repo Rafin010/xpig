@@ -6,32 +6,32 @@ import VideoGrid from '@/components/video/VideoGrid';
 import { SeoContent } from '@/components/layout/SeoContent';
 import { findTagBySlug, TARGET_TAG_PAGES, POPULAR_SEARCH_PILLS } from '@/lib/seo-keywords';
 
-async function getTagVideos(query: string) {
+async function getTagVideos(query: string, page: number = 1, size: number = 48) {
   try {
     const res = await fetch(
-      `https://xpig.onrender.com/api/v1/discover/search?q=${encodeURIComponent(query)}&size=36`,
+      `https://xpig.onrender.com/api/v1/discover/search?q=${encodeURIComponent(query)}&size=${size}&page=${page}`,
       { cache: 'no-store' }
     );
     if (res.ok) {
       const data = await res.json();
       if (Array.isArray(data.items) && data.items.length > 0) {
-        return data.items;
+        return { items: data.items, total: data.total || data.items.length };
       }
     }
   } catch (err) {}
 
   // Fallback to top videos if no specific keyword match
   try {
-    const res = await fetch(`https://xpig.onrender.com/api/v1/discover/search?size=36`, {
+    const res = await fetch(`https://xpig.onrender.com/api/v1/discover/search?size=${size}&page=${page}`, {
       cache: 'no-store',
     });
     if (res.ok) {
       const data = await res.json();
-      return data.items || [];
+      return { items: data.items || [], total: data.total || 0 };
     }
   } catch (e) {}
 
-  return [];
+  return { items: [], total: 0 };
 }
 
 async function getActiveSponsors() {
@@ -92,13 +92,17 @@ export async function generateMetadata({
 
 export default async function TagPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams?: Promise<{ page?: string }>;
 }) {
   const { slug } = await params;
+  const sp = searchParams ? await searchParams : {};
+  const currentPage = Math.max(1, parseInt(sp.page || '1', 10));
   const tag = findTagBySlug(slug);
-  const [videos, sponsors] = await Promise.all([
-    getTagVideos(tag.query),
+  const [{ items: videos, total }, sponsors] = await Promise.all([
+    getTagVideos(tag.query, currentPage, 48),
     getActiveSponsors(),
   ]);
 
@@ -192,7 +196,14 @@ export default async function TagPage({
 
       {/* Videos matching this tag */}
       <div className="flex-1">
-        <VideoGrid videos={videos} sponsors={sponsors} />
+        <VideoGrid 
+          videos={videos} 
+          sponsors={sponsors} 
+          totalVideos={total}
+          currentPage={currentPage}
+          pageSize={48}
+          baseUrl={`/tag/${slug}`}
+        />
       </div>
 
       {/* Structured SEO Overview */}

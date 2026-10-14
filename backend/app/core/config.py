@@ -14,7 +14,11 @@ class Settings(BaseSettings):
     R2_BUCKET_NAME: str = "xpig-videos"
     R2_PUBLIC_URL: str = "" # e.g. https://pub-xxxxxxxx.r2.dev
 
+    # Telegram Bot
+    TELEGRAM_BOT_TOKEN: str = "8973869022:AAFPAxRpPKvjRpzqbr4pI0s8q5pVqU0WsGY"
+
     class Config:
         env_file = ".env"
+        extra = "ignore"
 
 settings = Settings()

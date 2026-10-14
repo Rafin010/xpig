@@ -64,23 +64,28 @@ export default function StorageSettingsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  const fetchNodes = async () => {
+  const fetchNodes = async (isPolling: boolean | unknown = false) => {
+    const polling = isPolling === true;
     try {
-      setLoading(true);
+      if (!polling) setLoading(true);
       setError(null);
       const res = await fetch(`${API_BASE}/api/v1/storage-nodes/`);
       if (!res.ok) throw new Error("Failed to fetch storage nodes");
       const data = await res.json();
       setNodes(Array.isArray(data) ? data : []);
     } catch (err: any) {
-      setError(err.message || "An error occurred");
+      if (!polling) setError(err.message || "An error occurred");
     } finally {
-      setLoading(false);
+      if (!polling) setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchNodes();
+    const interval = setInterval(() => {
+      fetchNodes(true);
+    }, 6000);
+    return () => clearInterval(interval);
   }, []);
 
   const formatBytes = (bytes: number) => {

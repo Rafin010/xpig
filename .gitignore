@@ -37,3 +37,9 @@ logs/
 XPIG-STORAG/
 *.mp4
 *.m3u8
+
+# Sessions & Batch Checkpoints
+*.session
+*.session-journal
+processed_files_*.json
+backend/processed_files_*.json

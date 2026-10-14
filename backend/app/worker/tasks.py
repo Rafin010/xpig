@@ -24,7 +24,7 @@ async def process_video_task(ctx, video_id: int, input_path: str, output_dir: st
         "-filter_complex", "[1:v]scale=w=trunc(iw*0.07/2)*2:h=-2,format=rgba,colorchannelmixer=aa=0.40[wm];[0:v][wm]overlay=W-w-15:H-h-15:eof_action=repeat[outv]",
         "-map", "[outv]", "-map", "0:a?",
         "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "veryfast", "-crf", "23",
-        "-c:a", "copy",
+        "-c:a", "aac", "-b:a", "128k",
         watermarked_path
     ]
     
@@ -42,28 +42,6 @@ async def process_video_task(ctx, video_id: int, input_path: str, output_dir: st
         
     final_file_size = os.path.getsize(watermarked_path)
     
-    thumbnail_path = os.path.join(output_dir, f"thumb_{video_id}.jpg")
-    ffmpeg_thumb_cmd = [
-        "ffmpeg", "-y", "-ss", "00:00:05", "-i", input_path,
-        "-frames:v", "1", "-q:v", "2", thumbnail_path
-    ]
-    logger.info(f"Extracting thumbnail: {' '.join(ffmpeg_thumb_cmd)}")
-    await loop.run_in_executor(
-        None,
-        lambda: subprocess.run(ffmpeg_thumb_cmd, capture_output=True)
-    )
-    
-    preview_path = os.path.join(output_dir, f"preview_{video_id}.mp4")
-    ffmpeg_preview_cmd = [
-        "ffmpeg", "-y", "-ss", "00:00:05", "-t", "00:00:05", "-i", input_path,
-        "-vf", "scale=640:-2", "-an", "-c:v", "libx264", "-crf", "28", "-preset", "ultrafast", preview_path
-    ]
-    logger.info(f"Extracting preview clip: {' '.join(ffmpeg_preview_cmd)}")
-    await loop.run_in_executor(
-        None,
-        lambda: subprocess.run(ffmpeg_preview_cmd, capture_output=True)
-    )
-    
     # Probe real duration with ffprobe
     duration_seconds = 0
     try:
@@ -80,6 +58,36 @@ async def process_video_task(ctx, video_id: int, input_path: str, output_dir: st
             logger.info(f"Video {video_id} duration: {duration_seconds}s")
     except Exception as e:
         logger.warning(f"Failed to probe duration for video {video_id}: {e}")
+        
+    thumbnail_path = os.path.join(output_dir, f"thumb_{video_id}.jpg")
+    thumb_time = "00:00:05" if duration_seconds > 6 else ("00:00:01" if duration_seconds > 2 else "00:00:00")
+    ffmpeg_thumb_cmd = [
+        "ffmpeg", "-y", "-ss", thumb_time, "-i", input_path,
+        "-frames:v", "1", "-q:v", "2", thumbnail_path
+    ]
+    logger.info(f"Extracting thumbnail: {' '.join(ffmpeg_thumb_cmd)}")
+    await loop.run_in_executor(
+        None,
+        lambda: subprocess.run(ffmpeg_thumb_cmd, capture_output=True)
+    )
+    
+    # Fallback if thumb wasn't extracted
+    if not os.path.exists(thumbnail_path) or os.path.getsize(thumbnail_path) == 0:
+        fallback_thumb = ["ffmpeg", "-y", "-i", input_path, "-frames:v", "1", "-q:v", "2", thumbnail_path]
+        await loop.run_in_executor(None, lambda: subprocess.run(fallback_thumb, capture_output=True))
+    
+    preview_path = os.path.join(output_dir, f"preview_{video_id}.mp4")
+    prev_ss = "00:00:05" if duration_seconds > 10 else "00:00:00"
+    prev_dur = "00:00:05" if duration_seconds > 5 else f"00:00:0{max(1, duration_seconds)}"
+    ffmpeg_preview_cmd = [
+        "ffmpeg", "-y", "-ss", prev_ss, "-t", prev_dur, "-i", input_path,
+        "-vf", "scale=640:-2", "-an", "-c:v", "libx264", "-crf", "28", "-preset", "ultrafast", preview_path
+    ]
+    logger.info(f"Extracting preview clip: {' '.join(ffmpeg_preview_cmd)}")
+    await loop.run_in_executor(
+        None,
+        lambda: subprocess.run(ffmpeg_preview_cmd, capture_output=True)
+    )
     
     # --- PHASE 1: Quick DB check to get active R2 node credentials ---
     async with SessionLocal() as db:

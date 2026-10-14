@@ -3,7 +3,7 @@ import { SeoContent } from '@/components/layout/SeoContent';
 
 async function getVideosData(page: number, category: string = 'All') {
   try {
-    const size = 24;
+    const size = 48;
     const apiBase = process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || 'https://xpig.onrender.com';
     let url = `${apiBase}/api/v1/discover/search?size=${size}&page=${page}`;
     if (category && category !== 'All') {
@@ -14,7 +14,7 @@ async function getVideosData(page: number, category: string = 'All') {
     return await res.json();
   } catch (err) {
     console.error("Failed to load videos from API:", err);
-    return { items: [], total: 0, page: 1, size: 24 };
+    return { items: [], total: 0, page: 1, size: 48 };
   }
 }
 
@@ -52,6 +52,8 @@ export default async function HomePage({
           sponsors={sponsors} 
           activeCategory={activeCategory} 
           totalVideos={totalItems} 
+          currentPage={currentPage}
+          pageSize={48}
         />
       </div>
 

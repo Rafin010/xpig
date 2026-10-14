@@ -31,6 +31,7 @@ function formatDuration(duration: any): string {
 
 export default function VideoCard({ video }: { video: any }) {
   const [isHovered, setIsHovered] = useState(false);
+  const [imageError, setImageError] = useState(false);
   const [hasBeenWatched, setHasBeenWatched] = useState(false);
   const [exactDuration, setExactDuration] = useState<number>(video?.duration || 0);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -116,18 +117,28 @@ export default function VideoCard({ video }: { video: any }) {
           />
         )}
 
-        {/* Thumbnail Image */}
-        {video.thumbnail_url ? (
+        {/* Thumbnail Image or Dynamic 4-Second Video Frame Fallback */}
+        {video.thumbnail_url && !imageError ? (
           <Image 
             src={video.thumbnail_url} 
             alt={video.title} 
             className={`w-full h-full object-cover transition-transform duration-500 ${isHovered ? 'scale-110' : ''}`}
             fill 
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" 
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            onError={() => setImageError(true)} 
+          />
+        ) : playUrl ? (
+          /* Auto-captures frame at 4s if image is missing or fails to load */
+          <video 
+            src={`${playUrl}#t=4.0`}
+            preload="metadata"
+            muted
+            playsInline
+            className={`w-full h-full object-cover transition-transform duration-500 pointer-events-none ${isHovered ? 'scale-110' : ''}`}
           />
         ) : (
-          <div className="w-full h-full bg-zinc-800 flex items-center justify-center">
-            <span className="text-zinc-600 font-bold">NO THUMBNAIL</span>
+          <div className="w-full h-full bg-zinc-900 flex items-center justify-center">
+            <Play className="w-8 h-8 text-zinc-700" />
           </div>
         )}
 

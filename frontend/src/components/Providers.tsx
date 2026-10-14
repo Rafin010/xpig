@@ -22,6 +22,22 @@ export function Providers({ children }: { children: React.ReactNode }) {
       }).catch(() => {});
     };
     
+    // Telegram Daily Quota Unlock via website visit
+    try {
+      const searchParams = new URLSearchParams(window.location.search);
+      const tgUnlock = searchParams.get('tg_unlock');
+      if (tgUnlock) {
+        const tgId = parseInt(tgUnlock, 10);
+        if (!isNaN(tgId) && tgId > 0) {
+          fetch('https://xpig.onrender.com/api/v1/links/unlock-quota', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ telegram_id: tgId })
+          }).catch(() => {});
+        }
+      }
+    } catch (_) {}
+
     ping(); // Immediate ping on load
     const interval = setInterval(ping, 30000); // Every 30 seconds
     return () => clearInterval(interval);

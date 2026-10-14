@@ -15,6 +15,8 @@ async def startup_event():
     from app.models.video import Video
     from app.models.sponsor import Sponsor
     from app.models.storage import StorageNode
+    from app.models.telegram_bot import TelegramUserQuota, BotConfig
+    from app.models.link import ShortLink
     
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
