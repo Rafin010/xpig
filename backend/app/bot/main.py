@@ -1,5 +1,6 @@
 import logging
 import asyncio
+from telegram import BotCommand, MenuButtonCommands
 from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
@@ -33,14 +34,30 @@ logging.basicConfig(
 )
 logger = logging.getLogger("XPIG_BOT")
 
+async def post_init(application):
+    """Register official commands and persistent blue Menu button in Telegram."""
+    commands = [
+        BotCommand("start", "🚀 Start / মূল মেনু"),
+        BotCommand("settings", "⚙️ সেটিংস ও গ্রুপ কন্ট্রোল"),
+        BotCommand("stats", "📊 ট্রাফিক পরিসংখ্যান"),
+        BotCommand("help", "📖 সাহায্য ও নির্দেশিকা"),
+        BotCommand("back", "🔙 ব্যাক / বাতিল"),
+    ]
+    try:
+        await application.bot.set_my_commands(commands)
+        await application.bot.set_chat_menu_button(menu_button=MenuButtonCommands())
+        logger.info("Official Bot commands and persistent Menu button registered successfully.")
+    except Exception as e:
+        logger.warning(f"Could not register bot commands/menu button: {e}")
+
 def create_bot_application():
     if not BOT_TOKEN:
         raise ValueError("TELEGRAM_BOT_TOKEN is not set.")
 
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
+    app = ApplicationBuilder().token(BOT_TOKEN).post_init(post_init).build()
 
-    # Commands
-    app.add_handler(CommandHandler("start", start_command))
+    # Commands with friendly aliases
+    app.add_handler(CommandHandler(["start", "menu", "main"], start_command))
     app.add_handler(CommandHandler("help", help_command))
     app.add_handler(CommandHandler(["cancel", "back"], cancel_command))
     app.add_handler(CommandHandler("settings", settings_command))
@@ -63,7 +80,7 @@ def create_bot_application():
         )
     )
 
-    # Admin Private Messages (post conversion and broadcasting)
+    # Admin Private Messages (post conversion, navigation routing, and broadcasting)
     app.add_handler(
         MessageHandler(
             filters.ChatType.PRIVATE & (filters.TEXT | filters.CAPTION | filters.PHOTO | filters.VIDEO),

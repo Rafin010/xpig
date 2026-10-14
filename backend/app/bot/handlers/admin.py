@@ -1,6 +1,13 @@
 import logging
 from datetime import date
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import (
+    Update,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    ReplyKeyboardMarkup,
+    KeyboardButton
+)
+from telegram.constants import ChatType
 from telegram.ext import ContextTypes
 from sqlalchemy.future import select
 from sqlalchemy import func
@@ -14,6 +21,23 @@ logger = logging.getLogger(__name__)
 
 # Temporary in-memory draft cache for admin publishing
 ADMIN_DRAFTS: dict[str, dict] = {}
+
+# Persistent Reply Keyboard (Pinned at bottom of private chat)
+PERSISTENT_KEYBOARD = ReplyKeyboardMarkup(
+    [
+        [KeyboardButton("🚀 Start / মূল মেনু"), KeyboardButton("⚙️ সেটিংস ও কন্ট্রোল")],
+        [KeyboardButton("📊 ট্রাফিক পরিসংখ্যান"), KeyboardButton("🔙 ব্যাক / বাতিল")]
+    ],
+    resize_keyboard=True,
+    is_persistent=True
+)
+
+def get_nav_row(back_cb: str = "show_main_menu") -> list[InlineKeyboardButton]:
+    """Universal navigation row guaranteeing Back and Start on every message."""
+    return [
+        InlineKeyboardButton("🔙 ব্যাক (Back)", callback_data=back_cb),
+        InlineKeyboardButton("🏠 স্টার্ট (Start)", callback_data="show_main_menu")
+    ]
 
 def is_admin(user) -> bool:
     if not user:
@@ -32,43 +56,66 @@ async def check_admin_access(update: Update) -> bool:
         return True
     return False
 
+def get_master_admin_menu_content(user):
+    text = (
+        f"🔥 **XPIG Traffic Engine - Master Admin Panel**\n"
+        f"স্বাগতম, Master Admin @{user.username or user.first_name}!\n\n"
+        f"🚀 **আপনার সুপার পাওয়ার:**\n"
+        f"• যে কোনো লিংক বা পোস্ট আমাকে পাঠালে তা নিমেষেই XPIG Gateway (`https://xpig.me/link/...`) এ রূপান্তর হবে।\n"
+        f"• ১ ক্লিকেই তা আপনার কাস্টম গ্রুপে পাবলিশ করতে পারবেন।\n"
+        f"• গ্রুপে সাধারণ ইউজারদের দৈনিক ২ মেসেজ লিমিট ও ওয়েবসাইট ভিজিট রুল সক্রিয়।\n\n"
+        f"📌 **কমান্ড তালিকা:**\n"
+        f"/settings - গেটওয়ে মোড ও গ্রুপ সেটিংস\n"
+        f"/stats - লাইভ ট্রাফিক ও ক্লিকের পরিসংখ্যান\n"
+        f"/help - বিস্তারিত নির্দেশিকা\n"
+        f"/back - চলমান কাজ বাতিল ও ব্যাক"
+    )
+    keyboard = [
+        [
+            InlineKeyboardButton("⚙️ সেটিংস ও কন্ট্রোল", callback_data="show_settings"),
+            InlineKeyboardButton("📊 ট্রাফিক অ্যানালিটিক্স", callback_data="show_stats")
+        ],
+        [
+            InlineKeyboardButton("🌐 XPIG.me ওয়েবসাইট", url="https://xpig.me")
+        ],
+        [
+            InlineKeyboardButton("🔄 রিফ্রেশ (Refresh)", callback_data="show_main_menu"),
+            InlineKeyboardButton("❌ মেনু বন্ধ করুন (Close)", callback_data="close_menu")
+        ]
+    ]
+    return text, keyboard
+
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     is_master = await check_admin_access(update)
+    is_pm = update.effective_chat and update.effective_chat.type == ChatType.PRIVATE
 
     if is_master:
-        text = (
-            f"🔥 **XPIG Traffic Engine - Master Admin Panel**\n"
-            f"স্বাগতম, Master Admin @{user.username or user.first_name}!\n\n"
-            f"🚀 **আপনার সুপার পাওয়ার:**\n"
-            f"• যে কোনো লিংক বা পোস্ট আমাকে পাঠালে তা নিমেষেই XPIG Gateway (`https://xpig.me/link/...`) এ রূপান্তর হবে।\n"
-            f"• ১ ক্লিকেই তা অফিসিয়াল গ্রুপে পাবলিশ করতে পারবেন।\n"
-            f"• গ্রুপে সাধারণ ইউজারদের দৈনিক ২ মেসেজ লিমিট ও ওয়েবসাইট ভিজিট রুল সক্রিয়।\n\n"
-            f"📌 **কমান্ড তালিকা:**\n"
-            f"/settings - গেটওয়ে মোড ও গ্রুপ সেটিংস\n"
-            f"/stats - লাইভ ট্রাফিক ও ক্লিকের পরিসংখ্যান\n"
-            f"/help - বিস্তারিত নিয়মাবলী"
-        )
-        keyboard = [
-            [
-                InlineKeyboardButton("⚙️ সেটিংস ও কন্ট্রোল", callback_data="show_settings"),
-                InlineKeyboardButton("📊 ট্রাফিক অ্যানালিটিক্স", callback_data="show_stats")
-            ],
-            [
-                InlineKeyboardButton("🌐 XPIG.me ওয়েবসাইট", url="https://xpig.me")
-            ],
-            [
-                InlineKeyboardButton("❌ মেনু বন্ধ করুন (Close)", callback_data="close_menu")
-            ]
-        ]
-        await update.message.reply_text(
-            text,
-            reply_markup=InlineKeyboardMarkup(keyboard),
-            parse_mode="Markdown"
-        )
+        if update.message and is_pm:
+            # Set the persistent bottom keyboard in private chat
+            await update.message.reply_text(
+                "🔘 **কুইক অ্যাক্সেস কিবোর্ড সক্রিয়:** নিচের বাটনগুলো দিয়েও যেকোনো সময় সহজে নেভিগেট করতে পারবেন।",
+                reply_markup=PERSISTENT_KEYBOARD,
+                parse_mode="Markdown"
+            )
+
+        text, keyboard = get_master_admin_menu_content(user)
+        if update.callback_query:
+            await update.callback_query.edit_message_text(
+                text,
+                reply_markup=InlineKeyboardMarkup(keyboard),
+                parse_mode="Markdown"
+            )
+        else:
+            await update.message.reply_text(
+                text,
+                reply_markup=InlineKeyboardMarkup(keyboard),
+                parse_mode="Markdown"
+            )
     else:
         # Regular user in private chat
         unlock_url = f"https://xpig.me?tg_unlock={user.id}"
+        group_url = await get_config("target_group_url", "https://t.me/virallinksharexpig")
         text = (
             f"👋 **স্বাগতম, {user.first_name}!**\n\n"
             f"XPIG লিংকিং গ্রুপে পোস্ট করতে প্রতিদিন আমাদের ওয়েবসাইট ভিজিট করে অনুমতি আনলক করতে হবে।\n\n"
@@ -76,21 +123,32 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         keyboard = [
             [InlineKeyboardButton("🌐 ভিজিট করে কোটা আনলক করুন", url=unlock_url)],
-            [InlineKeyboardButton("🔄 স্ট্যাটাস চেক করুন", callback_data=f"check_unlock:{user.id}")]
+            [InlineKeyboardButton("👥 অফিসিয়াল গ্রুপে জয়েন করুন", url=group_url)],
+            [
+                InlineKeyboardButton("🔄 স্ট্যাটাস চেক করুন", callback_data=f"check_unlock:{user.id}"),
+                InlineKeyboardButton("🏠 স্টার্ট (Start)", callback_data="show_main_menu")
+            ]
         ]
-        await update.message.reply_text(
-            text,
-            reply_markup=InlineKeyboardMarkup(keyboard),
-            parse_mode="Markdown"
-        )
+        if update.callback_query:
+            await update.callback_query.edit_message_text(
+                text,
+                reply_markup=InlineKeyboardMarkup(keyboard),
+                parse_mode="Markdown"
+            )
+        else:
+            await update.message.reply_text(
+                text,
+                reply_markup=InlineKeyboardMarkup(keyboard),
+                parse_mode="Markdown"
+            )
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = (
         "📖 **XPIG Bot গাইডলাইন:**\n\n"
         "👑 **অ্যাডমিনদের জন্য:**\n"
-        "1. যে কোনো লিংক বা টেক্সট সরাসরি বটকে পাঠান।\n"
-        "2. বট অটোমেটিক তা `xpig.me/link/...` গেটওয়ে লিংকে কনভার্ট করবে।\n"
-        "3. '🚀 Publish to Group' বাটনে চাপলেই সরাসরি গ্রুপে পোস্ট চলে যাবে।\n\n"
+        "1. যে কোনো লিংক, টেক্সট, ফটো বা ভিডিও সরাসরি বটকে পাঠান।\n"
+        "2. বট অটোমেটিক সব লিংককে `xpig.me/link/...` গেটওয়ে লিংকে কনভার্ট করবে।\n"
+        "3. '🚀 Publish to Group' বাটনে চাপলেই সরাসরি আপনার সিলেক্ট করা গ্রুপে পোস্ট যাবে।\n\n"
         "👥 **সাধারণ ইউজারদের জন্য:**\n"
         "1. প্রতিদিন সর্বোচ্চ ২টা লিংক/মেসেজ শেয়ার করার সুযোগ।\n"
         "2. পোস্ট করার আগে দিনে একবার `xpig.me` ওয়েবসাইট ভিজিট করা বাধ্যতামূলক।"
@@ -98,17 +156,22 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [
             InlineKeyboardButton("⚙️ সেটিংস", callback_data="show_settings"),
-            InlineKeyboardButton("🔙 মূল মেনু (Back)", callback_data="show_main_menu")
+            InlineKeyboardButton("📊 অ্যানালিটিক্স", callback_data="show_stats")
         ],
+        get_nav_row("show_main_menu"),
         [
             InlineKeyboardButton("❌ বন্ধ করুন (Close)", callback_data="close_menu")
         ]
     ]
-    await update.message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
+    if update.callback_query:
+        await update.callback_query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
+    else:
+        await update.message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
 
 async def settings_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await check_admin_access(update):
-        await update.message.reply_text("⛔ আপনি এই কমান্ড ব্যবহারের অনুমতিপ্রাপ্ত নন।")
+        if update.message:
+            await update.message.reply_text("⛔ আপনি এই কমান্ড ব্যবহারের অনুমতিপ্রাপ্ত নন।")
         return
 
     ad_mode_str = await get_config("is_ad_mode", "false")
@@ -118,16 +181,19 @@ async def settings_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     is_force_sub = force_sub_str.lower() in ("true", "1", "yes")
 
     group_id = await get_config("target_group_id", "Not configured")
+    group_title = await get_config("target_group_title", "Custom Group")
+    group_url = await get_config("target_group_url", "https://t.me/virallinksharexpig")
 
     mode_label = "⏳ 5-Sec Ad Timer Gateway" if is_ad else "⚡ 2-Click XPIG Direct"
-    force_sub_label = "✅ ON" if is_force_sub else "❌ OFF"
+    force_sub_label = "✅ ON (গ্রুপে জয়েন বাধ্যতামূলক)" if is_force_sub else "❌ OFF (সবার জন্য উন্মুক্ত)"
 
     text = (
         "⚙️ **XPIG সিস্টেম সেটিংস ও কন্ট্রোল প্যানেল**\n\n"
-        f"🔗 **বর্তমান গেটওয়ে মোড:** `{mode_label}`\n"
-        f"📢 **Force-Sub চ্যানেল গেট:** `{force_sub_label}`\n"
-        f"👥 **টার্গেট গ্রুপ আইডি:** `{group_id}`\n\n"
-        "নিচের বাটনে ট্যাপ করে যেকোনো অপশন তাৎক্ষণিক পরিবর্তন করুন:"
+        f"🔗 **বর্তমান গেটওয়ে লিংক মোড:** `{mode_label}`\n"
+        f"📢 **কাস্টম গ্রুপ ফোর্স-জয়েন:** `{force_sub_label}`\n"
+        f"👥 **সিলেক্টেড টার্গেট গ্রুপ:** `{group_title}` (`{group_id}`)\n"
+        f"🔗 **গ্রুপ লিংক:** {group_url}\n\n"
+        "💡 *টিপস:* গ্রুপ পরিবর্তন করতে আপনার টার্গেট গ্রুপে বটকে অ্যাডমিন করে সেখানে `/setgroup` কমান্ড দিন।"
     )
 
     keyboard = [
@@ -139,14 +205,15 @@ async def settings_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ],
         [
             InlineKeyboardButton(
-                f"Force-Sub: { 'বন্ধ করুন' if is_force_sub else 'চালু করুন' }",
+                f"ফোর্স-জয়েন: { 'বন্ধ করুন' if is_force_sub else 'চালু করুন' }",
                 callback_data="toggle_force_sub"
             )
         ],
         [
             InlineKeyboardButton("🔄 রিফ্রেশ", callback_data="show_settings"),
-            InlineKeyboardButton("🔙 মূল মেনু (Back)", callback_data="show_main_menu")
+            InlineKeyboardButton("👥 গ্রুপ লিংক দেখুন", url=group_url)
         ],
+        get_nav_row("show_main_menu"),
         [
             InlineKeyboardButton("❌ বন্ধ করুন (Close)", callback_data="close_menu")
         ]
@@ -167,26 +234,23 @@ async def settings_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await check_admin_access(update):
-        await update.message.reply_text("⛔ শুধুমাত্র অ্যাডমিন এই তথ্য দেখতে পারবেন।")
+        if update.message:
+            await update.message.reply_text("⛔ শুধুমাত্র অ্যাডমিন এই তথ্য দেখতে পারবেন।")
         return
 
     today = date.today()
     async with SessionLocal() as db:
-        # Total links
         res_links = await db.execute(select(func.count(ShortLink.id)))
         total_links = res_links.scalar() or 0
 
-        # Total clicks
         res_clicks = await db.execute(select(func.sum(ShortLink.clicks)))
         total_clicks = res_clicks.scalar() or 0
 
-        # Today's active quotas
         res_users = await db.execute(
             select(func.count(TelegramUserQuota.id)).filter(TelegramUserQuota.quota_date == today)
         )
         today_active_users = res_users.scalar() or 0
 
-        # Today's website unlocked users
         res_unlocked = await db.execute(
             select(func.count(TelegramUserQuota.id)).filter(
                 TelegramUserQuota.quota_date == today,
@@ -206,9 +270,9 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     keyboard = [
         [
-            InlineKeyboardButton("🔄 আপডেট করুন", callback_data="show_stats"),
-            InlineKeyboardButton("🔙 মূল মেনু (Back)", callback_data="show_main_menu")
+            InlineKeyboardButton("🔄 আপডেট / রিফ্রেশ", callback_data="show_stats")
         ],
+        get_nav_row("show_main_menu"),
         [
             InlineKeyboardButton("❌ বন্ধ করুন (Close)", callback_data="close_menu")
         ]
@@ -248,35 +312,35 @@ async def handle_admin_callback(update: Update, context: ContextTypes.DEFAULT_TY
         await settings_command(update, context)
     elif data == "show_main_menu":
         user = update.effective_user
-        text = (
-            f"🔥 **XPIG Traffic Engine - Master Admin Panel**\n"
-            f"স্বাগতম, Master Admin @{user.username or user.first_name}!\n\n"
-            f"🚀 **আপনার সুপার পাওয়ার:**\n"
-            f"• যে কোনো লিংক বা পোস্ট আমাকে পাঠালে তা নিমেষেই XPIG Gateway (`https://xpig.me/link/...`) এ রূপান্তর হবে।\n"
-            f"• ১ ক্লিকেই তা অফিসিয়াল গ্রুপে পাবলিশ করতে পারবেন।\n"
-            f"• গ্রুপে সাধারণ ইউজারদের দৈনিক ২ মেসেজ লিমিট ও ওয়েবসাইট ভিজিট রুল সক্রিয়।\n\n"
-            f"📌 **কমান্ড তালিকা:**\n"
-            f"/settings - গেটওয়ে মোড ও গ্রুপ সেটিংস\n"
-            f"/stats - লাইভ ট্রাফিক ও ক্লিকের পরিসংখ্যান\n"
-            f"/help - বিস্তারিত নিয়মাবলী"
-        )
-        keyboard = [
-            [
-                InlineKeyboardButton("⚙️ সেটিংস ও কন্ট্রোল", callback_data="show_settings"),
-                InlineKeyboardButton("📊 ট্রাফিক অ্যানালিটিক্স", callback_data="show_stats")
-            ],
-            [
-                InlineKeyboardButton("🌐 XPIG.me ওয়েবসাইট", url="https://xpig.me")
-            ],
-            [
-                InlineKeyboardButton("❌ মেনু বন্ধ করুন (Close)", callback_data="close_menu")
+        is_master = await check_admin_access(update)
+        if is_master:
+            text, keyboard = get_master_admin_menu_content(user)
+            await query.edit_message_text(
+                text,
+                reply_markup=InlineKeyboardMarkup(keyboard),
+                parse_mode="Markdown"
+            )
+        else:
+            unlock_url = f"https://xpig.me?tg_unlock={user.id}"
+            group_url = await get_config("target_group_url", "https://t.me/virallinksharexpig")
+            text = (
+                f"👋 **স্বাগতম, {user.first_name}!**\n\n"
+                f"XPIG লিংকিং গ্রুপে পোস্ট করতে প্রতিদিন আমাদের ওয়েবসাইট ভিজিট করে অনুমতি আনলক করতে হবে।\n\n"
+                f"🔗 নিচের বাটনে ক্লিক করে ওয়েবসাইট ভিজিট করুন ও আজকের কোটা আনলক করুন:"
+            )
+            keyboard = [
+                [InlineKeyboardButton("🌐 ভিজিট করে কোটা আনলক করুন", url=unlock_url)],
+                [InlineKeyboardButton("👥 অফিসিয়াল গ্রুপে জয়েন করুন", url=group_url)],
+                [
+                    InlineKeyboardButton("🔄 স্ট্যাটাস চেক করুন", callback_data=f"check_unlock:{user.id}"),
+                    InlineKeyboardButton("🏠 স্টার্ট (Start)", callback_data="show_main_menu")
+                ]
             ]
-        ]
-        await query.edit_message_text(
-            text,
-            reply_markup=InlineKeyboardMarkup(keyboard),
-            parse_mode="Markdown"
-        )
+            await query.edit_message_text(
+                text,
+                reply_markup=InlineKeyboardMarkup(keyboard),
+                parse_mode="Markdown"
+            )
     elif data == "close_menu":
         try:
             await query.message.delete()
@@ -288,7 +352,7 @@ async def handle_admin_callback(update: Update, context: ContextTypes.DEFAULT_TY
         await query.edit_message_text(
             "❌ **পোস্ট বাতিল করা হয়েছে।** কোনো কিছু গ্রুপে পাঠানো হয়নি।",
             reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🔙 মূল মেনুতে ফিরুন (Back)", callback_data="show_main_menu")]
+                get_nav_row("show_main_menu")
             ]),
             parse_mode="Markdown"
         )
@@ -296,12 +360,18 @@ async def handle_admin_callback(update: Update, context: ContextTypes.DEFAULT_TY
         draft_id = data.split(":", 1)[1]
         draft = ADMIN_DRAFTS.get(draft_id)
         if not draft:
-            await query.edit_message_text("❌ ড্রাফটের মেয়াদ শেষ হয়ে গেছে। পুনরায় লিংক পাঠান।")
+            await query.edit_message_text(
+                "❌ ড্রাফটের মেয়াদ শেষ হয়ে গেছে। পুনরায় লিংক পাঠান।",
+                reply_markup=InlineKeyboardMarkup([get_nav_row("show_main_menu")])
+            )
             return
 
         group_id = await get_config("target_group_id", "")
         if not group_id:
-            await query.edit_message_text("⚠️ টার্গেট গ্রুপ এখনো সেট করা হয়নি! প্রথমে গ্রুপে গিয়ে `/setgroup` কমান্ড দিন।")
+            await query.edit_message_text(
+                "⚠️ টার্গেট গ্রুপ এখনো সেট করা হয়নি! প্রথমে গ্রুপে গিয়ে `/setgroup` কমান্ড দিন।",
+                reply_markup=InlineKeyboardMarkup([get_nav_row("show_main_menu")])
+            )
             return
 
         try:
@@ -327,29 +397,53 @@ async def handle_admin_callback(update: Update, context: ContextTypes.DEFAULT_TY
                     parse_mode="Markdown"
                 )
             
-            await query.edit_message_text("✅ **সফলভাবে গ্রুপে পাবলিশ করা হয়েছে!**")
+            await query.edit_message_text(
+                "✅ **সফলভাবে গ্রুপে পাবলিশ করা হয়েছে!**",
+                reply_markup=InlineKeyboardMarkup([get_nav_row("show_main_menu")])
+            )
             ADMIN_DRAFTS.pop(draft_id, None)
         except Exception as e:
             logger.error(f"Error publishing to group: {e}")
-            await query.edit_message_text(f"❌ গ্রুপে পাঠাতে ত্রুটি হয়েছে: {e}")
+            await query.edit_message_text(
+                f"❌ গ্রুপে পাঠাতে ত্রুটি হয়েছে: {e}",
+                reply_markup=InlineKeyboardMarkup([get_nav_row("show_main_menu")])
+            )
 
 async def handle_admin_private_content(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Only master admin gets content harvesting & publishing powers in PM
-    if not await check_admin_access(update):
-        return
-
     message = update.message
     if not message:
         return
 
     text = message.text or message.caption or ""
-    urls = extract_urls(text)
+    clean_text = text.strip().lower()
 
+    # Route persistent keyboard buttons or common text commands
+    if clean_text in ["🚀 start / মূল মেনু", "start", "/start", "মেনু", "শুরু", "home", "main menu", "🏠 স্টার্ট", "স্টার্ট"]:
+        await start_command(update, context)
+        return
+    if clean_text in ["🔙 ব্যাক / বাতিল", "back", "/back", "বাতিল", "ব্যাক", "ফিরে যান", "cancel", "/cancel", "🔙"]:
+        await cancel_command(update, context)
+        return
+    if clean_text in ["⚙️ সেটিংস ও কন্ট্রোল", "⚙️ সেটিংস", "settings", "/settings", "সেটিংস"]:
+        await settings_command(update, context)
+        return
+    if clean_text in ["📊 ট্রাফিক পরিসংখ্যান", "📊 পরিসংখ্যান", "stats", "/stats", "পরিসংখ্যান"]:
+        await stats_command(update, context)
+        return
+    if clean_text in ["📖 সাহায্য", "help", "/help", "সাহায্য"]:
+        await help_command(update, context)
+        return
+
+    # If regular user sent other text, guide them
+    if not await check_admin_access(update):
+        await start_command(update, context)
+        return
+
+    urls = extract_urls(text)
     if not urls:
-        # Admin sent text without links
         keyboard = [
+            get_nav_row("show_main_menu"),
             [
-                InlineKeyboardButton("🔙 মূল মেনু (Main Menu)", callback_data="show_main_menu"),
                 InlineKeyboardButton("❌ বন্ধ করুন (Close)", callback_data="close_menu")
             ]
         ]
@@ -359,7 +453,7 @@ async def handle_admin_private_content(update: Update, context: ContextTypes.DEF
         )
         return
 
-    # Convert links
+    # Convert links to XPIG Gateway links
     converted_text, count = await convert_text_links(text, telegram_id=message.from_user.id)
 
     # Branded footer
@@ -379,15 +473,13 @@ async def handle_admin_private_content(update: Update, context: ContextTypes.DEF
     reply_preview = (
         f"🎯 **{count}টি লিংক সফলভাবে কনভার্ট করা হয়েছে!**\n\n"
         f"📋 **প্রিভিউ:**\n{converted_text}\n\n"
-        "নিচের বাটনে চাপ দিয়ে সরাসরি গ্রুপে পোস্ট করুন অথবা বাতিল/ব্যাক করুন:"
+        "নিচের বাটনে চাপ দিয়ে সরাসরি আপনার গ্রুপে পোস্ট করুন অথবা ব্যাক করুন:"
     )
 
     keyboard = [
         [InlineKeyboardButton("🚀 Publish to Group Now", callback_data=f"publish_draft:{draft_id}")],
-        [
-            InlineKeyboardButton("🔙 মূল মেনু (Back)", callback_data="show_main_menu"),
-            InlineKeyboardButton("❌ বাতিল করুন (Cancel)", callback_data=f"cancel_draft:{draft_id}")
-        ]
+        get_nav_row("show_main_menu"),
+        [InlineKeyboardButton("❌ বাতিল করুন (Cancel)", callback_data=f"cancel_draft:{draft_id}")]
     ]
 
     await message.reply_text(
@@ -405,13 +497,13 @@ async def cancel_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 ADMIN_DRAFTS.pop(k, None)
     
     keyboard = [
+        get_nav_row("show_main_menu"),
         [
-            InlineKeyboardButton("🔙 মূল মেনু (Main Menu)", callback_data="show_main_menu"),
             InlineKeyboardButton("❌ বন্ধ করুন (Close)", callback_data="close_menu")
         ]
     ]
     await update.message.reply_text(
-        "✅ **চলমান টাস্ক বাতিল করা হয়েছে।** আপনি যেকোনো সময় নতুন কাজ শুরু করতে পারেন।",
+        "✅ **চলমান টাস্ক বা ড্রাফট বাতিল করা হয়েছে।**\nআপনি যেকোনো সময় নতুন কাজ শুরু করতে পারেন।",
         reply_markup=InlineKeyboardMarkup(keyboard),
         parse_mode="Markdown"
     )
@@ -421,8 +513,8 @@ async def set_api_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     args = context.args
     keyboard = [
+        get_nav_row("show_main_menu"),
         [
-            InlineKeyboardButton("🔙 মূল মেনু (Back)", callback_data="show_main_menu"),
             InlineKeyboardButton("❌ বন্ধ করুন (Close)", callback_data="close_menu")
         ]
     ]
@@ -450,8 +542,8 @@ async def add_source_command(update: Update, context: ContextTypes.DEFAULT_TYPE)
         return
     args = context.args
     keyboard = [
+        get_nav_row("show_main_menu"),
         [
-            InlineKeyboardButton("🔙 মূল মেনু (Back)", callback_data="show_main_menu"),
             InlineKeyboardButton("❌ বন্ধ করুন (Close)", callback_data="close_menu")
         ]
     ]
@@ -484,8 +576,8 @@ async def sources_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await check_admin_access(update):
         return
     keyboard = [
+        get_nav_row("show_main_menu"),
         [
-            InlineKeyboardButton("🔙 মূল মেনু (Back)", callback_data="show_main_menu"),
             InlineKeyboardButton("❌ বন্ধ করুন (Close)", callback_data="close_menu")
         ]
     ]
@@ -510,8 +602,8 @@ async def remove_source_command(update: Update, context: ContextTypes.DEFAULT_TY
         return
     args = context.args
     keyboard = [
+        get_nav_row("show_main_menu"),
         [
-            InlineKeyboardButton("🔙 মূল মেনু (Back)", callback_data="show_main_menu"),
             InlineKeyboardButton("❌ বন্ধ করুন (Close)", callback_data="close_menu")
         ]
     ]
@@ -537,4 +629,3 @@ async def remove_source_command(update: Update, context: ContextTypes.DEFAULT_TY
             "❌ গ্রুপটি লিস্টে পাওয়া যায়নি।",
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
-

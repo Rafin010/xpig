@@ -57,14 +57,28 @@ async def set_group_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("⛔ শুধুমাত্র অ্যাডমিন এই গ্রুপ সেট করতে পারবেন।")
         return
 
+    group_url = ""
+    try:
+        if chat.username:
+            group_url = f"https://t.me/{chat.username}"
+        else:
+            invite = await context.bot.create_chat_invite_link(chat.id)
+            group_url = invite.invite_link
+    except Exception as e:
+        logger.warning(f"Could not generate invite link: {e}")
+        group_url = await get_config("target_group_url", "https://t.me/virallinksharexpig")
+
     await set_config("target_group_id", str(chat.id))
     await set_config("target_group_title", chat.title or "XPIG Group")
+    if group_url:
+        await set_config("target_group_url", group_url)
 
     msg = await update.message.reply_text(
         f"✅ **এই গ্রুপটি সফলভাবে XPIG ট্রাফিক ইঞ্জিনের প্রধান গ্রুপ হিসেবে সেট করা হয়েছে!**\n\n"
         f"📌 গ্রুপ নাম: `{chat.title}`\n"
-        f"🆔 গ্রুপ আইডি: `{chat.id}`\n\n"
-        f"এখন থেকে এই গ্রুপে লিংক কন্ট্রোল, ২ মেসেজ লিমিট ও ওয়েবসাইট ট্রাফিক সিস্টেম স্বয়ংক্রিয়ভাবে কার্যকর থাকবে।",
+        f"🆔 গ্রুপ আইডি: `{chat.id}`\n"
+        f"🔗 গ্রুপ লিংক: {group_url}\n\n"
+        f"এখন থেকে শুধুমাত্র এই নির্দিষ্ট গ্রুপেই ফোর্স-জয়েন, ২ মেসেজ লিমিট ও ওয়েবসাইট ট্রাফিক সিস্টেম স্বয়ংক্রিয়ভাবে কার্যকর থাকবে।",
         parse_mode="Markdown"
     )
     # Auto clean after 30 seconds
@@ -90,23 +104,31 @@ async def handle_group_message(update: Update, context: ContextTypes.DEFAULT_TYP
     if external_urls:
         quota_note = ""
         if not is_admin:
-            # Check Force-Sub if enabled
+            # Check Custom Group Force-Join if enabled
             force_sub_enabled = await get_config("force_sub_enabled", "false")
-            force_sub_channel = await get_config("force_sub_channel", "")
-            if force_sub_enabled.lower() in ("true", "1", "yes") and force_sub_channel:
+            target_group_id = await get_config("target_group_id", "")
+            target_group_url = await get_config("target_group_url", "https://t.me/virallinksharexpig")
+
+            if force_sub_enabled.lower() in ("true", "1", "yes") and target_group_id:
                 try:
-                    sub_member = await context.bot.get_chat_member(force_sub_channel, user.id)
+                    target_id_num = int(target_group_id)
+                    sub_member = await context.bot.get_chat_member(target_id_num, user.id)
                     if sub_member.status in [ChatMember.LEFT, ChatMember.BANNED]:
                         await message.delete()
+                        keyboard = [
+                            [InlineKeyboardButton("👥 জয়েন গ্রুপ (Join Group)", url=target_group_url)],
+                            [InlineKeyboardButton("🔄 স্ট্যাটাস ভেরিফাই করুন", callback_data=f"check_unlock:{user.id}")]
+                        ]
                         warn = await chat.send_message(
-                            f"⚠️ {user.mention_markdown()}, লিংক পোস্ট করার আগে আমাদের অফিসিয়াল চ্যানেলে জয়েন করুন!\n\n"
-                            f"📢 চ্যানেল: {force_sub_channel}",
+                            f"⚠️ {user.mention_markdown()}, লিংক পোস্ট করার পূর্বে আমাদের অফিসিয়াল গ্রুপে জয়েন থাকতে হবে!\n\n"
+                            f"👉 জয়েন না করে গ্রুপে কোনো পোস্ট বা মেসেজ পাঠানো যাবে না।",
+                            reply_markup=InlineKeyboardMarkup(keyboard),
                             parse_mode="Markdown"
                         )
-                        asyncio.create_task(auto_delete_message(context.bot, chat.id, warn.message_id, 15))
+                        asyncio.create_task(auto_delete_message(context.bot, chat.id, warn.message_id, 25))
                         return
                 except Exception as e:
-                    logger.error(f"Force-sub check failed: {e}")
+                    logger.error(f"Custom group check failed: {e}")
 
             # Check today's quota
             quota = await get_user_quota(user.id, user.username)
