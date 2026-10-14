@@ -29,6 +29,45 @@ function formatTime(seconds: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
+/**
+ * Professional Auto-Rotate SVG Icon with animated rotating phone and dual orbiting arrows.
+ */
+function AutoRotateIcon({ className = "w-4 h-4", isRotated = false }: { className?: string; isRotated?: boolean }) {
+  return (
+    <svg 
+      viewBox="0 0 24 24" 
+      fill="none" 
+      stroke="currentColor" 
+      strokeWidth="2" 
+      strokeLinecap="round" 
+      strokeLinejoin="round" 
+      className={className}
+      aria-hidden="true"
+    >
+      {/* Central Phone Device that tilts/rotates smoothly */}
+      <rect 
+        x="6.5" 
+        y="4" 
+        width="11" 
+        height="16" 
+        rx="2.5" 
+        strokeWidth="1.8"
+        className={`transition-transform duration-300 origin-center ${isRotated ? 'rotate-90' : ''}`}
+      />
+      {/* Speaker Bar & Home Button */}
+      <line x1="10.5" y1="6.5" x2="13.5" y2="6.5" strokeWidth="1.5" />
+      <circle cx="12" cy="17" r="0.75" fill="currentColor" stroke="none" />
+      
+      {/* Dual Curved Orbiting Arrows */}
+      <path d="M20.5 9A8 8 0 0 0 12 3.2" strokeWidth="1.8" />
+      <polyline points="21 5 20.5 9 16.5 9" strokeWidth="1.8" />
+      
+      <path d="M3.5 15A8 8 0 0 0 12 20.8" strokeWidth="1.8" />
+      <polyline points="3 19 3.5 15 7.5 15" strokeWidth="1.8" />
+    </svg>
+  );
+}
+
 export function Player({ src, fallbackSrc, poster, previewUrl, title, autoPlay = true }: PlayerProps) {
   const [mounted, setMounted] = useState(false);
   const playerRef = useRef<any>(null);
@@ -38,6 +77,7 @@ export function Player({ src, fallbackSrc, poster, previewUrl, title, autoPlay =
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [isRotated, setIsRotated] = useState(false);
+  const [isScreenPortrait, setIsScreenPortrait] = useState(true);
   const [currentSrc, setCurrentSrc] = useState(src);
   const [isAudioOnly, setIsAudioOnly] = useState(false);
   const [hoverPreview, setHoverPreview] = useState<{
@@ -196,62 +236,115 @@ export function Player({ src, fallbackSrc, poster, previewUrl, title, autoPlay =
     return () => document.removeEventListener('pointerdown', handleOutsideClick);
   }, [mounted]);
 
-  const toggleRotate = async (e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    try {
-      const orientation = screen.orientation as any;
-      if (orientation) {
-        const type = orientation.type || '';
-        if (type.includes('portrait') || !isRotated) {
-          if (playerRef.current && !playerRef.current.state?.fullscreen) {
-            try {
-              await playerRef.current.remote?.enterFullscreen();
-            } catch {}
-          }
-          if (orientation.lock) {
-            await orientation.lock('landscape').catch(() => {});
-          }
-          setIsRotated(true);
-        } else {
-          if (orientation.lock) {
-            await orientation.lock('portrait').catch(() => {});
-          } else if (orientation.unlock) {
+  // Track device screen orientation (Portrait vs Landscape)
+  useEffect(() => {
+    if (!mounted) return;
+    const checkOrientation = () => {
+      if (typeof window !== 'undefined') {
+        setIsScreenPortrait(window.innerHeight >= window.innerWidth);
+      }
+    };
+    checkOrientation();
+    window.addEventListener('resize', checkOrientation);
+    window.addEventListener('orientationchange', checkOrientation);
+    return () => {
+      window.removeEventListener('resize', checkOrientation);
+      window.removeEventListener('orientationchange', checkOrientation);
+    };
+  }, [mounted]);
+
+  // Fullscreen event listener to sync rotation and unlock orientation on exit
+  useEffect(() => {
+    if (!mounted) return;
+    const handleFsChange = () => {
+      const isFs = Boolean(document.fullscreenElement || (document as any).webkitFullscreenElement);
+      if (!isFs && !isRotated) {
+        try {
+          const orientation = (screen.orientation || (screen as any).mozOrientation || (screen as any).msOrientation) as any;
+          if (orientation && orientation.unlock) {
             orientation.unlock();
           }
-          if (playerRef.current && playerRef.current.state?.fullscreen) {
-            try {
-              await playerRef.current.remote?.exitFullscreen();
-            } catch {}
-          }
-          setIsRotated(false);
-        }
-        return;
+        } catch (e) {}
       }
-    } catch (err) {}
+    };
 
-    // Fallback if orientation API not supported
-    if (playerRef.current) {
-      try {
-        if (!isRotated) {
-          await playerRef.current.remote?.enterFullscreen();
-        } else {
-          await playerRef.current.remote?.exitFullscreen();
-        }
-      } catch {}
+    document.addEventListener('fullscreenchange', handleFsChange);
+    document.addEventListener('webkitfullscreenchange', handleFsChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFsChange);
+      document.removeEventListener('webkitfullscreenchange', handleFsChange);
+    };
+  }, [mounted, isRotated]);
+
+  const toggleRotate = async (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
     }
-    setIsRotated(prev => !prev);
+
+    const nextRotated = !isRotated;
+    setIsRotated(nextRotated);
+
+    const container = containerRef.current;
+    const orientation = (screen.orientation || (screen as any).mozOrientation || (screen as any).msOrientation) as any;
+
+    if (nextRotated) {
+      // 1. Enter Fullscreen (required by mobile browsers to allow orientation lock)
+      try {
+        const isAlreadyFs = Boolean(document.fullscreenElement || (document as any).webkitFullscreenElement);
+        if (!isAlreadyFs) {
+          if (container && container.requestFullscreen) {
+            await container.requestFullscreen().catch(() => {});
+          } else if (container && (container as any).webkitRequestFullscreen) {
+            await (container as any).webkitRequestFullscreen().catch(() => {});
+          } else if (playerRef.current?.remote?.enterFullscreen) {
+            await playerRef.current.remote.enterFullscreen().catch(() => {});
+          }
+        }
+      } catch (err) {}
+
+      // 2. Lock screen orientation to landscape
+      try {
+        if (orientation && orientation.lock) {
+          await orientation.lock('landscape').catch(() => {});
+        } else if ((screen as any).lockOrientation) {
+          (screen as any).lockOrientation('landscape');
+        }
+      } catch (err) {}
+    } else {
+      // Revert from landscape back to portrait
+      try {
+        if (orientation && orientation.unlock) {
+          orientation.unlock();
+        } else if (orientation && orientation.lock) {
+          await orientation.lock('portrait').catch(() => {});
+        }
+      } catch (err) {}
+
+      try {
+        const isFs = Boolean(document.fullscreenElement || (document as any).webkitFullscreenElement);
+        if (isFs) {
+          if (document.exitFullscreen) {
+            await document.exitFullscreen().catch(() => {});
+          } else if ((document as any).webkitExitFullscreen) {
+            await (document as any).webkitExitFullscreen().catch(() => {});
+          } else if (playerRef.current?.remote?.exitFullscreen) {
+            await playerRef.current.remote.exitFullscreen().catch(() => {});
+          }
+        }
+      } catch (err) {}
+    }
   };
 
   const handleFullscreenChange = (isFullscreen: boolean) => {
     try {
+      const orientation = (screen.orientation || (screen as any).mozOrientation || (screen as any).msOrientation) as any;
       if (isFullscreen) {
-        const orientation = screen.orientation as any;
         if (orientation && orientation.lock) {
           orientation.lock('landscape').catch(() => {});
         }
         setIsRotated(true);
       } else {
-        const orientation = screen.orientation as any;
         if (orientation && orientation.unlock) {
           orientation.unlock();
         }
@@ -278,11 +371,30 @@ export function Player({ src, fallbackSrc, poster, previewUrl, title, autoPlay =
 
   const isLooping = currentSrc === fallbackSrc;
   const previewSource = isAudioOnly && fallbackSrc ? fallbackSrc : (currentSrc || fallbackSrc || '');
+  const isCssRotated = isRotated && isScreenPortrait;
 
   return (
     <div 
       ref={containerRef}
-      className="relative w-full aspect-video bg-black rounded-none md:rounded-xl overflow-hidden select-none group flex items-center justify-center"
+      className={`relative w-full aspect-video bg-black rounded-none md:rounded-xl overflow-hidden select-none group flex items-center justify-center transition-[transform,width,height] duration-300 ${
+        isCssRotated
+          ? '!fixed !inset-0 !z-[99999] !w-[100vh] !h-[100vw] !max-w-none !max-h-none !rounded-none !shadow-none'
+          : ''
+      }`}
+      style={
+        isCssRotated
+          ? {
+              transform: 'rotate(90deg) translateY(-100%)',
+              transformOrigin: 'top left',
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              width: '100vh',
+              height: '100vw',
+              zIndex: 99999,
+            }
+          : undefined
+      }
     >
       <MediaPlayer 
         ref={playerRef}
@@ -415,20 +527,41 @@ export function Player({ src, fallbackSrc, poster, previewUrl, title, autoPlay =
         </div>
       )}
 
-      {/* Floating switch button when playing fallback video clip */}
-      {fallbackSrc && currentSrc === fallbackSrc && (
+      {/* Top-Right Control Cluster: Audio Switch + Professional Mobile Auto-Rotate */}
+      <div className="absolute top-3.5 right-3.5 z-30 flex items-center gap-2 pointer-events-auto">
+        {/* Floating switch button when playing fallback video clip */}
+        {fallbackSrc && currentSrc === fallbackSrc && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleStreamSource();
+            }}
+            className="px-3 py-1.5 rounded-full bg-zinc-900/90 hover:bg-zinc-800 backdrop-blur-md border border-pink-500/60 text-[11px] font-bold text-pink-300 hover:text-white flex items-center gap-1.5 shadow-lg transition-all active:scale-95 cursor-pointer"
+          >
+            <Volume2 className="w-3.5 h-3.5 text-pink-400" />
+            <span className="hidden sm:inline">🎵 সম্পূর্ণ অডিও</span>
+          </button>
+        )}
+
+        {/* Mobile & Tablet Professional Auto Rotate Button */}
         <button
           type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            toggleStreamSource();
-          }}
-          className="absolute top-3 right-3 z-20 px-3 py-1.5 rounded-full bg-zinc-900/90 hover:bg-zinc-800 backdrop-blur-md border border-pink-500/60 text-[11px] font-bold text-pink-300 hover:text-white flex items-center gap-1.5 shadow-lg transition-all active:scale-95 cursor-pointer pointer-events-auto"
+          onClick={toggleRotate}
+          aria-label={isRotated ? "Exit Landscape Rotation" : "Auto Rotate Video"}
+          className={`md:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-full backdrop-blur-md transition-all duration-300 active:scale-90 shadow-xl border cursor-pointer select-none ${
+            isRotated
+              ? 'bg-pink-600/95 text-white border-pink-300/60 shadow-pink-900/50 ring-2 ring-pink-500/40'
+              : 'bg-black/70 hover:bg-black/90 text-zinc-100 hover:text-white border-white/25 hover:border-white/40'
+          }`}
+          title={isRotated ? "Exit Landscape Rotation" : "Auto Rotate Player"}
         >
-          <Volume2 className="w-3.5 h-3.5 text-pink-400" />
-          <span>🎵 সম্পূর্ণ অডিও শুনুন (Full Audio)</span>
+          <AutoRotateIcon className={`w-4 h-4 transition-transform duration-300 ${isRotated ? 'text-white' : 'text-pink-400'}`} isRotated={isRotated} />
+          <span className="text-[11px] font-bold tracking-tight">
+            {isRotated ? 'ল্যান্ডস্কেপ' : 'রোটেট'}
+          </span>
         </button>
-      )}
+      </div>
 
       {/* Real-time YouTube-Style Compact Video Frame Scrubber Tooltip - Positioned in containerRef */}
       {hoverPreview.visible && (
@@ -480,17 +613,6 @@ export function Player({ src, fallbackSrc, poster, previewUrl, title, autoPlay =
           <Play className="w-10 h-10 md:w-12 md:h-12 text-white fill-white ml-1.5 drop-shadow-md" />
         </button>
       )}
-
-      {/* Mobile Screen Rotation Button */}
-      <button
-        type="button"
-        onClick={toggleRotate}
-        aria-label="Rotate Video Player"
-        className="sm:hidden absolute top-3 left-3 z-20 p-2 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md border border-white/20 text-white/90 hover:text-white flex items-center justify-center shadow-lg transition-all active:scale-95 cursor-pointer pointer-events-auto"
-        title="Rotate Player"
-      >
-        <RotateCw className={`w-4 h-4 transition-transform duration-300 ${isRotated ? 'rotate-90 text-pink-400' : ''}`} />
-      </button>
     </div>
   );
 }
