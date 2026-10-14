@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+.font-signature {
+  font-family: var(--font-signature), 'Dancing Script', 'Brush Script MT', 'Segoe Script', cursive;
+}
+
 :root {
   --background: #181818;
   --foreground: #ededed;
@@ -166,4 +170,20 @@ media-player .vds-poster {
   animation-name: float-screen-emoji;
   animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
   animation-fill-mode: forwards;
+}
+
+/* Smooth Tab & System Switch Transition */
+@keyframes tab-fade-slide {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-tab-switch {
+  animation: tab-fade-slide 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }

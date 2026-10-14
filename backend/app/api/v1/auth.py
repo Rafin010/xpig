@@ -19,11 +19,13 @@ class GoogleAuthPayload(BaseModel):
     picture: Optional[str] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
+    cookie_tracker_id: Optional[str] = None
 
 class AdminGoogleAuthPayload(BaseModel):
     access_token: str
     latitude: Optional[float] = None
     longitude: Optional[float] = None
+    cookie_tracker_id: Optional[str] = None
 
 def get_telemetry(user: User) -> dict:
     if user.age_verification_status and user.age_verification_status.startswith("{"):
@@ -44,6 +46,34 @@ def update_telemetry(user: User, data: dict):
     current = get_telemetry(user)
     current.update(data)
     user.age_verification_status = json.dumps(current)
+
+async def merge_guest_identity(user: User, cookie_tracker_id: Optional[str], db: AsyncSession):
+    if not cookie_tracker_id:
+        return
+    try:
+        from app.models.guest import GuestUser
+        guest_res = await db.execute(select(GuestUser).where(GuestUser.cookie_tracker_id == cookie_tracker_id))
+        guest = guest_res.scalars().first()
+        if guest and not guest.is_converted:
+            user.total_clicks = (user.total_clicks or 0) + (guest.total_clicks or 0)
+            user.total_watched_videos = (user.total_watched_videos or 0) + (guest.total_watched_videos or 0)
+            user.total_watch_seconds = (user.total_watch_seconds or 0) + (guest.total_watch_seconds or 0)
+            if not user.device_name and guest.device_name:
+                user.device_name = guest.device_name
+            if not user.browser_name and guest.browser_name:
+                user.browser_name = guest.browser_name
+            if not user.os_name and guest.os_name:
+                user.os_name = guest.os_name
+            if not user.country and guest.country:
+                user.country = guest.country
+            if not user.last_ip and guest.ip_address:
+                user.last_ip = guest.ip_address
+            user.cookie_tracker_id = guest.cookie_tracker_id
+
+            guest.is_converted = True
+            guest.converted_to_user_id = user.id
+    except Exception as e:
+        print(f"Guest identity merge notice: {e}")
 
 @router.post("/google")
 async def google_auth(
@@ -121,6 +151,10 @@ async def google_auth(
             })
         await db.commit()
         
+    if payload.cookie_tracker_id:
+        await merge_guest_identity(user, payload.cookie_tracker_id, db)
+        await db.commit()
+        
     # 3. Create XPIG JWT Token
     access_token = create_access_token(subject=user.id)
         
@@ -192,6 +226,10 @@ async def admin_google_verify(
     if user.hashed_password in ["invited_cofounder", "PENDING_GOOGLE_LOGIN"]:
         user.hashed_password = "google_oauth"
     await db.commit()
+
+    if payload.cookie_tracker_id:
+        await merge_guest_identity(user, payload.cookie_tracker_id, db)
+        await db.commit()
 
     # 5. Issue Token & Session
     access_token = create_access_token(subject=user.id)

@@ -15,6 +15,7 @@ from app.models.social import Comment, Like
 from app.models.moderation import Report, ModerationLog
 from app.api.deps import get_current_user
 from app.models.user import User
+from app.models.guest import GuestUser
 import uuid
 from app.schemas.video import Video as VideoSchema, VideoCreate, VideoSourceCreate
 from app.services.media_provider import SelfHostedProvider # Replace with factory
@@ -172,10 +173,13 @@ async def upload_video(
     return {"status": "uploading", "video_id": video.id, "title": video.title}
 
 from pydantic import BaseModel
+from sqlalchemy import func
 
 class PingPayload(BaseModel):
     watch_time: int
     is_new_view: bool = False
+    user_id: Optional[int] = None
+    cookie_tracker_id: Optional[str] = None
 
 @router.post("/{video_id}/ping")
 async def ping_video(
@@ -191,6 +195,37 @@ async def ping_video(
     video.total_watch_seconds = (video.total_watch_seconds or 0) + payload.watch_time
     if payload.is_new_view:
         video.views = (video.views or 0) + 1
+
+    # Credit logged in user's personal watch stats
+    if payload.user_id:
+        user_res = await db.execute(select(User).where(User.id == payload.user_id))
+        user = user_res.scalars().first()
+        if user:
+            user.total_watch_seconds = (user.total_watch_seconds or 0) + payload.watch_time
+            if payload.is_new_view:
+                user.total_watched_videos = (user.total_watched_videos or 0) + 1
+            user.last_active = func.now()
+            if payload.cookie_tracker_id and not user.cookie_tracker_id:
+                user.cookie_tracker_id = payload.cookie_tracker_id
+    elif payload.cookie_tracker_id:
+        # Credit guest user's personal watch stats via persistent cookie
+        guest_res = await db.execute(select(GuestUser).where(GuestUser.cookie_tracker_id == payload.cookie_tracker_id))
+        guest = guest_res.scalars().first()
+        if guest:
+            guest.total_watch_seconds = (guest.total_watch_seconds or 0) + payload.watch_time
+            if payload.is_new_view:
+                guest.total_watched_videos = (guest.total_watched_videos or 0) + 1
+            guest.last_active = func.now()
+        else:
+            guest = GuestUser(
+                cookie_tracker_id=payload.cookie_tracker_id,
+                total_watch_seconds=payload.watch_time,
+                total_watched_videos=1 if payload.is_new_view else 0,
+                last_active=func.now(),
+                first_seen=func.now(),
+                session_started_at=func.now()
+            )
+            db.add(guest)
         
     await db.commit()
     return {"status": "ok", "views": video.views or 0, "total_watch_seconds": video.total_watch_seconds or 0}

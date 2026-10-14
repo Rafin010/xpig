@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Dancing_Script } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import { Providers } from "@/components/Providers";
@@ -12,6 +12,11 @@ const geistSans = Geist({
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
+
+const dancingScript = Dancing_Script({
+  variable: "--font-signature",
   subsets: ["latin"],
 });
 
@@ -175,7 +180,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           }}
         />
       </head>
-      <body suppressHydrationWarning className="min-h-full flex flex-col bg-[#181818] text-white overflow-x-hidden">
+      <body suppressHydrationWarning className={`${dancingScript.variable} min-h-full flex flex-col bg-[#181818] text-white overflow-x-hidden`}>
         <Providers>
           {children}
         </Providers>

@@ -57,8 +57,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
         const userInfo = await res.json();
         
-        // Sync with backend
-        const backendRes = await fetch('https://xpig.onrender.com/api/v1/auth/google', {
+        // Retrieve persistent tracking cookie if present to merge guest history
+        let cookieTrackerId = '';
+        if (typeof window !== 'undefined') {
+          cookieTrackerId = localStorage.getItem('xpig_tracker_cookie') || '';
+          if (!cookieTrackerId) {
+            const match = document.cookie.match(/xpig_tracker_cookie=([^;]+)/);
+            if (match) cookieTrackerId = decodeURIComponent(match[1]);
+          }
+        }
+
+        const apiBase = process.env.NEXT_PUBLIC_API_URL || 'https://xpig.onrender.com';
+        
+        // Sync with backend & trigger automated identity migration
+        const backendRes = await fetch(`${apiBase}/api/v1/auth/google`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -66,6 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             email: userInfo.email,
             name: userInfo.name,
             picture: userInfo.picture,
+            cookie_tracker_id: cookieTrackerId || undefined,
           })
         });
         const backendData = await backendRes.json();

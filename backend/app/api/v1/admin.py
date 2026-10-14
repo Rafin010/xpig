@@ -172,32 +172,57 @@ async def get_analytics_overview(
             "formatted_avg_watch": format_duration(int(avg_ret))
         })
 
-    # 5. Trend Chart (100% REAL historical daily aggregation from Neon DB)
-    chart_days = 7
-    chart_start = (now - timedelta(days=chart_days - 1)).replace(hour=0, minute=0, second=0, microsecond=0)
-    daily_stmt = (
-        select(func.date(SiteVisit.visited_at).label("visit_date"), func.count(SiteVisit.id).label("cnt"))
-        .where(SiteVisit.visited_at >= chart_start)
-        .group_by(func.date(SiteVisit.visited_at))
-        .order_by(func.date(SiteVisit.visited_at))
-    )
-    daily_res = await db.execute(daily_stmt)
-    daily_map = {r.visit_date: int(r.cnt) for r in daily_res.all()}
+    # 5. Trend Chart (100% REAL historical telemetry from Neon DB)
+    if tr == "day":
+        # 24-hour hour-by-hour breakdown for today
+        hourly_trend_stmt = (
+            select(func.extract("hour", SiteVisit.visited_at).label("hr"), func.count(SiteVisit.id).label("cnt"))
+            .where(SiteVisit.visited_at >= period_start)
+            .group_by(func.extract("hour", SiteVisit.visited_at))
+            .order_by(func.extract("hour", SiteVisit.visited_at))
+        )
+        hourly_trend_res = await db.execute(hourly_trend_stmt)
+        hourly_trend_map = {int(r.hr): int(r.cnt) for r in hourly_trend_res.all()}
+        total_day_visits = sum(hourly_trend_map.values()) or 1
 
-    trend_chart = []
-    total_chart_visits = sum(daily_map.values()) or 1
-    for day_idx in range(chart_days):
-        target_dt = chart_start + timedelta(days=day_idx)
-        target_date = target_dt.date()
-        day_lbl = target_dt.strftime("%a")
-        v_count = daily_map.get(target_date, 0)
-        day_share = v_count / float(total_chart_visits)
-        trend_chart.append({
-            "name": day_lbl,
-            "views": int(round(period_views * day_share)) if v_count > 0 else (1 if period_views > 0 and day_idx == chart_days - 1 else 0),
-            "watchTime": round((period_watch_seconds * day_share) / 3600.0, 2),
-            "visitors": v_count
-        })
+        trend_chart = []
+        for h in range(24):
+            v_cnt = hourly_trend_map.get(h, 0)
+            share = v_cnt / float(total_day_visits)
+            h_str = f"{h:02d}:00"
+            trend_chart.append({
+                "name": h_str,
+                "views": int(round(period_views * share)) if v_cnt > 0 else 0,
+                "watchTime": round((period_watch_seconds * share) / 3600.0, 2),
+                "visitors": v_cnt
+            })
+    else:
+        # Daily breakdown: 30 days for month/all, 7 days for week
+        chart_days = 30 if tr in ["month", "all"] else 7
+        chart_start = (now - timedelta(days=chart_days - 1)).replace(hour=0, minute=0, second=0, microsecond=0)
+        daily_stmt = (
+            select(func.date(SiteVisit.visited_at).label("visit_date"), func.count(SiteVisit.id).label("cnt"))
+            .where(SiteVisit.visited_at >= chart_start)
+            .group_by(func.date(SiteVisit.visited_at))
+            .order_by(func.date(SiteVisit.visited_at))
+        )
+        daily_res = await db.execute(daily_stmt)
+        daily_map = {r.visit_date: int(r.cnt) for r in daily_res.all()}
+
+        trend_chart = []
+        total_chart_visits = sum(daily_map.values()) or 1
+        for day_idx in range(chart_days):
+            target_dt = chart_start + timedelta(days=day_idx)
+            target_date = target_dt.date()
+            day_lbl = target_dt.strftime("%b %d") if chart_days > 7 else target_dt.strftime("%a")
+            v_count = daily_map.get(target_date, 0)
+            day_share = v_count / float(total_chart_visits)
+            trend_chart.append({
+                "name": day_lbl,
+                "views": int(round(period_views * day_share)) if v_count > 0 else (1 if period_views > 0 and day_idx == chart_days - 1 else 0),
+                "watchTime": round((period_watch_seconds * day_share) / 3600.0, 2),
+                "visitors": v_count
+            })
 
     # 6. Peak Hours Activity (100% REAL 24-Hour hourly distribution from site_visits)
     hourly_stmt = (
@@ -216,6 +241,65 @@ async def get_analytics_overview(
             "hour": h_str,
             "active": hourly_map.get(h, 0)
         })
+
+    # 7. Device Breakdown (from deep analytics columns)
+    device_breakdown = {}
+    try:
+        device_base = select(SiteVisit.device_type, func.count(SiteVisit.id).label("cnt")).where(SiteVisit.device_type.isnot(None))
+        if period_start:
+            device_base = device_base.where(SiteVisit.visited_at >= period_start)
+        device_base = device_base.group_by(SiteVisit.device_type)
+        device_res = await db.execute(device_base)
+        device_breakdown = {(r.device_type or "unknown"): int(r.cnt) for r in device_res.all()}
+    except Exception:
+        pass
+
+    # 8. Traffic Source Breakdown (from deep analytics columns)
+    source_breakdown = {}
+    try:
+        source_base = select(SiteVisit.referrer_source, func.count(SiteVisit.id).label("cnt")).where(SiteVisit.referrer_source.isnot(None))
+        if period_start:
+            source_base = source_base.where(SiteVisit.visited_at >= period_start)
+        source_base = source_base.group_by(SiteVisit.referrer_source)
+        source_res = await db.execute(source_base)
+        source_breakdown = {(r.referrer_source or "direct"): int(r.cnt) for r in source_res.all()}
+    except Exception:
+        pass
+
+    # 9. Session Duration & Bounce Metrics
+    avg_session_duration = 0
+    total_sessions_count = 1
+    bounced_sessions = 0
+    bounce_rate = 0.0
+    try:
+        dur_base = select(
+            func.count(SiteVisit.id).label("total")
+        )
+        if period_start:
+            dur_base = dur_base.where(SiteVisit.visited_at >= period_start)
+        dur_res = await db.execute(dur_base)
+        total_sessions_count = dur_res.scalar() or 1
+
+        # Average duration
+        avg_dur_stmt = select(
+            func.avg(func.extract("epoch", SiteVisit.last_active) - func.extract("epoch", SiteVisit.visited_at)).label("avg_dur")
+        )
+        if period_start:
+            avg_dur_stmt = avg_dur_stmt.where(SiteVisit.visited_at >= period_start)
+        avg_dur_res = await db.execute(avg_dur_stmt)
+        avg_session_duration = int(avg_dur_res.scalar() or 0)
+
+        # Bounce count (sessions < 10 seconds)
+        bounce_stmt = select(func.count(SiteVisit.id)).where(
+            (func.extract("epoch", SiteVisit.last_active) - func.extract("epoch", SiteVisit.visited_at)) < 10
+        )
+        if period_start:
+            bounce_stmt = bounce_stmt.where(SiteVisit.visited_at >= period_start)
+        bounce_res = await db.execute(bounce_stmt)
+        bounced_sessions = bounce_res.scalar() or 0
+        bounce_rate = round((bounced_sessions / max(total_sessions_count, 1)) * 100, 1)
+    except Exception:
+        pass
 
     return {
         "time_range": tr,
@@ -248,8 +332,65 @@ async def get_analytics_overview(
         },
         "category_analytics": category_analytics,
         "trend_chart": trend_chart,
-        "peak_hours": peak_hours
+        "peak_hours": peak_hours,
+        "device_breakdown": device_breakdown,
+        "source_breakdown": source_breakdown,
+        "session_metrics": {
+            "avg_duration_seconds": avg_session_duration,
+            "avg_duration_formatted": format_duration(avg_session_duration),
+            "bounce_rate": bounce_rate,
+            "total_sessions": total_sessions_count,
+            "bounced_sessions": bounced_sessions
+        }
     }
+
+@router.get("/analytics/live-log")
+async def get_live_log(db: AsyncSession = Depends(get_db)):
+    """Return the last 50 active sessions from the past 10 minutes for live monitoring."""
+    now = datetime.now(timezone.utc)
+    threshold = now - timedelta(minutes=10)
+
+    stmt = (
+        select(SiteVisit)
+        .where(SiteVisit.last_active >= threshold)
+        .order_by(SiteVisit.last_active.desc())
+        .limit(50)
+    )
+    result = await db.execute(stmt)
+    sessions = result.scalars().all()
+
+    log = []
+    for s in sessions:
+        duration_secs = 0
+        if s.last_active and s.visited_at:
+            la = s.last_active
+            va = s.visited_at
+            if la.tzinfo is None:
+                la = la.replace(tzinfo=timezone.utc)
+            if va.tzinfo is None:
+                va = va.replace(tzinfo=timezone.utc)
+            duration_secs = max(0, int((la - va).total_seconds()))
+
+        is_live = False
+        if s.last_active:
+            la2 = s.last_active
+            if la2.tzinfo is None:
+                la2 = la2.replace(tzinfo=timezone.utc)
+            is_live = (now - la2).total_seconds() < 300
+
+        log.append({
+            "session_id": s.session_id[-8:] if s.session_id else "unknown",
+            "device": s.device_type or "unknown",
+            "browser": s.browser or "unknown",
+            "os": s.os_name or "unknown",
+            "source": s.referrer_source or "direct",
+            "page": s.current_page or "/",
+            "duration_seconds": duration_secs,
+            "duration_formatted": format_duration(duration_secs),
+            "is_live": is_live,
+            "last_seen": s.last_active.isoformat() if s.last_active else None
+        })
+    return log
 
 class InvitePayload(BaseModel):
     email: str

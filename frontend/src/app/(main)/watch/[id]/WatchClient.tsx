@@ -257,12 +257,28 @@ export default function WatchClient({
     let isMounted = true;
     const recordView = async () => {
       try {
+        let loggedUserId: number | undefined = undefined;
+        try {
+          const uStr = localStorage.getItem('xpig_user') || localStorage.getItem('xpig_admin_user');
+          if (uStr) {
+            const u = JSON.parse(uStr);
+            if (u && u.id) loggedUserId = Number(u.id);
+          }
+        } catch (_) {}
+
+        let cookieTrk: string | undefined = undefined;
+        try {
+          cookieTrk = localStorage.getItem('xpig_tracker_cookie') || undefined;
+        } catch (_) {}
+
         const res = await fetch(`https://xpig.onrender.com/api/v1/videos/${numericId}/ping`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             watch_time: 1,
-            is_new_view: true
+            is_new_view: true,
+            user_id: loggedUserId,
+            cookie_tracker_id: cookieTrk
           })
         });
         if (res.ok && isMounted) {
@@ -281,12 +297,28 @@ export default function WatchClient({
       const videoElement = document.querySelector('video');
       if (videoElement && !videoElement.paused) {
         try {
+          let loggedUserId: number | undefined = undefined;
+          try {
+            const uStr = localStorage.getItem('xpig_user') || localStorage.getItem('xpig_admin_user');
+            if (uStr) {
+              const u = JSON.parse(uStr);
+              if (u && u.id) loggedUserId = Number(u.id);
+            }
+          } catch (_) {}
+
+          let cookieTrk: string | undefined = undefined;
+          try {
+            cookieTrk = localStorage.getItem('xpig_tracker_cookie') || undefined;
+          } catch (_) {}
+
           await fetch(`https://xpig.onrender.com/api/v1/videos/${numericId}/ping`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               watch_time: 10,
-              is_new_view: false
+              is_new_view: false,
+              user_id: loggedUserId,
+              cookie_tracker_id: cookieTrk
             })
           });
         } catch (e) {}
