@@ -276,79 +276,92 @@ export function Player({ src, fallbackSrc, poster, previewUrl, title, autoPlay =
     };
   }, [mounted, isRotated]);
 
-  const toggleRotate = async (e?: React.MouseEvent) => {
+  const toggleRotate = async (e?: React.MouseEvent | React.TouchEvent) => {
     if (e) {
       e.preventDefault();
       e.stopPropagation();
     }
 
-    const nextRotated = !isRotated;
-    setIsRotated(nextRotated);
-
+    const player = playerRef.current;
     const container = containerRef.current;
+    const videoEl = container?.querySelector('video') as HTMLVideoElement | null;
     const orientation = (screen.orientation || (screen as any).mozOrientation || (screen as any).msOrientation) as any;
 
-    if (nextRotated) {
-      // 1. Enter Fullscreen (required by mobile browsers to allow orientation lock)
+    const isCurrentlyFs = Boolean(
+      document.fullscreenElement || 
+      (document as any).webkitFullscreenElement ||
+      player?.state?.fullscreen
+    );
+
+    if (!isCurrentlyFs) {
+      // 1. Enter native Fullscreen via MediaPlayer or fallback to Video Element (for iOS)
       try {
-        const isAlreadyFs = Boolean(document.fullscreenElement || (document as any).webkitFullscreenElement);
-        if (!isAlreadyFs) {
-          if (container && container.requestFullscreen) {
-            await container.requestFullscreen().catch(() => {});
-          } else if (container && (container as any).webkitRequestFullscreen) {
-            await (container as any).webkitRequestFullscreen().catch(() => {});
-          } else if (playerRef.current?.remote?.enterFullscreen) {
-            await playerRef.current.remote.enterFullscreen().catch(() => {});
+        if (player && typeof player.enterFullscreen === 'function') {
+          await player.enterFullscreen('prefer-media');
+        } else if (videoEl) {
+          if (typeof videoEl.requestFullscreen === 'function') {
+            await videoEl.requestFullscreen();
+          } else if (typeof (videoEl as any).webkitEnterFullscreen === 'function') {
+            (videoEl as any).webkitEnterFullscreen();
           }
         }
-      } catch (err) {}
+      } catch (err) {
+        console.warn('enterFullscreen fallback to video element:', err);
+        try {
+          if (videoEl && typeof (videoEl as any).webkitEnterFullscreen === 'function') {
+            (videoEl as any).webkitEnterFullscreen();
+          } else if (videoEl && typeof videoEl.requestFullscreen === 'function') {
+            await videoEl.requestFullscreen();
+          }
+        } catch (e2) {}
+      }
 
       // 2. Lock screen orientation to landscape
       try {
-        if (orientation && orientation.lock) {
+        if (orientation && typeof orientation.lock === 'function') {
           await orientation.lock('landscape').catch(() => {});
-        } else if ((screen as any).lockOrientation) {
+        } else if (typeof (screen as any).lockOrientation === 'function') {
           (screen as any).lockOrientation('landscape');
         }
-      } catch (err) {}
+      } catch (e) {}
+
+      setIsRotated(true);
     } else {
-      // Revert from landscape back to portrait
+      // Exit fullscreen & unlock orientation back to portrait
       try {
-        if (orientation && orientation.unlock) {
+        if (orientation && typeof orientation.unlock === 'function') {
           orientation.unlock();
-        } else if (orientation && orientation.lock) {
+        } else if (orientation && typeof orientation.lock === 'function') {
           await orientation.lock('portrait').catch(() => {});
+        }
+      } catch (e) {}
+
+      try {
+        if (player && typeof player.exitFullscreen === 'function') {
+          await player.exitFullscreen();
+        } else if (typeof document.exitFullscreen === 'function') {
+          await document.exitFullscreen();
+        } else if (typeof (document as any).webkitExitFullscreen === 'function') {
+          await (document as any).webkitExitFullscreen();
         }
       } catch (err) {}
 
-      try {
-        const isFs = Boolean(document.fullscreenElement || (document as any).webkitFullscreenElement);
-        if (isFs) {
-          if (document.exitFullscreen) {
-            await document.exitFullscreen().catch(() => {});
-          } else if ((document as any).webkitExitFullscreen) {
-            await (document as any).webkitExitFullscreen().catch(() => {});
-          } else if (playerRef.current?.remote?.exitFullscreen) {
-            await playerRef.current.remote.exitFullscreen().catch(() => {});
-          }
-        }
-      } catch (err) {}
+      setIsRotated(false);
     }
   };
 
   const handleFullscreenChange = (isFullscreen: boolean) => {
+    setIsRotated(isFullscreen);
     try {
       const orientation = (screen.orientation || (screen as any).mozOrientation || (screen as any).msOrientation) as any;
       if (isFullscreen) {
-        if (orientation && orientation.lock) {
+        if (orientation && typeof orientation.lock === 'function') {
           orientation.lock('landscape').catch(() => {});
         }
-        setIsRotated(true);
       } else {
-        if (orientation && orientation.unlock) {
+        if (orientation && typeof orientation.unlock === 'function') {
           orientation.unlock();
         }
-        setIsRotated(false);
       }
     } catch (err) {}
   };
@@ -371,30 +384,11 @@ export function Player({ src, fallbackSrc, poster, previewUrl, title, autoPlay =
 
   const isLooping = currentSrc === fallbackSrc;
   const previewSource = isAudioOnly && fallbackSrc ? fallbackSrc : (currentSrc || fallbackSrc || '');
-  const isCssRotated = isRotated && isScreenPortrait;
 
   return (
     <div 
       ref={containerRef}
-      className={`relative w-full aspect-video bg-black rounded-none md:rounded-xl overflow-hidden select-none group flex items-center justify-center transition-[transform,width,height] duration-300 ${
-        isCssRotated
-          ? '!fixed !inset-0 !z-[99999] !w-[100vh] !h-[100vw] !max-w-none !max-h-none !rounded-none !shadow-none'
-          : ''
-      }`}
-      style={
-        isCssRotated
-          ? {
-              transform: 'rotate(90deg) translateY(-100%)',
-              transformOrigin: 'top left',
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              width: '100vh',
-              height: '100vw',
-              zIndex: 99999,
-            }
-          : undefined
-      }
+      className="relative w-full aspect-video bg-black rounded-none md:rounded-xl overflow-hidden select-none group flex items-center justify-center"
     >
       <MediaPlayer 
         ref={playerRef}
@@ -404,6 +398,7 @@ export function Player({ src, fallbackSrc, poster, previewUrl, title, autoPlay =
         streamType="on-demand"
         logLevel="warn"
         playsInline
+        fullscreenOrientation="landscape"
         autoPlay={autoPlay}
         muted={false}
         loop={isLooping}
@@ -421,7 +416,7 @@ export function Player({ src, fallbackSrc, poster, previewUrl, title, autoPlay =
         }}
         onPause={() => setIsPlaying(false)}
         onFullscreenChange={handleFullscreenChange}
-        className="w-full h-full aspect-video bg-black rounded-none md:rounded-xl overflow-hidden ring-0 outline-none flex items-center justify-center"
+        className="w-full h-full aspect-video bg-black rounded-none md:rounded-xl overflow-hidden ring-0 outline-none flex items-center justify-center relative"
         style={{ '--video-brand': '#db2777' } as any}
       >
         <MediaProvider className="w-full h-full flex items-center justify-center bg-black">
@@ -443,6 +438,39 @@ export function Player({ src, fallbackSrc, poster, previewUrl, title, autoPlay =
           icons={defaultLayoutIcons} 
           color="hsl(330, 81%, 60%)" 
         />
+
+        {/* Floating Top-Right Auto-Rotate Button - Native inside MediaPlayer for inline & fullscreen visibility */}
+        <div className="absolute top-3.5 right-3.5 z-40 flex items-center gap-2 pointer-events-auto">
+          {fallbackSrc && currentSrc === fallbackSrc && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleStreamSource();
+              }}
+              className="px-3 py-1.5 rounded-full bg-zinc-900/90 hover:bg-zinc-800 backdrop-blur-md border border-pink-500/60 text-[11px] font-bold text-pink-300 hover:text-white flex items-center gap-1.5 shadow-lg transition-all active:scale-95 cursor-pointer"
+            >
+              <Volume2 className="w-3.5 h-3.5 text-pink-400" />
+              <span className="hidden sm:inline">🎵 সম্পূর্ণ অডিও</span>
+            </button>
+          )}
+
+          {/* Mobile & Tablet Auto-Rotate Fullscreen Button (Icon Only) */}
+          <button
+            type="button"
+            onClick={toggleRotate}
+            onTouchEnd={(e) => e.stopPropagation()}
+            aria-label="Auto Rotate Fullscreen"
+            className={`md:hidden w-9 h-9 rounded-full backdrop-blur-md flex items-center justify-center transition-all duration-200 active:scale-90 shadow-2xl border cursor-pointer select-none pointer-events-auto ${
+              isRotated
+                ? 'bg-pink-600 text-white border-pink-300 shadow-pink-900/50 ring-2 ring-pink-400'
+                : 'bg-black/80 hover:bg-black/95 text-zinc-100 hover:text-white border-white/30 hover:border-white/50'
+            }`}
+            title="Auto Rotate Fullscreen"
+          >
+            <AutoRotateIcon className="w-5 h-5 text-white" isRotated={isRotated} />
+          </button>
+        </div>
       </MediaPlayer>
 
       {/* Audio-Only Visualizer Overlay - Positioned above MediaPlayer inside containerRef */}
@@ -527,41 +555,6 @@ export function Player({ src, fallbackSrc, poster, previewUrl, title, autoPlay =
         </div>
       )}
 
-      {/* Top-Right Control Cluster: Audio Switch + Professional Mobile Auto-Rotate */}
-      <div className="absolute top-3.5 right-3.5 z-30 flex items-center gap-2 pointer-events-auto">
-        {/* Floating switch button when playing fallback video clip */}
-        {fallbackSrc && currentSrc === fallbackSrc && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleStreamSource();
-            }}
-            className="px-3 py-1.5 rounded-full bg-zinc-900/90 hover:bg-zinc-800 backdrop-blur-md border border-pink-500/60 text-[11px] font-bold text-pink-300 hover:text-white flex items-center gap-1.5 shadow-lg transition-all active:scale-95 cursor-pointer"
-          >
-            <Volume2 className="w-3.5 h-3.5 text-pink-400" />
-            <span className="hidden sm:inline">🎵 সম্পূর্ণ অডিও</span>
-          </button>
-        )}
-
-        {/* Mobile & Tablet Professional Auto Rotate Button */}
-        <button
-          type="button"
-          onClick={toggleRotate}
-          aria-label={isRotated ? "Exit Landscape Rotation" : "Auto Rotate Video"}
-          className={`md:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-full backdrop-blur-md transition-all duration-300 active:scale-90 shadow-xl border cursor-pointer select-none ${
-            isRotated
-              ? 'bg-pink-600/95 text-white border-pink-300/60 shadow-pink-900/50 ring-2 ring-pink-500/40'
-              : 'bg-black/70 hover:bg-black/90 text-zinc-100 hover:text-white border-white/25 hover:border-white/40'
-          }`}
-          title={isRotated ? "Exit Landscape Rotation" : "Auto Rotate Player"}
-        >
-          <AutoRotateIcon className={`w-4 h-4 transition-transform duration-300 ${isRotated ? 'text-white' : 'text-pink-400'}`} isRotated={isRotated} />
-          <span className="text-[11px] font-bold tracking-tight">
-            {isRotated ? 'ল্যান্ডস্কেপ' : 'রোটেট'}
-          </span>
-        </button>
-      </div>
 
       {/* Real-time YouTube-Style Compact Video Frame Scrubber Tooltip - Positioned in containerRef */}
       {hoverPreview.visible && (
