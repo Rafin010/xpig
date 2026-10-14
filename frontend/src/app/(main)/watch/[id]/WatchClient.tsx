@@ -16,6 +16,7 @@ import { useSidebar } from '@/context/SidebarContext';
 import { useAuth } from '@/context/AuthContext';
 import WatchPageSkeleton from '@/components/skeletons/WatchPageSkeleton';
 import VideoCard from '@/components/video/VideoCard';
+import Pagination from '@/components/ui/Pagination';
 import SponsorWatchBanner from '@/components/ads/SponsorWatchBanner';
 import { decodeVideoId, encodeVideoId } from '@/lib/obfuscate';
 import { FloatingHearts, playDopamineChime } from '@/components/video/FloatingHearts';
@@ -53,7 +54,11 @@ export default function WatchClient({ videoId }: { videoId: string }) {
   const numericId = decodeVideoId(videoId);
 
   const [videoData, setVideoData] = useState<any>(null);
-  const [relatedVideos, setRelatedVideos] = useState<any[]>([]);
+  const [upNextVideos, setUpNextVideos] = useState<any[]>([]);
+  const [suggestedVideos, setSuggestedVideos] = useState<any[]>([]);
+  const [suggestionsPage, setSuggestionsPage] = useState<number>(1);
+  const [suggestionsTotal, setSuggestionsTotal] = useState<number>(0);
+  const [isSuggestionsLoading, setIsSuggestionsLoading] = useState<boolean>(false);
   const [watchSponsor, setWatchSponsor] = useState<any>(null);
   const [isLiked, setIsLiked] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
@@ -94,6 +99,25 @@ export default function WatchClient({ videoId }: { videoId: string }) {
     } catch (e) {}
   }, [numericId]);
 
+  const fetchSuggestions = async (page: number) => {
+    setIsSuggestionsLoading(true);
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || (typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://127.0.0.1:8000' : 'https://xpig.onrender.com');
+      const res = await fetch(`${apiBase}/api/v1/discover/search?size=36&page=${page}`);
+      if (res.ok) {
+        const data = await res.json();
+        const filtered = (data.items || []).filter((v: any) => v.id.toString() !== numericId);
+        setSuggestedVideos(filtered);
+        setSuggestionsTotal(data.total || 0);
+        setSuggestionsPage(page);
+      }
+    } catch (err) {
+      console.error('Failed to load suggestions:', err);
+    } finally {
+      setIsSuggestionsLoading(false);
+    }
+  };
+
   useEffect(() => {
     async function loadData() {
       setIsLoading(true);
@@ -108,14 +132,17 @@ export default function WatchClient({ videoId }: { videoId: string }) {
           }
         }
 
-        // Fetch dynamically shuffled related recommendations
-        const randomSeed = Math.floor(Math.random() * 900000) + 100000;
+        // Fetch initial full suggested videos catalog (36 videos)
         const apiBase = process.env.NEXT_PUBLIC_API_URL || (typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://127.0.0.1:8000' : 'https://xpig.onrender.com');
-        const relRes = await fetch(`${apiBase}/api/v1/discover/search?size=24&seed=${randomSeed}`);
-        if (relRes.ok) {
-          const rData = await relRes.json();
-          // Filter out current video
-          setRelatedVideos((rData.items || []).filter((v: any) => v.id.toString() !== numericId));
+        const sRes = await fetch(`${apiBase}/api/v1/discover/search?size=36&page=1`);
+        if (sRes.ok) {
+          const sData = await sRes.json();
+          const filtered = (sData.items || []).filter((v: any) => v.id.toString() !== numericId);
+          setSuggestedVideos(filtered);
+          setSuggestionsTotal(sData.total || 0);
+          setSuggestionsPage(1);
+          // Set Up Next sidebar with top 10 items
+          setUpNextVideos(filtered.slice(0, 10));
         }
 
         // Fetch active sponsor for sidebar
@@ -450,67 +477,107 @@ export default function WatchClient({ videoId }: { videoId: string }) {
           <h3 className="text-base font-bold text-zinc-200 tracking-tight">Up Next</h3>
           
           <div className="flex flex-col gap-3">
-            {relatedVideos.slice(0, 10).map((video) => (
-              <Link 
-                key={video.id} 
-                href={`/watch/${encodeVideoId(video.id)}`}
-                className="flex gap-3 group rounded-[12px] p-1.5 hover:bg-zinc-900/80 transition-colors"
-              >
-                <div className="w-32 sm:w-40 aspect-video bg-zinc-900 rounded-[10px] overflow-hidden relative shrink-0 border border-zinc-800/60">
-                  {video.thumbnail_url ? (
-                    <Image 
-                      src={video.thumbnail_url} 
-                      alt={video.title} 
-                      fill 
-                      sizes="(max-width: 640px) 128px, 160px"
-                      className="object-cover group-hover:scale-105 transition-transform duration-300" 
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-zinc-800 flex items-center justify-center text-[10px] text-zinc-500">
-                      NO THUMBNAIL
+            {upNextVideos.map((video) => {
+              const cardPlayUrl = video.preview_url || video.video_url || video.sources?.[0]?.source_url;
+              return (
+                <Link 
+                  key={video.id} 
+                  href={`/watch/${encodeVideoId(video.id)}`}
+                  className="flex gap-3 group rounded-[12px] p-1.5 hover:bg-zinc-900/80 transition-colors"
+                >
+                  <div className="w-32 sm:w-40 aspect-video bg-zinc-900 rounded-[10px] overflow-hidden relative shrink-0 border border-zinc-800/60">
+                    {video.thumbnail_url ? (
+                      <Image 
+                        src={video.thumbnail_url} 
+                        alt={video.title} 
+                        fill 
+                        sizes="(max-width: 640px) 128px, 160px"
+                        className="object-cover group-hover:scale-105 transition-transform duration-300" 
+                      />
+                    ) : cardPlayUrl ? (
+                      <video 
+                        src={`${cardPlayUrl}#t=4.0`}
+                        preload="metadata"
+                        muted
+                        playsInline
+                        className="object-cover w-full h-full pointer-events-none"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-zinc-800 flex items-center justify-center text-[10px] text-zinc-500">
+                        HD VIDEO
+                      </div>
+                    )}
+                    <div className="absolute bottom-1 right-1 bg-black/80 px-1.5 py-0.5 rounded text-[10px] font-bold text-white tracking-wide">
+                      {formatDuration(video.duration) || 'HD'}
                     </div>
-                  )}
-                  <div className="absolute bottom-1 right-1 bg-black/80 px-1.5 py-0.5 rounded text-[10px] font-bold text-white tracking-wide">
-                    {formatDuration(video.duration) || 'HD'}
                   </div>
-                </div>
-                
-                <div className="flex flex-col justify-start py-0.5 overflow-hidden">
-                  <h4 className="text-xs font-medium text-zinc-200 line-clamp-2 group-hover:text-white transition-colors leading-snug">
-                    {video.title}
-                  </h4>
-                  <div className="flex items-center gap-1 mt-1">
-                    <span className="text-[11px] text-zinc-400 font-medium">xpig</span>
-                    <Image 
-                      src="/verified-badge.png" 
-                      alt="Verified Creator" 
-                      width={14} 
-                      height={14} 
-                      className="w-3.5 h-3.5 object-contain shrink-0" 
-                    />
+                  
+                  <div className="flex flex-col justify-start py-0.5 overflow-hidden">
+                    <h4 className="text-xs font-medium text-zinc-200 line-clamp-2 group-hover:text-white transition-colors leading-snug">
+                      {video.title}
+                    </h4>
+                    <div className="flex items-center gap-1 mt-1">
+                      <span className="text-[11px] text-zinc-400 font-medium">xpig</span>
+                      <Image 
+                        src="/verified-badge.png" 
+                        alt="Verified Creator" 
+                        width={14} 
+                        height={14} 
+                        className="w-3.5 h-3.5 object-contain shrink-0" 
+                      />
+                    </div>
+                    <p className="text-[10px] text-zinc-500 mt-0.5">
+                      {(video.views || 0).toLocaleString()} views
+                    </p>
                   </div>
-                  <p className="text-[10px] text-zinc-500 mt-0.5">
-                    {video.views || 0} views
-                  </p>
-                </div>
-              </Link>
-            ))}
+                </Link>
+              );
+            })}
           </div>
         </div>
         
       </div>
 
-      {/* Full Width Related Videos Section Below */}
-      {relatedVideos.length > 10 && (
-        <div className="max-w-[1440px] mx-auto px-4 md:px-0 mt-12 mb-8">
-          <h2 className="text-xl font-bold text-white mb-6">More Videos</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
-            {relatedVideos.slice(10).map((video) => (
-              <VideoCard key={video.id} video={video} />
-            ))}
+      {/* Full Width Suggested Videos Catalog with Centered Numbered Pagination */}
+      <div id="more-videos-section" className="max-w-[1440px] mx-auto px-4 md:px-0 mt-12 mb-10 pt-8 border-t border-zinc-800/80 scroll-mt-20">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+          <div>
+            <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2.5">
+              <span>Suggested For You</span>
+              <span className="w-2 h-2 rounded-full bg-pink-500 animate-pulse" />
+            </h2>
+            <p className="text-xs text-zinc-400 mt-1">
+              Explore more trending, viral and uncut videos
+            </p>
+          </div>
+          <div className="text-[11px] sm:text-xs font-semibold text-zinc-400 bg-zinc-900 border border-zinc-800 px-3 py-1 rounded-full self-start sm:self-auto">
+            <span>Page {suggestionsPage} of {Math.max(1, Math.ceil(suggestionsTotal / 36))} ({suggestionsTotal.toLocaleString()} videos)</span>
           </div>
         </div>
-      )}
+
+        {isSuggestionsLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 opacity-40 animate-pulse">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="aspect-video bg-zinc-800 rounded-xl" />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+            {suggestedVideos.map((video) => (
+              <VideoCard key={`sug-${video.id}`} video={video} />
+            ))}
+          </div>
+        )}
+
+        {/* Centered Numbered Pagination (1, 2, 3, 4... Next) */}
+        <Pagination 
+          currentPage={suggestionsPage}
+          totalPages={Math.max(1, Math.ceil(suggestionsTotal / 36))}
+          totalItems={suggestionsTotal}
+          pageSize={36}
+          onPageChange={fetchSuggestions}
+        />
+      </div>
 
       {/* YouTube-Style Share Dialog Modal */}
       <ShareModal

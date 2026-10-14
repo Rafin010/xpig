@@ -52,6 +52,15 @@ export default function Pagination({
     if (onPageChange) {
       e.preventDefault();
       onPageChange(pageNum);
+      if (typeof window !== 'undefined') {
+        const target = document.getElementById('more-videos-section');
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        } else {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      }
+      return;
     }
     // Smooth scroll back to top of the catalog
     if (typeof window !== 'undefined') {
