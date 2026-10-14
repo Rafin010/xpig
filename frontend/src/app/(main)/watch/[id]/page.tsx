@@ -100,6 +100,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   };
 }
 
+
 export default async function WatchPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
   const video = await fetchVideoData(resolvedParams.id);
@@ -133,9 +134,7 @@ export default async function WatchPage({ params }: { params: Promise<{ id: stri
           dangerouslySetInnerHTML={{ __html: JSON.stringify(videoSchema) }}
         />
       )}
-      <WatchClient videoId={resolvedParams.id} />
+      <WatchClient videoId={resolvedParams.id} initialVideo={video} />
     </>
   );
 }
-
-export const instant = false;

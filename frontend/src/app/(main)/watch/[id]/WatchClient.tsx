@@ -9,7 +9,7 @@ const Player = dynamic(() => import('@/components/video/Player').then((m) => m.P
     </div>
   ),
 });
-import { Heart, Share2, Check, CheckCircle2, Eye } from 'lucide-react';
+import { Heart, Share2, Check, CheckCircle2, Eye, RotateCw, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useSidebar } from '@/context/SidebarContext';
@@ -46,14 +46,20 @@ function formatDuration(duration: any): string {
   return '';
 }
 
-export default function WatchClient({ videoId }: { videoId: string }) {
+export default function WatchClient({ 
+  videoId, 
+  initialVideo = null 
+}: { 
+  videoId: string; 
+  initialVideo?: any; 
+}) {
   const { isCollapsed, toggleSidebar } = useSidebar();
   const { isAuthenticated, loginWithGoogle } = useAuth();
   
   // Resolve obfuscated video slug (e.g. "v_xxrb9") to raw database ID (e.g. "371")
   const numericId = decodeVideoId(videoId);
 
-  const [videoData, setVideoData] = useState<any>(null);
+  const [videoData, setVideoData] = useState<any>(initialVideo || null);
   const [upNextVideos, setUpNextVideos] = useState<any[]>([]);
   const [suggestedVideos, setSuggestedVideos] = useState<any[]>([]);
   const [suggestionsPage, setSuggestionsPage] = useState<number>(1);
@@ -62,11 +68,12 @@ export default function WatchClient({ videoId }: { videoId: string }) {
   const [watchSponsor, setWatchSponsor] = useState<any>(null);
   const [isLiked, setIsLiked] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!initialVideo);
+  const [loadError, setLoadError] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
   const [heartBurst, setHeartBurst] = useState(0);
   const [isShareOpen, setIsShareOpen] = useState(false);
-  const [sharesCount, setSharesCount] = useState<number>(0);
+  const [sharesCount, setSharesCount] = useState<number>(initialVideo?.shares_count || 0);
 
   // Auto-collapse sidebar on video open
   useEffect(() => {
@@ -119,36 +126,66 @@ export default function WatchClient({ videoId }: { videoId: string }) {
   };
 
   useEffect(() => {
+    let isCancelled = false;
+
+    async function fetchVideoWithRetry(id: string, maxRetries = 2) {
+      for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        try {
+          const vRes = await fetch(`https://xpig.onrender.com/api/v1/videos/${id}`);
+          if (vRes.ok) {
+            const vData = await vRes.json();
+            return vData;
+          }
+        } catch (e) {
+          // Retry on network glitch / cold start
+        }
+        if (attempt < maxRetries) {
+          await new Promise((r) => setTimeout(r, 1200 * (attempt + 1)));
+        }
+      }
+      return null;
+    }
+
     async function loadData() {
-      setIsLoading(true);
+      if (!initialVideo) {
+        setIsLoading(true);
+      }
+      setLoadError(false);
+
       try {
-        // Fetch specific video using decoded numeric ID
-        const vRes = await fetch(`https://xpig.onrender.com/api/v1/videos/${numericId}`);
-        if (vRes.ok) {
-          const vData = await vRes.json();
-          setVideoData(vData);
-          if (typeof vData.shares_count === 'number') {
-            setSharesCount(vData.shares_count);
+        let vData = initialVideo;
+        if (!vData && numericId) {
+          vData = await fetchVideoWithRetry(numericId, 2);
+          if (!isCancelled) {
+            if (vData) {
+              setVideoData(vData);
+              if (typeof vData.shares_count === 'number') {
+                setSharesCount(vData.shares_count);
+              }
+            } else {
+              setLoadError(true);
+            }
           }
         }
 
         // Fetch initial full suggested videos catalog (36 videos)
         const apiBase = process.env.NEXT_PUBLIC_API_URL || (typeof window !== 'undefined' && window.location.hostname === 'localhost' ? 'http://127.0.0.1:8000' : 'https://xpig.onrender.com');
-        const sRes = await fetch(`${apiBase}/api/v1/discover/search?size=36&page=1`);
-        if (sRes.ok) {
-          const sData = await sRes.json();
-          const filtered = (sData.items || []).filter((v: any) => v.id.toString() !== numericId);
-          setSuggestedVideos(filtered);
-          setSuggestionsTotal(sData.total || 0);
-          setSuggestionsPage(1);
-          // Set Up Next sidebar with top 10 items
-          setUpNextVideos(filtered.slice(0, 10));
-        }
+        try {
+          const sRes = await fetch(`${apiBase}/api/v1/discover/search?size=36&page=1`);
+          if (sRes.ok && !isCancelled) {
+            const sData = await sRes.json();
+            const filtered = (sData.items || []).filter((v: any) => v.id.toString() !== numericId);
+            setSuggestedVideos(filtered);
+            setSuggestionsTotal(sData.total || 0);
+            setSuggestionsPage(1);
+            setUpNextVideos(filtered.slice(0, 10));
+          }
+        } catch (e) {}
 
         // Fetch active sponsor for sidebar
         try {
           const spRes = await fetch(`https://xpig.onrender.com/api/v1/sponsors/`);
-          if (spRes.ok) {
+          if (spRes.ok && !isCancelled) {
             const spData = await spRes.json();
             if (Array.isArray(spData) && spData.length > 0) {
               setWatchSponsor(spData[0]);
@@ -156,13 +193,23 @@ export default function WatchClient({ videoId }: { videoId: string }) {
           }
         } catch (e) {}
       } catch (err) {
-        console.error(err);
+        console.error('WatchClient loadData error:', err);
+        if (!isCancelled && !videoData) {
+          setLoadError(true);
+        }
       } finally {
-        setIsLoading(false);
+        if (!isCancelled) {
+          setIsLoading(false);
+        }
       }
     }
+
     loadData();
-  }, [numericId]);
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [numericId, initialVideo]);
   
   // Real-time Ambient Mode (Safeguarded against CORS SecurityError)
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -327,6 +374,37 @@ export default function WatchClient({ videoId }: { videoId: string }) {
   };
 
   if (isLoading) return <WatchPageSkeleton />;
+
+  if (!videoData) {
+    return (
+      <div className="min-h-[75vh] flex flex-col items-center justify-center px-4 text-center">
+        <div className="w-16 h-16 rounded-full bg-rose-500/10 border border-rose-500/30 flex items-center justify-center mb-6">
+          <RotateCw className="w-8 h-8 text-rose-500" />
+        </div>
+        <h2 className="text-2xl font-bold text-white mb-2">
+          ভিডিওটি লোড করা সম্ভব হয়নি
+        </h2>
+        <p className="text-zinc-400 text-sm max-w-md mb-6">
+          সার্ভারের সাময়িক বিলম্বের কারণে ভিডিও লোড হতে দেরি হচ্ছে। অনুগ্রহ করে নিচে ক্লিক করে পুনরায় চেষ্টা করুন।
+        </p>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => window.location.reload()}
+            className="px-6 py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-bold text-sm rounded-xl transition-all shadow-lg shadow-rose-900/30 flex items-center gap-2 active:scale-95 cursor-pointer"
+          >
+            <RotateCw className="w-4 h-4" />
+            <span>আবার চেষ্টা করুন (Retry)</span>
+          </button>
+          <Link
+            href="/"
+            className="px-6 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 hover:text-white font-bold text-sm rounded-xl transition-all border border-zinc-700 flex items-center gap-2 active:scale-95"
+          >
+            <span>হোমপেজে ফিরে যান</span>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   // Dynamically resolve real video stream from Cloudflare R2
   const realVideoUrl = 

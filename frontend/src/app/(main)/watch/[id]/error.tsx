@@ -14,7 +14,15 @@ export default function WatchError({
 }) {
   useEffect(() => {
     console.error('Watch Page Error:', error);
-  }, [error]);
+    // Automatic recovery after transient server cold-start
+    const timer = setTimeout(() => {
+      try {
+        reset();
+      } catch (e) {}
+      window.location.reload();
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, [error, reset]);
 
   return (
     <div className="min-h-[75vh] flex flex-col items-center justify-center px-4 text-center">
@@ -26,13 +34,18 @@ export default function WatchError({
         ভিডিওটি লোড করা সম্ভব হয়নি
       </h2>
       <p className="text-zinc-400 text-sm max-w-md mb-8">
-        সার্ভারের অস্থায়ী সমস্যা বা সংযোগ বিচ্ছিন্নতার কারণে পৃষ্ঠাটি লোড হতে পারেনি। অনুগ্রহ করে পুনরায় চেষ্টা করুন।
+        সার্ভারের অস্থায়ী সমস্যা বা সংযোগ বিচ্ছিন্নতার কারণে পৃষ্ঠাটি লোড হতে পারেনি। অনুগ্রহ করে পুনরায় চেষ্টা করুন (স্বয়ংক্রিয়ভাবে পুনরায় লোড হচ্ছে...)।
       </p>
 
       <div className="flex items-center gap-3 flex-wrap justify-center">
         <button
-          onClick={() => reset()}
-          className="px-6 py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-bold text-sm rounded-xl transition-all shadow-lg shadow-rose-900/30 flex items-center gap-2 active:scale-95"
+          onClick={() => {
+            try {
+              reset();
+            } catch (e) {}
+            window.location.reload();
+          }}
+          className="px-6 py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-bold text-sm rounded-xl transition-all shadow-lg shadow-rose-900/30 flex items-center gap-2 active:scale-95 cursor-pointer"
         >
           <RotateCw className="w-4 h-4" />
           <span>আবার চেষ্টা করুন (Retry)</span>
