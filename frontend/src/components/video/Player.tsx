@@ -14,6 +14,7 @@ interface PlayerProps {
   previewUrl?: string;
   title?: string;
   autoPlay?: boolean;
+  onFrameDetected?: (isVertical: boolean, ratio: number) => void;
 }
 
 function formatTime(seconds: number): string {
@@ -31,8 +32,31 @@ function formatTime(seconds: number): string {
 
 /**
  * Professional Auto-Rotate SVG Icon with animated rotating phone and dual orbiting arrows.
+ * Adapts icon display when playing vertical (reels) vs widescreen (YouTube) videos.
  */
-function AutoRotateIcon({ className = "w-4 h-4", isRotated = false }: { className?: string; isRotated?: boolean }) {
+function AutoRotateIcon({ className = "w-4 h-4", isRotated = false, isVertical = false }: { className?: string; isRotated?: boolean; isVertical?: boolean }) {
+  if (isVertical) {
+    return (
+      <svg 
+        viewBox="0 0 24 24" 
+        fill="none" 
+        stroke="currentColor" 
+        strokeWidth="2" 
+        strokeLinecap="round" 
+        strokeLinejoin="round" 
+        className={className}
+        aria-hidden="true"
+      >
+        {/* Upright Phone with Portrait Fullscreen Expand Arrows */}
+        <rect x="7" y="3" width="10" height="18" rx="2" strokeWidth="1.8" className={isRotated ? "stroke-pink-400" : ""} />
+        <line x1="10.5" y1="5.5" x2="13.5" y2="5.5" strokeWidth="1.5" />
+        <circle cx="12" cy="18" r="0.75" fill="currentColor" stroke="none" />
+        <polyline points="3 7 3 3 7 3" strokeWidth="1.8" />
+        <polyline points="21 17 21 21 17 21" strokeWidth="1.8" />
+      </svg>
+    );
+  }
+
   return (
     <svg 
       viewBox="0 0 24 24" 
@@ -68,7 +92,7 @@ function AutoRotateIcon({ className = "w-4 h-4", isRotated = false }: { classNam
   );
 }
 
-export function Player({ src, fallbackSrc, poster, previewUrl, title, autoPlay = true }: PlayerProps) {
+export function Player({ src, fallbackSrc, poster, previewUrl, title, autoPlay = true, onFrameDetected }: PlayerProps) {
   const [mounted, setMounted] = useState(false);
   const playerRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -77,6 +101,8 @@ export function Player({ src, fallbackSrc, poster, previewUrl, title, autoPlay =
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [isRotated, setIsRotated] = useState(false);
+  const [isVertical, setIsVertical] = useState(false);
+  const [videoRatio, setVideoRatio] = useState<number>(16 / 9);
   const [isScreenPortrait, setIsScreenPortrait] = useState(true);
   const [currentSrc, setCurrentSrc] = useState(src);
   const [isAudioOnly, setIsAudioOnly] = useState(false);
@@ -99,9 +125,10 @@ export function Player({ src, fallbackSrc, poster, previewUrl, title, autoPlay =
   useEffect(() => {
     setCurrentSrc(src);
     setIsAudioOnly(false);
+    setIsVertical(false);
   }, [src]);
 
-  // Audio track check: detects media files with zero video frames (e.g. voice notes / audio leaks)
+  // Audio track check & dynamic video aspect ratio detection (e.g. 9:16 vertical reels vs 16:9 YouTube)
   const checkMediaTracks = useCallback(() => {
     if (!containerRef.current) return;
     const videoEl = containerRef.current.querySelector('media-player video') as HTMLVideoElement;
@@ -116,19 +143,54 @@ export function Player({ src, fallbackSrc, poster, previewUrl, title, autoPlay =
         }
       } else if (videoEl.videoWidth > 0 && videoEl.videoHeight > 0) {
         setIsAudioOnly(false);
+        const w = videoEl.videoWidth;
+        const h = videoEl.videoHeight;
+        const ratio = w / h;
+        // ratio < 0.95 means vertical / reels style (e.g. 9:16 = 0.5625, 4:5 = 0.8)
+        const isVert = ratio < 0.95;
+        setIsVertical(isVert);
+        setVideoRatio(ratio);
+        onFrameDetected?.(isVert, ratio);
       }
     }
-  }, [fallbackSrc, currentSrc]);
+  }, [fallbackSrc, currentSrc, onFrameDetected]);
 
   useEffect(() => {
     if (!mounted) return;
+    const container = containerRef.current;
+    if (!container) return;
+
+    let cleanupListeners: (() => void) | undefined;
+    const attachListeners = () => {
+      const videoEl = container.querySelector('media-player video') as HTMLVideoElement;
+      if (videoEl) {
+        const handleMeta = () => {
+          checkMediaTracks();
+        };
+        videoEl.addEventListener('loadedmetadata', handleMeta);
+        videoEl.addEventListener('canplay', handleMeta);
+        videoEl.addEventListener('playing', handleMeta);
+        cleanupListeners = () => {
+          videoEl.removeEventListener('loadedmetadata', handleMeta);
+          videoEl.removeEventListener('canplay', handleMeta);
+          videoEl.removeEventListener('playing', handleMeta);
+        };
+      }
+    };
+
+    attachListeners();
+
     let count = 0;
     const interval = setInterval(() => {
       checkMediaTracks();
       count++;
-      if (count > 20) clearInterval(interval);
-    }, 250);
-    return () => clearInterval(interval);
+      if (count > 25) clearInterval(interval);
+    }, 200);
+
+    return () => {
+      if (cleanupListeners) cleanupListeners();
+      clearInterval(interval);
+    };
   }, [currentSrc, mounted, checkMediaTracks]);
 
   // Real-time YouTube-style frame scrubber on seekbar hover
@@ -253,6 +315,55 @@ export function Player({ src, fallbackSrc, poster, previewUrl, title, autoPlay =
     };
   }, [mounted]);
 
+  // Option A: Physical device rotation auto-fullscreen (YouTube mobile web style)
+  // When widescreen YouTube-style video is playing and user tilts phone to landscape, auto-enter fullscreen.
+  // When user tilts phone back upright, smoothly exit fullscreen. Reels (vertical) videos stay upright!
+  useEffect(() => {
+    if (!mounted) return;
+    const handleDeviceRotate = async () => {
+      if (typeof window === 'undefined' || window.innerWidth >= 1024) return;
+      const isLandscapeScreen = window.innerWidth > window.innerHeight;
+
+      const player = playerRef.current;
+      const isCurrentlyFs = Boolean(
+        document.fullscreenElement || 
+        (document as any).webkitFullscreenElement ||
+        player?.state?.fullscreen
+      );
+
+      // If YouTube-style widescreen video is actively playing and user tilts phone to landscape:
+      if (!isVertical && isPlaying && isLandscapeScreen && !isCurrentlyFs) {
+        try {
+          if (player && typeof player.enterFullscreen === 'function') {
+            await player.enterFullscreen('prefer-media');
+          }
+          const orientation = (screen.orientation || (screen as any).mozOrientation || (screen as any).msOrientation) as any;
+          if (orientation && typeof orientation.lock === 'function') {
+            orientation.lock('landscape').catch(() => {});
+          }
+          setIsRotated(true);
+        } catch (_) {}
+      } else if (!isVertical && !isLandscapeScreen && isCurrentlyFs) {
+        // If user tilts phone back upright, smoothly exit fullscreen back to inline
+        try {
+          if (player && typeof player.exitFullscreen === 'function') {
+            await player.exitFullscreen();
+          } else if (document.exitFullscreen) {
+            await document.exitFullscreen();
+          }
+          setIsRotated(false);
+        } catch (_) {}
+      }
+    };
+
+    window.addEventListener('resize', handleDeviceRotate);
+    window.addEventListener('orientationchange', handleDeviceRotate);
+    return () => {
+      window.removeEventListener('resize', handleDeviceRotate);
+      window.removeEventListener('orientationchange', handleDeviceRotate);
+    };
+  }, [mounted, isVertical, isPlaying]);
+
   // Fullscreen event listener to sync rotation and unlock orientation on exit
   useEffect(() => {
     if (!mounted) return;
@@ -306,7 +417,6 @@ export function Player({ src, fallbackSrc, poster, previewUrl, title, autoPlay =
           }
         }
       } catch (err) {
-        console.warn('enterFullscreen fallback to video element:', err);
         try {
           if (videoEl && typeof (videoEl as any).webkitEnterFullscreen === 'function') {
             (videoEl as any).webkitEnterFullscreen();
@@ -316,18 +426,21 @@ export function Player({ src, fallbackSrc, poster, previewUrl, title, autoPlay =
         } catch (e2) {}
       }
 
-      // 2. Lock screen orientation to landscape
+      // 2. Lock screen orientation:
+      // Vertical (Reels) -> PORTRAIT (Keep upright, never flip sideways!)
+      // Horizontal (YouTube) -> LANDSCAPE (Auto-rotate to widescreen)
       try {
+        const targetOrientation = isVertical ? 'portrait' : 'landscape';
         if (orientation && typeof orientation.lock === 'function') {
-          await orientation.lock('landscape').catch(() => {});
+          await orientation.lock(targetOrientation).catch(() => {});
         } else if (typeof (screen as any).lockOrientation === 'function') {
-          (screen as any).lockOrientation('landscape');
+          (screen as any).lockOrientation(targetOrientation);
         }
       } catch (e) {}
 
       setIsRotated(true);
     } else {
-      // Exit fullscreen & unlock orientation back to portrait
+      // Exit fullscreen & unlock orientation back
       try {
         if (orientation && typeof orientation.unlock === 'function') {
           orientation.unlock();
@@ -355,8 +468,9 @@ export function Player({ src, fallbackSrc, poster, previewUrl, title, autoPlay =
     try {
       const orientation = (screen.orientation || (screen as any).mozOrientation || (screen as any).msOrientation) as any;
       if (isFullscreen) {
+        const targetOrientation = isVertical ? 'portrait' : 'landscape';
         if (orientation && typeof orientation.lock === 'function') {
-          orientation.lock('landscape').catch(() => {});
+          orientation.lock(targetOrientation).catch(() => {});
         }
       } else {
         if (orientation && typeof orientation.unlock === 'function') {
@@ -368,7 +482,7 @@ export function Player({ src, fallbackSrc, poster, previewUrl, title, autoPlay =
 
   if (!mounted) {
     return (
-      <div className="relative w-full aspect-video bg-black rounded-none md:rounded-xl overflow-hidden flex items-center justify-center">
+      <div className={`relative w-full bg-black rounded-none md:rounded-xl overflow-hidden flex items-center justify-center ${isVertical ? 'aspect-[9/16] max-h-[78vh] sm:max-h-[82vh] max-w-[420px] mx-auto' : 'aspect-video'}`}>
         {poster ? (
           <img 
             src={poster} 
@@ -388,7 +502,11 @@ export function Player({ src, fallbackSrc, poster, previewUrl, title, autoPlay =
   return (
     <div 
       ref={containerRef}
-      className="relative w-full aspect-video bg-black rounded-none md:rounded-xl overflow-hidden select-none group flex items-center justify-center"
+      className={`relative w-full bg-black rounded-none md:rounded-xl overflow-hidden select-none group flex items-center justify-center transition-all duration-300 ${
+        isVertical 
+          ? 'aspect-[9/16] max-h-[78vh] sm:max-h-[82vh] max-w-[420px] mx-auto shadow-2xl' 
+          : 'aspect-video'
+      }`}
     >
       <MediaPlayer 
         ref={playerRef}
@@ -398,11 +516,11 @@ export function Player({ src, fallbackSrc, poster, previewUrl, title, autoPlay =
         streamType="on-demand"
         logLevel="warn"
         playsInline
-        fullscreenOrientation="landscape"
+        fullscreenOrientation={isVertical ? 'portrait' : 'landscape'}
         autoPlay={autoPlay}
         muted={false}
         loop={isLooping}
-        aspectRatio="16/9"
+        aspectRatio={isVertical ? '9/16' : '16/9'}
         controlsDelay={2000}
         onPlay={() => {
           setIsPlaying(true);
@@ -416,7 +534,7 @@ export function Player({ src, fallbackSrc, poster, previewUrl, title, autoPlay =
         }}
         onPause={() => setIsPlaying(false)}
         onFullscreenChange={handleFullscreenChange}
-        className="w-full h-full aspect-video bg-black rounded-none md:rounded-xl overflow-hidden ring-0 outline-none flex items-center justify-center relative"
+        className={`w-full h-full ${isVertical ? 'aspect-[9/16]' : 'aspect-video'} bg-black rounded-none md:rounded-xl overflow-hidden ring-0 outline-none flex items-center justify-center relative`}
         style={{ '--video-brand': '#db2777' } as any}
       >
         <MediaProvider className="w-full h-full flex items-center justify-center bg-black">
@@ -460,15 +578,15 @@ export function Player({ src, fallbackSrc, poster, previewUrl, title, autoPlay =
             type="button"
             onClick={toggleRotate}
             onTouchEnd={(e) => e.stopPropagation()}
-            aria-label="Auto Rotate Fullscreen"
+            aria-label={isVertical ? "Portrait Fullscreen" : "Auto Rotate Fullscreen"}
             className={`md:hidden w-9 h-9 rounded-full backdrop-blur-md flex items-center justify-center transition-all duration-200 active:scale-90 shadow-2xl border cursor-pointer select-none pointer-events-auto ${
               isRotated
                 ? 'bg-pink-600 text-white border-pink-300 shadow-pink-900/50 ring-2 ring-pink-400'
                 : 'bg-black/80 hover:bg-black/95 text-zinc-100 hover:text-white border-white/30 hover:border-white/50'
             }`}
-            title="Auto Rotate Fullscreen"
+            title={isVertical ? "খাড়া ফুলস্ক্রিন (Portrait Fullscreen)" : "অটো রোটেট (Landscape Fullscreen)"}
           >
-            <AutoRotateIcon className="w-5 h-5 text-white" isRotated={isRotated} />
+            <AutoRotateIcon className="w-5 h-5 text-white" isRotated={isRotated} isVertical={isVertical} />
           </button>
         </div>
       </MediaPlayer>

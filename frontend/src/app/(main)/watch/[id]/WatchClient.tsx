@@ -74,6 +74,11 @@ export default function WatchClient({
   const [heartBurst, setHeartBurst] = useState(0);
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [sharesCount, setSharesCount] = useState<number>(initialVideo?.shares_count || 0);
+  const [isVerticalVideo, setIsVerticalVideo] = useState(false);
+
+  useEffect(() => {
+    setIsVerticalVideo(false);
+  }, [numericId]);
 
   // Auto-collapse sidebar on video open
   useEffect(() => {
@@ -457,20 +462,28 @@ export default function WatchClient({
             {/* Static Fallback Glow (Before Play) */}
             {videoData?.thumbnail_url && (
               <div 
-                className="absolute -inset-10 blur-[80px] opacity-30 bg-cover bg-center z-0 hidden md:block" 
+                className={`absolute -inset-10 blur-[80px] opacity-30 bg-cover bg-center z-0 hidden md:block ${
+                  isVerticalVideo ? 'max-w-[420px] mx-auto' : ''
+                }`} 
                 style={{ backgroundImage: `url(${videoData.thumbnail_url})` }}
               />
             )}
             {/* Real-time Dynamic Glow */}
             <canvas
               ref={canvasRef}
-              width={160}
-              height={90}
-              className="absolute -inset-10 w-[calc(100%+80px)] h-[calc(100%+80px)] blur-[80px] opacity-60 z-0 hidden md:block pointer-events-none transition-opacity duration-500"
+              width={isVerticalVideo ? 90 : 160}
+              height={isVerticalVideo ? 160 : 90}
+              className={`absolute -inset-10 blur-[80px] opacity-60 z-0 hidden md:block pointer-events-none transition-opacity duration-500 ${
+                isVerticalVideo ? 'max-w-[420px] mx-auto w-full h-full' : 'w-[calc(100%+80px)] h-[calc(100%+80px)]'
+              }`}
             />
             
-            {/* Theatrical Fixed 16:9 Stage (Borderless) */}
-            <div className="relative z-10 w-full aspect-video bg-black md:rounded-xl overflow-hidden shadow-[0_10px_40px_rgba(0,0,0,0.6)] flex items-center justify-center">
+            {/* Theatrical Dynamic Frame Stage (Auto-adapts to 16:9 Landscape or 9:16 Vertical Reels) */}
+            <div className={`relative z-10 w-full bg-black md:rounded-xl overflow-hidden shadow-[0_10px_40px_rgba(0,0,0,0.6)] flex items-center justify-center transition-all duration-300 ${
+              isVerticalVideo 
+                ? 'max-w-[420px] aspect-[9/16] max-h-[78vh] sm:max-h-[82vh] mx-auto' 
+                : 'aspect-video'
+            }`}>
               <FloatingHearts burstCount={heartBurst} />
               {realVideoUrl ? (
                 <Player 
@@ -480,9 +493,10 @@ export default function WatchClient({
                   title={videoData?.title || `Video ${numericId}`} 
                   poster={videoData?.thumbnail_url || undefined}
                   previewUrl={videoData?.preview_url || undefined}
+                  onFrameDetected={(isVert) => setIsVerticalVideo(isVert)}
                 />
               ) : (
-                <div className="aspect-video w-full flex flex-col items-center justify-center bg-zinc-900 text-zinc-500">
+                <div className={`w-full flex flex-col items-center justify-center bg-zinc-900 text-zinc-500 ${isVerticalVideo ? 'aspect-[9/16]' : 'aspect-video'}`}>
                   <p className="text-sm font-semibold">Video stream is processing or currently unavailable.</p>
                 </div>
               )}
