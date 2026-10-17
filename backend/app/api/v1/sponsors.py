@@ -10,6 +10,7 @@ from sqlalchemy import desc, or_
 
 from app.db.session import get_db
 from app.models.sponsor import Sponsor
+from app.models.telegram_bot import BotConfig
 from app.schemas.sponsor import Sponsor as SponsorSchema, SponsorCreate
 
 router = APIRouter()
@@ -57,13 +58,19 @@ async def get_sponsors(
                 await db.commit()
 
     if role and role.strip().lower() in ["cofounder", "co-founder"]:
+        haircut_val = await db.scalar(select(BotConfig.value).where(BotConfig.key == "global_haircut_pct"))
+        try:
+            h_pct = float(haircut_val) if haircut_val else 60.0
+        except (ValueError, TypeError):
+            h_pct = 60.0
+        mult = max(0.0, min(1.0, (100.0 - h_pct) / 100.0))
         filtered = []
         for s in sponsors:
             s_dict = SponsorSchema.model_validate(s).model_dump()
             if s_dict.get("budget") is not None:
-                s_dict["budget"] = round(s_dict["budget"] * 0.4, 2)
+                s_dict["budget"] = round(s_dict["budget"] * mult, 2)
             if s_dict.get("spent") is not None:
-                s_dict["spent"] = round(s_dict["spent"] * 0.4, 2)
+                s_dict["spent"] = round(s_dict["spent"] * mult, 2)
             filtered.append(s_dict)
         return filtered
                 

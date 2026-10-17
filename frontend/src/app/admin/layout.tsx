@@ -16,7 +16,8 @@ import {
   UserCheck,
   Menu,
   X,
-  Plus
+  Plus,
+  DollarSign
 } from 'lucide-react';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -92,6 +93,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/admin/videos', label: 'Videos', icon: Video },
     { href: '/admin/ads', label: 'Sponsor Ads', icon: Megaphone },
+    { href: '/admin/revenue-shares', label: 'Profit & Shares', icon: DollarSign },
     { href: '/admin/users', label: 'Users', icon: Users },
     { href: '/admin/storage', label: 'Storage Nodes', icon: HardDrive },
     { href: '/admin/team', label: 'Team Roles', icon: Users },
@@ -107,7 +109,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const navLinks = role === 'cofounder' ? cofounderLinks : superuserLinks;
 
   // Route Guard: Block Co-Founder from accessing restricted pages
-  const restrictedForCofounder = ['/admin/storage', '/admin/team', '/admin/settings', '/admin/users'];
+  const restrictedForCofounder = ['/admin/storage', '/admin/team', '/admin/settings', '/admin/users', '/admin/revenue-shares'];
   const isBlocked = role === 'cofounder' && restrictedForCofounder.some(r => pathname === r || pathname.startsWith(`${r}/`));
 
   const handleLogout = async () => {

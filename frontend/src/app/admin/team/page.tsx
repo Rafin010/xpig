@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { 
   ShieldCheck, 
   Mail, 
@@ -18,7 +19,9 @@ import {
   X,
   Shield,
   UserCheck,
-  Video
+  Video,
+  DollarSign,
+  ArrowUpRight
 } from 'lucide-react';
 
 interface Cofounder {
@@ -204,6 +207,33 @@ export default function TeamManagementPage() {
           <span>Refresh Telemetry</span>
         </button>
       </div>
+
+      {/* Super Admin Exclusive: Profit & Revenue Share Banner */}
+      {isSuperAdmin && (
+        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-purple-950/40 via-zinc-900/90 to-emerald-950/30 border border-purple-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl">
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-purple-400 shrink-0">
+              <DollarSign className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-bold text-sm text-white flex items-center gap-2">
+                <span>কো-ফাউন্ডার রেভিনিউ শেয়ার ও কাটছাঁট লেজার</span>
+                <span className="px-2 py-0.5 bg-purple-500/20 text-purple-300 text-[10px] font-bold rounded-md uppercase">গোপন</span>
+              </h3>
+              <p className="text-xs text-zinc-400 mt-0.5">
+                স্পন্সরদের আয়, ৬০% হেয়ারকাট এবং প্রতিটি কো-ফাউন্ডারের শেয়ার % ও কাটছাঁটের স্বয়ংক্রিয় হিসাব দেখতে লেজার ড্যাশবোর্ডে প্রবেশ করুন।
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/admin/revenue-shares"
+            className="self-start sm:self-auto px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold rounded-xl text-xs transition-all shadow-md shadow-purple-900/30 flex items-center gap-1.5 shrink-0"
+          >
+            <span>প্রফিট লেজার ওপেন করুন</span>
+            <ArrowUpRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-8">
         
@@ -446,19 +476,23 @@ export default function TeamManagementPage() {
                         </div>
                       </div>
 
-                      {/* Super Admin Only: Co-Founder Video Upload Count Tracker */}
+                      {/* Super Admin Only: Co-Founder Video Upload Count & Rev Share */}
                       {isSuperAdmin && (
-                        <div className="flex items-center justify-between px-3.5 py-2.5 bg-gradient-to-r from-blue-950/20 via-zinc-900/90 to-pink-950/20 border border-blue-500/20 rounded-xl text-xs">
+                        <div className="flex items-center justify-between px-3.5 py-2.5 bg-gradient-to-r from-blue-950/20 via-zinc-900/90 to-purple-950/20 border border-purple-500/20 rounded-xl text-xs">
                           <div className="flex items-center gap-2">
                             <Video className="w-4 h-4 text-pink-400 shrink-0" />
-                            <span className="text-zinc-300 font-medium">আপলোডকৃত ভিডিও:</span>
+                            <span className="text-zinc-300 font-medium">ভিডিও:</span>
                             <span className="px-2.5 py-0.5 bg-pink-500/15 border border-pink-500/30 text-pink-400 font-bold rounded-lg text-xs">
                               {cf.uploaded_videos_count || 0} টি
                             </span>
                           </div>
-                          <span className="text-[10px] text-zinc-400 font-mono tracking-wide px-2 py-0.5 bg-zinc-900/90 rounded border border-zinc-800">
-                            Super Admin Only
-                          </span>
+                          <Link 
+                            href="/admin/revenue-shares" 
+                            className="text-[11px] text-purple-300 hover:text-white font-semibold flex items-center gap-1 hover:underline cursor-pointer"
+                          >
+                            <span>রেভিনিউ শেয়ার ও কাটছাঁট</span>
+                            <ArrowUpRight className="w-3 h-3" />
+                          </Link>
                         </div>
                       )}
 

@@ -5,6 +5,7 @@ from app.db.session import get_db
 from app.models.video import Video, VideoSource
 from app.models.user import User
 from app.models.sponsor import Sponsor
+from app.models.telegram_bot import BotConfig
 from typing import Optional
 import os
 import uuid
@@ -40,12 +41,18 @@ async def get_platform_stats(
         "sponsor_amount": round(float(sponsor_amount_val or 0.0), 2),
     }
     
-    # If co-founder, reduce revenue/sponsor amounts by 60%
+    # If co-founder, reduce revenue/sponsor amounts by dynamic haircut (default 60%)
     if role and role.strip().lower() in ["cofounder", "co-founder"]:
+        haircut_val = await db.scalar(select(BotConfig.value).where(BotConfig.key == "global_haircut_pct"))
+        try:
+            h_pct = float(haircut_val) if haircut_val else 60.0
+        except (ValueError, TypeError):
+            h_pct = 60.0
+        mult = max(0.0, min(1.0, (100.0 - h_pct) / 100.0))
         if "total_revenue" in result:
-            result["total_revenue"] = round(result["total_revenue"] * 0.4)
+            result["total_revenue"] = round(result["total_revenue"] * mult)
         if "sponsor_amount" in result:
-            result["sponsor_amount"] = round(result["sponsor_amount"] * 0.4)
+            result["sponsor_amount"] = round(result["sponsor_amount"] * mult)
             
     return result
 
@@ -635,3 +642,154 @@ async def upload_video(
     )
     
     return {"message": "Upload started, processing in background.", "video_id": new_video.id}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 💰 SUPER ADMIN EXCLUSIVE: CO-FOUNDER REVENUE SHARE & PROFIT DISTRIBUTION
+# ─────────────────────────────────────────────────────────────────────────────
+
+class RevenueShareUpdate(BaseModel):
+    revenue_share_pct: float
+    extra_cut_pct: Optional[float] = 0.0
+    fixed_deduction: Optional[float] = 0.0
+    notes: Optional[str] = ""
+
+class GlobalHaircutUpdate(BaseModel):
+    global_haircut_pct: float
+
+@router.get("/revenue-shares")
+async def get_revenue_shares(db: AsyncSession = Depends(get_db)):
+    """
+    Super Admin Classified Endpoint: Calculates real gross revenue, total views,
+    global concealment haircut (default 60%), per-founder base shares, custom deductions,
+    and net retained profits for the Super Admin.
+    """
+    # 1. Total real gross revenue from sponsors
+    total_spent_val = await db.scalar(select(func.sum(Sponsor.spent))) or 0.0
+    total_budget_val = await db.scalar(select(func.sum(Sponsor.budget))) or 0.0
+    gross_revenue = round(float(total_spent_val if total_spent_val > 0 else total_budget_val), 2)
+    
+    # 2. Total views across all videos
+    total_views = await db.scalar(select(func.sum(Video.views))) or 0
+    total_videos = await db.scalar(select(func.count(Video.id))) or 0
+    
+    # 3. Get global haircut from BotConfig (default 60.0%)
+    haircut_conf = await db.scalar(select(BotConfig.value).where(BotConfig.key == "global_haircut_pct"))
+    try:
+        global_haircut_pct = float(haircut_conf) if haircut_conf else 60.0
+    except (ValueError, TypeError):
+        global_haircut_pct = 60.0
+        
+    concealed_pool_multiplier = max(0.0, min(1.0, (100.0 - global_haircut_pct) / 100.0))
+    visible_pool_revenue = round(gross_revenue * concealed_pool_multiplier, 2)
+    
+    # 4. Fetch all cofounders
+    result = await db.execute(select(User).where(User.is_cofounder == True))
+    cofounders = result.scalars().all()
+    
+    counts_res = await db.execute(
+        select(Video.creator_id, func.count(Video.id)).group_by(Video.creator_id)
+    )
+    video_counts = {creator_id: count for creator_id, count in counts_res.all()}
+    
+    partners_data = []
+    total_founder_payouts = 0.0
+    
+    for u in cofounders:
+        t = get_telemetry(u)
+        share_pct = float(t.get("revenue_share_pct", 10.0))
+        extra_cut_pct = float(t.get("extra_cut_pct", 0.0))
+        fixed_deduction = float(t.get("fixed_deduction", 0.0))
+        notes = t.get("payout_notes", "")
+        
+        # Real 100% earnings if not concealed
+        real_100_earnings = round((gross_revenue * (share_pct / 100.0)), 2)
+        
+        # Reported base on visible (discounted) pool
+        reported_base = round((visible_pool_revenue * (share_pct / 100.0)), 2)
+        
+        # Net payout after extra cut % and fixed deduction
+        effective_share_pct = max(0.0, share_pct - extra_cut_pct)
+        net_calc = (visible_pool_revenue * (effective_share_pct / 100.0)) - fixed_deduction
+        final_net_payout = max(0.0, round(net_calc, 2))
+        
+        admin_retained_from_partner = round(max(0.0, real_100_earnings - final_net_payout), 2)
+        total_founder_payouts += final_net_payout
+        
+        partners_data.append({
+            "id": u.id,
+            "username": u.username,
+            "email": u.email,
+            "avatar_url": u.avatar_url,
+            "role": t.get("role", "Co-Founder"),
+            "uploaded_videos_count": video_counts.get(u.id, 0),
+            "revenue_share_pct": share_pct,
+            "extra_cut_pct": extra_cut_pct,
+            "fixed_deduction": fixed_deduction,
+            "notes": notes,
+            "real_100_earnings": real_100_earnings,
+            "reported_base": reported_base,
+            "final_net_payout": final_net_payout,
+            "admin_retained": admin_retained_from_partner,
+            "last_active": u.last_active.isoformat() if u.last_active else None
+        })
+        
+    super_admin_net_profit = round(max(0.0, gross_revenue - total_founder_payouts), 2)
+    profit_margin_pct = round((super_admin_net_profit / max(1.0, gross_revenue)) * 100.0, 1) if gross_revenue > 0 else 100.0
+    
+    return {
+        "gross_revenue": gross_revenue,
+        "total_views": total_views,
+        "total_videos": total_videos,
+        "global_haircut_pct": global_haircut_pct,
+        "visible_pool_revenue": visible_pool_revenue,
+        "super_admin_net_profit": super_admin_net_profit,
+        "super_admin_profit_margin_pct": profit_margin_pct,
+        "total_founder_payouts": round(total_founder_payouts, 2),
+        "partners": partners_data
+    }
+
+@router.patch("/revenue-shares/{user_id}")
+async def update_partner_share(
+    user_id: int, 
+    payload: RevenueShareUpdate, 
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalars().first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Co-founder not found")
+        
+    t = get_telemetry(user)
+    t["revenue_share_pct"] = float(payload.revenue_share_pct)
+    t["extra_cut_pct"] = float(payload.extra_cut_pct or 0.0)
+    t["fixed_deduction"] = float(payload.fixed_deduction or 0.0)
+    t["payout_notes"] = (payload.notes or "").strip()
+    update_telemetry(user, t)
+    await db.commit()
+    
+    return {
+        "success": True, 
+        "user_id": user.id,
+        "revenue_share_pct": t["revenue_share_pct"],
+        "extra_cut_pct": t["extra_cut_pct"],
+        "fixed_deduction": t["fixed_deduction"],
+        "notes": t["payout_notes"]
+    }
+
+@router.post("/revenue-shares/settings")
+async def update_revenue_settings(
+    payload: GlobalHaircutUpdate, 
+    db: AsyncSession = Depends(get_db)
+):
+    new_pct = max(0.0, min(95.0, float(payload.global_haircut_pct)))
+    conf = await db.execute(select(BotConfig).where(BotConfig.key == "global_haircut_pct"))
+    existing = conf.scalars().first()
+    if existing:
+        existing.value = str(new_pct)
+    else:
+        db.add(BotConfig(key="global_haircut_pct", value=str(new_pct)))
+    await db.commit()
+    
+    return {"success": True, "global_haircut_pct": new_pct}
+
